@@ -1,33 +1,20 @@
-package com.wdlpiaoyi.glimmerwhim.anchor;
-
-import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
-import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
-import com.wdlpiaoyi.glimmerwhim.engine.WhimEvent;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+package com.wdlpiaoyi.glimmerwhim.whims;
 
 import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
-import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
-import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimEvent;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 
-import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.network.FriendlyByteBuf;
+import java.util.UUID;
+
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.Vec3;
 
-public final class DevVoidTestAnchor implements WhimAnchor
+public final class VoidTestWhim implements WhimType
 {
-    public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev_voidtest");
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev_voidtest");
 
-    private static final String WRONG = "该锚不接受锚数据，固定于 0 0 0";
+    public static final VoidTestWhim INSTANCE = new VoidTestWhim();
 
     private enum Step
     {
@@ -43,41 +30,20 @@ public final class DevVoidTestAnchor implements WhimAnchor
 
     private int held;
 
-    public static DevVoidTestAnchor parse(CommandSourceStack source, String data)
-    {
-        if (data != null && !data.isBlank())
-        {
-            throw new IllegalArgumentException(WRONG);
-        }
-
-        return new DevVoidTestAnchor();
-    }
-
-    public static Collection<String> suggestData(CommandSourceStack source)
-    {
-        return List.of();
-    }
-
-    public static DevVoidTestAnchor read(FriendlyByteBuf buf)
-    {
-        return new DevVoidTestAnchor();
-    }
-
-    @Override
-    public ResourceLocation type()
-    {
-        return TYPE;
-    }
-
-    @Override
-    public void write(FriendlyByteBuf buf)
+    private VoidTestWhim()
     {
     }
 
     @Override
-    public Optional<Vec3> position(Level level, Vec3 eye, float partialTick, WhimData data, WhimParams params)
+    public ResourceLocation id()
     {
-        return Optional.of(Vec3.ZERO);
+        return ID;
+    }
+
+    @Override
+    public WhimParams params()
+    {
+        return WhimParams.NONE;
     }
 
     @Override

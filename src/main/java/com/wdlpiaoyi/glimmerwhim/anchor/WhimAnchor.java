@@ -2,7 +2,6 @@ package com.wdlpiaoyi.glimmerwhim.anchor;
 
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
-import com.wdlpiaoyi.glimmerwhim.engine.WhimEvent;
 
 import java.util.Optional;
 
@@ -18,8 +17,4 @@ public interface WhimAnchor
     void write(FriendlyByteBuf buf);
 
     Optional<Vec3> position(Level level, Vec3 eye, float partialTick, WhimData data, WhimParams params);
-
-    default void on(WhimEvent event)
-    {
-    }
 }

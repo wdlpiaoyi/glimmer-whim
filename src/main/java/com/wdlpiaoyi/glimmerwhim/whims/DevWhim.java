@@ -1,5 +1,6 @@
 package com.wdlpiaoyi.glimmerwhim.whims;
 
+import com.wdlpiaoyi.glimmerwhim.engine.WhimParam;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 
 import net.minecraft.resources.ResourceLocation;
@@ -23,6 +24,7 @@ public final class DevWhim implements WhimType
     @Override
     public WhimParams params()
     {
-        return WhimParams.NONE;
+        return WhimParams.of(WhimParam.choice("shape", "cube", "cube", "quad"),
+                WhimParam.positiveNumber("size", "1"));
     }
 }

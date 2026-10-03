@@ -270,7 +270,7 @@ public final class WhimRegistry
             {
                 WhimEvent event = new WhimEvent(kind, registry.level, tracked.whim(), player);
 
-                tracked.whim().anchor().on(event);
+                tracked.whim().type().on(event);
 
                 event.removal().ifPresent(reason -> registry.removeWhim(id, reason));
 

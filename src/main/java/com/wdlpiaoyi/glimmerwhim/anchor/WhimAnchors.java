@@ -14,8 +14,7 @@ import java.util.function.Function;
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.anchor.DevPosAnchor;
 import com.wdlpiaoyi.glimmerwhim.anchor.DevRayAnchor;
-import com.wdlpiaoyi.glimmerwhim.anchor.DevRemoveOnUseAnchor;
-import com.wdlpiaoyi.glimmerwhim.anchor.DevVoidTestAnchor;
+import com.wdlpiaoyi.glimmerwhim.anchor.FixedAnchor;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.FriendlyByteBuf;
@@ -39,19 +38,11 @@ public final class WhimAnchors
     static
     {
         register(DevRayAnchor.TYPE, DevRayAnchor::read, DevRayAnchor::parse, DevRayAnchor::suggestData, "dx dy dz；~ 表示视线方向",
-                WhimParam.choice("shape", "quad", "quad", "cube"),
-                WhimParam.positiveNumber("size", "1"),
                 WhimParam.positiveNumber("distance", "8"));
 
-        register(DevPosAnchor.TYPE, DevPosAnchor::read, DevPosAnchor::parse, DevPosAnchor::suggestData, "x y z；~ 表示当前位置",
-                WhimParam.choice("shape", "cube", "quad", "cube"),
-                WhimParam.positiveNumber("size", "1"));
+        register(DevPosAnchor.TYPE, DevPosAnchor::read, DevPosAnchor::parse, DevPosAnchor::suggestData, "x y z；~ 表示当前位置");
 
-        register(DevRemoveOnUseAnchor.TYPE, DevRemoveOnUseAnchor::read, DevRemoveOnUseAnchor::parse,
-                DevRemoveOnUseAnchor::suggestData, "不接受锚数据，固定于 0 0 0");
-
-        register(DevVoidTestAnchor.TYPE, DevVoidTestAnchor::read, DevVoidTestAnchor::parse,
-                DevVoidTestAnchor::suggestData, "不接受锚数据，固定于 0 0 0");
+        register(FixedAnchor.TYPE, FixedAnchor::read, FixedAnchor::parse, FixedAnchor::suggestData, "不接受锚数据，固定于 0 0 0");
     }
 
     private WhimAnchors()

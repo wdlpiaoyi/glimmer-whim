@@ -67,7 +67,7 @@ public final class WhimAim
                 continue;
             }
 
-            double hit = WhimRenderer.hit(whim.type().id()).test(eye, direction, at, whim.data(), params);
+            double hit = WhimRenderer.hit(whim.type().id()).test(eye, direction, at, whim.data(), whim.type().params());
 
             if (hit < 0.0D || hit >= bestHit)
             {

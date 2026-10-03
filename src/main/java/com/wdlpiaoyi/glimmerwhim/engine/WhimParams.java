@@ -39,6 +39,25 @@ public final class WhimParams
         return this.params.get(name);
     }
 
+    public WhimParams plus(WhimParams other)
+    {
+        if (other.params.isEmpty())
+        {
+            return this;
+        }
+
+        if (this.params.isEmpty())
+        {
+            return other;
+        }
+
+        Map<String, WhimParam> merged = new LinkedHashMap<>(this.params);
+
+        merged.putAll(other.params);
+
+        return new WhimParams(merged.values());
+    }
+
     public String text(WhimData data, String name)
     {
         WhimParam param = get(name);
@@ -92,7 +111,7 @@ public final class WhimParams
             if (param == null)
             {
                 throw new IllegalArgumentException(this.params.isEmpty()
-                        ? "该锚不接受参数: " + name
+                        ? "该灵感不接受参数: " + name
                         : "未知参数: " + name + "（可用: " + String.join(", ", this.params.keySet()) + "）");
             }
 

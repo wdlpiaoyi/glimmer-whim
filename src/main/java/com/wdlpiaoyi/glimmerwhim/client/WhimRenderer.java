@@ -108,8 +108,8 @@ public final class WhimRenderer
         for (ClientWhimCache.WhimView whim : ClientWhimCache.all())
         {
             WhimAnchor anchor = whim.anchor();
-            WhimParams params = WhimAnchors.params(anchor.type());
-            Vec3 at = anchor.position(level, eye, partialTick, whim.data(), params).orElse(null);
+            WhimParams anchorParams = WhimAnchors.params(anchor.type());
+            Vec3 at = anchor.position(level, eye, partialTick, whim.data(), anchorParams).orElse(null);
 
             if (at == null || at.subtract(eye).lengthSqr() < 1.0E-8D)
             {
@@ -121,7 +121,7 @@ public final class WhimRenderer
                 continue;
             }
 
-            drawable.add(new Drawable(whim, params, at));
+            drawable.add(new Drawable(whim, whim.type().params(), at));
         }
 
         drawable.sort(Comparator.comparingDouble(entry -> -entry.at().distanceToSqr(eye)));
