@@ -3,7 +3,7 @@ package com.wdlpiaoyi.glimmerwhim.config;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.wdlpiaoyi.glimmerwhim.client.WhimTypes;
+import com.wdlpiaoyi.glimmerwhim.whim.WhimTypes;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.ForgeConfigSpec;

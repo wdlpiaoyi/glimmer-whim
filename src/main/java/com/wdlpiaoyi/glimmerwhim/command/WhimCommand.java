@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import com.mojang.brigadier.arguments.DoubleArgumentType;
@@ -12,10 +13,14 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.wdlpiaoyi.glimmerwhim.whim.Whim;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchor;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchors;
+import com.wdlpiaoyi.glimmerwhim.whim.WhimData;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimRegistry;
+import com.wdlpiaoyi.glimmerwhim.whim.WhimTypes;
 import com.wdlpiaoyi.glimmerwhim.whim.anchor.RayAnchor;
 
 import net.minecraft.commands.CommandSourceStack;
@@ -40,11 +45,13 @@ public final class WhimCommand
     private static final List<String> USAGE = List.of(
             "用法:",
             "  /glimmerwhim list [dimension] —— 列出该维度中存活的灵感",
-            "  /glimmerwhim spawn [seconds] [anchortype] [anchordata] —— 生成一条灵感",
+            "  /glimmerwhim spawn [seconds] [anchortype] [锚数据和参数...] —— 生成一条灵感",
             "参数:",
             "  seconds —— 存活秒数，默认 60",
             "  anchortype —— 锚类型，默认 " + DEFAULT_ANCHOR,
-            "  anchordata —— 锚的数据；" + DEFAULT_ANCHOR + " 的格式是 dx dy dz，省略则取执行者视线方向");
+            "  锚数据 —— " + DEFAULT_ANCHOR + " 的格式是 dx dy dz，省略则取执行者视线方向",
+            "  灵感参数 —— 写成 {名字:值}，跟在锚数据后面",
+            "  " + Whim.DEV_ELEMENT.getPath() + " 的参数 —— " + paramUsage());
 
     private static final SimpleCommandExceptionType ERROR_PLAYER =
             new SimpleCommandExceptionType(Component.literal("只能由玩家执行"));
@@ -94,17 +101,15 @@ public final class WhimCommand
                                 .executes(context -> spawn(context.getSource(),
                                         DoubleArgumentType.getDouble(context, "seconds"),
                                         StringArgumentType.getString(context, "anchortype"), null))
-                                .then(Commands.argument("anchordata", StringArgumentType.greedyString())
-                                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(
-                                                WhimAnchors.suggestData(
-                                                        WhimAnchors.resolve(StringArgumentType.getString(context, "anchortype"))
-                                                                .orElse(null),
-                                                        context.getSource()),
-                                                builder))
+                                .then(Commands.argument("data", StringArgumentType.greedyString())
+                                        .suggests((context, builder) -> suggestTail(
+                                                WhimAnchors.resolve(StringArgumentType.getString(context, "anchortype"))
+                                                        .orElse(null),
+                                                context.getSource(), builder))
                                         .executes(context -> spawn(context.getSource(),
                                                 DoubleArgumentType.getDouble(context, "seconds"),
                                                 StringArgumentType.getString(context, "anchortype"),
-                                                StringArgumentType.getString(context, "anchordata")))))));
+                                                StringArgumentType.getString(context, "data")))))));
 
         event.getDispatcher().register(root);
     }
@@ -112,6 +117,38 @@ public final class WhimCommand
     private static String anchorNames()
     {
         return WhimAnchors.types().stream().map(ResourceLocation::getPath).collect(Collectors.joining(", "));
+    }
+
+    private static String paramUsage()
+    {
+        return WhimTypes.params(Whim.DEV_ELEMENT).stream()
+                .map(param -> param.name() + " = " + param.hint() + "（默认 " + param.defaultValue() + "）")
+                .collect(Collectors.joining("，"));
+    }
+
+    /** 锚数据和灵感参数共用这一段尾巴，补全时两样都摆上。 */
+    private static CompletableFuture<Suggestions> suggestTail(ResourceLocation anchor, CommandSourceStack source,
+            SuggestionsBuilder builder)
+    {
+        String remaining = builder.getRemaining();
+        int space = remaining.lastIndexOf(' ');
+        SuggestionsBuilder tail = builder.createOffset(builder.getStart() + (space < 0 ? 0 : space + 1));
+
+        for (String group : WhimTypes.suggestions(Whim.DEV_ELEMENT))
+        {
+            tail.suggest(group);
+        }
+
+        // 尾巴还空着，顺手把锚数据也摆上
+        if (remaining.isBlank())
+        {
+            for (String data : WhimAnchors.suggestData(anchor, source))
+            {
+                tail.suggest(data);
+            }
+        }
+
+        return tail.buildFuture();
     }
 
     private static String formatSeconds(double seconds)
@@ -153,14 +190,15 @@ public final class WhimCommand
         for (Whim whim : whimes)
         {
             String line = "  " + whim.id() + "  锚=" + whim.anchor().type() + "  元素=" + whim.element()
-                    + "  剩余=" + (whim.lifetime() / 20) + "s";
+                    + "  剩余=" + (whim.lifetime() / 20) + "s"
+                    + (whim.data().isEmpty() ? "" : "  参数=" + whim.data());
             source.sendSuccess(() -> Component.literal(line), false);
         }
 
         return whimes.size();
     }
 
-    private static int spawn(CommandSourceStack source, double seconds, String anchorType, String anchorData)
+    private static int spawn(CommandSourceStack source, double seconds, String anchorType, String tail)
             throws CommandSyntaxException
     {
         ServerPlayer player = source.getPlayer();
@@ -177,11 +215,24 @@ public final class WhimCommand
             throw ERROR_ANCHOR.create(anchorType);
         }
 
+        // 尾巴里的 {名字:值} 是灵感参数，抠掉之后剩下的才是锚数据。
+        WhimData.Split split = WhimData.split(tail);
+        WhimData data;
+
+        try
+        {
+            data = WhimTypes.parse(Whim.DEV_ELEMENT, split.data());
+        }
+        catch (IllegalArgumentException e)
+        {
+            throw ERROR_DATA.create(e.getMessage());
+        }
+
         WhimAnchor anchor;
 
         try
         {
-            anchor = WhimAnchors.create(type, source, anchorData);
+            anchor = WhimAnchors.create(type, source, split.anchorData().isEmpty() ? null : split.anchorData());
         }
         catch (RuntimeException e)
         {
@@ -190,10 +241,11 @@ public final class WhimCommand
         }
 
         int lifetime = (int) Math.round(seconds * 20.0D);
-        Whim whim = new Whim(UUID.randomUUID(), anchor, Whim.DEV_ELEMENT, lifetime);
+        Whim whim = new Whim(UUID.randomUUID(), anchor, Whim.DEV_ELEMENT, data, lifetime);
         WhimRegistry.of(player.serverLevel()).spawn(whim);
 
-        source.sendSuccess(() -> Component.literal("已生成灵感 " + whim.id() + "，存活 " + formatSeconds(seconds) + " 秒"), true);
+        source.sendSuccess(() -> Component.literal("已生成灵感 " + whim.id() + "，存活 " + formatSeconds(seconds) + " 秒"
+                + (data.isEmpty() ? "" : "，参数 " + data)), true);
         return 1;
     }
 }

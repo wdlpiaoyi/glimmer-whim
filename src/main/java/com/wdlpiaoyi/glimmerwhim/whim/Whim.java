@@ -7,7 +7,7 @@ import net.minecraft.resources.ResourceLocation;
 /**
  * 一条灵感。
  * <p>
- * 只有四个必填字段，可选字段（intensity、source、visibility）这一版一个都不写。
+ * intensity、source、visibility 这些可选字段这一版一个都不写。
  * 不是实体，不落盘 —— 活几十秒的东西没有存档价值。
  */
 public final class Whim
@@ -18,13 +18,15 @@ public final class Whim
     private final UUID id;
     private final WhimAnchor anchor;
     private final ResourceLocation element;
+    private final WhimData data;
     private int lifetime;
 
-    public Whim(UUID id, WhimAnchor anchor, ResourceLocation element, int lifetime)
+    public Whim(UUID id, WhimAnchor anchor, ResourceLocation element, WhimData data, int lifetime)
     {
         this.id = id;
         this.anchor = anchor;
         this.element = element;
+        this.data = data;
         this.lifetime = lifetime;
     }
 
@@ -41,6 +43,12 @@ public final class Whim
     public ResourceLocation element()
     {
         return this.element;
+    }
+
+    /** 这个元素类型自己的参数；没写就是空的。 */
+    public WhimData data()
+    {
+        return this.data;
     }
 
     /** 消散前还能存在多久，单位 tick。 */

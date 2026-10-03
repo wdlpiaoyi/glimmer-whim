@@ -8,6 +8,7 @@ import java.util.UUID;
 import com.wdlpiaoyi.glimmerwhim.net.WhimRemovePacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimSpawnPacket;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchor;
+import com.wdlpiaoyi.glimmerwhim.whim.WhimData;
 
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -20,7 +21,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
  */
 public final class ClientWhimCache
 {
-    public record WhimView(UUID id, WhimAnchor anchor, ResourceLocation element, int lifetime)
+    public record WhimView(UUID id, WhimAnchor anchor, ResourceLocation element, WhimData data, int lifetime)
     {
     }
 
@@ -34,7 +35,7 @@ public final class ClientWhimCache
     public static void accept(WhimSpawnPacket packet)
     {
         switchDimension(packet.dimension());
-        WHIMES.put(packet.id(), new WhimView(packet.id(), packet.anchor(), packet.element(), packet.lifetime()));
+        WHIMES.put(packet.id(), new WhimView(packet.id(), packet.anchor(), packet.element(), packet.data(), packet.lifetime()));
     }
 
     public static void remove(WhimRemovePacket packet)

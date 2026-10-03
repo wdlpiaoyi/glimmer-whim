@@ -7,6 +7,7 @@ import com.wdlpiaoyi.glimmerwhim.client.ClientWhimCache;
 import com.wdlpiaoyi.glimmerwhim.whim.Whim;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchor;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchors;
+import com.wdlpiaoyi.glimmerwhim.whim.WhimData;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;
@@ -23,11 +24,12 @@ import net.minecraftforge.network.NetworkEvent;
  * 带上维度是为了让客户端知道"这还是不是同一个世界" —— 收到别的维度的包就先把缓存清了。
  * 不带 visibility：能不能用是发包那一刻的事，用不了的人根本收不到。
  */
-public record WhimSpawnPacket(ResourceKey<Level> dimension, UUID id, WhimAnchor anchor, ResourceLocation element, int lifetime)
+public record WhimSpawnPacket(ResourceKey<Level> dimension, UUID id, WhimAnchor anchor, ResourceLocation element,
+        WhimData data, int lifetime)
 {
     public static WhimSpawnPacket of(ResourceKey<Level> dimension, Whim whim)
     {
-        return new WhimSpawnPacket(dimension, whim.id(), whim.anchor(), whim.element(), whim.lifetime());
+        return new WhimSpawnPacket(dimension, whim.id(), whim.anchor(), whim.element(), whim.data(), whim.lifetime());
     }
 
     public static void encode(WhimSpawnPacket packet, FriendlyByteBuf buf)
@@ -36,6 +38,7 @@ public record WhimSpawnPacket(ResourceKey<Level> dimension, UUID id, WhimAnchor 
         buf.writeUUID(packet.id);
         WhimAnchors.write(buf, packet.anchor);
         buf.writeResourceLocation(packet.element);
+        packet.data.write(buf);
         buf.writeVarInt(packet.lifetime);
     }
 
@@ -45,9 +48,10 @@ public record WhimSpawnPacket(ResourceKey<Level> dimension, UUID id, WhimAnchor 
         UUID id = buf.readUUID();
         WhimAnchor anchor = WhimAnchors.read(buf);
         ResourceLocation element = buf.readResourceLocation();
+        WhimData data = WhimData.read(buf);
         int lifetime = buf.readVarInt();
 
-        return new WhimSpawnPacket(dimension, id, anchor, element, lifetime);
+        return new WhimSpawnPacket(dimension, id, anchor, element, data, lifetime);
     }
 
     public static void handle(WhimSpawnPacket packet, Supplier<NetworkEvent.Context> context)
