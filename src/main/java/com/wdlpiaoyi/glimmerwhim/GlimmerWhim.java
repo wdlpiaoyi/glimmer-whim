@@ -30,6 +30,9 @@ public final class GlimmerWhim
         MinecraftForge.EVENT_BUS.register(WhimRegistry.class);
         MinecraftForge.EVENT_BUS.register(WhimCommand.class);
 
+        // 通用配置服务端也要读（日志、权限、summon 的默认值），所以放在 dist 判断外面。
+        context.registerConfig(ModConfig.Type.COMMON, WhimConfig.COMMON_SPEC);
+
         if (FMLEnvironment.dist == Dist.CLIENT)
         {
             context.registerConfig(ModConfig.Type.CLIENT, WhimConfig.CLIENT_SPEC);
@@ -38,5 +41,22 @@ public final class GlimmerWhim
         }
 
         LOGGER.info("Glimmer Whim loaded: 魔法流经你。");
+    }
+
+    /**
+     * 调试信息。配置里 {@code [debug] verboseLog} 开着就打 info，关掉以后只进 debug，不刷屏。
+     * <p>
+     * 只读 COMMON 里的键 —— 服务端也在用。
+     */
+    public static void log(String format, Object... args)
+    {
+        if (WhimConfig.verboseLog())
+        {
+            LOGGER.info(format, args);
+        }
+        else
+        {
+            LOGGER.debug(format, args);
+        }
     }
 }

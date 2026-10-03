@@ -132,7 +132,7 @@ public final class FreeLook
             }
 
             state = State.ACTIVE;
-            GlimmerWhim.LOGGER.info("[Whim] freelook on");
+            GlimmerWhim.log("[Whim] freelook on");
             return;
         }
 
@@ -146,7 +146,7 @@ public final class FreeLook
         fadeFromPitch = pitch;
         fadeStart = System.currentTimeMillis();
         state = State.FADING;
-        GlimmerWhim.LOGGER.info("[Whim] freelook off");
+        GlimmerWhim.log("[Whim] freelook off");
     }
 
     /** 每 tick 收个尾：退完了就彻底把镜头交还给人。 */
@@ -162,7 +162,7 @@ public final class FreeLook
      * 鼠标要把人转这么多。收到的就是原版 {@code MouseHandler} 那份（灵敏度、平滑都在里面了）。
      * <p>
      * 原版的下一步是 {@code Entity.turn} 里的 {@code * 0.15F}，那一刀被我们掐了，所以在这儿补上 ——
-     * 不补的话镜头会比原版快上一大截。
+     * 不补的话镜头会比原版快上一大截。补完再乘配置里的 {@code freelook.sensitivity}（默认 1.0，就是原版那份）。
      * <p>
      * 返回 true 表示这一刀别落到人身上，转镜头就行了。
      */
@@ -173,8 +173,11 @@ public final class FreeLook
             return false;
         }
 
-        yaw += (float) yRot * 0.15F;
-        pitch = Mth.clamp(pitch + (float) xRot * 0.15F, -90.0F, 90.0F);
+        float step = (float) (0.15D * WhimConfig.freeLookSensitivity());
+        float limit = (float) WhimConfig.freeLookPitchLimitDegrees();
+
+        yaw += (float) yRot * step;
+        pitch = Mth.clamp(pitch + (float) xRot * step, -limit, limit);
 
         return true;
     }

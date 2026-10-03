@@ -17,8 +17,8 @@ import org.lwjgl.glfw.GLFW;
  * 键位在 {@code 选项 → 控制 → 微光奇想} 的"自由视角"里，默认左 Alt；按法在
  * {@code config/glimmerwhim-client.toml} 的 {@code [freelook] mode} 里（HOLD / TOGGLE）。
  * <p>
- * 这里只管"看"：按住以后鼠标转的是镜头，人的朝向冻在原地 —— 准星判定、挖掘、放置、攻击、
- * 拉弓、还有我们自己的瞄准，全都是照人的朝向算的，一点没动；松手镜头淡回人的朝向。
+ * 这里只管"看"：按住以后鼠标转的是镜头，人的朝向冻在原地 —— 挖掘、放置、攻击、拉弓这些动手的事
+ * 照旧全按人的朝向算，一点没动；只有"瞄"（高亮）跟着镜头走，因为准星在屏幕正中间；松手镜头淡回人的朝向。
  */
 public final class FreeLookHandler
 {

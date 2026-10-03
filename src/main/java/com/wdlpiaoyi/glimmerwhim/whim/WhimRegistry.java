@@ -74,7 +74,7 @@ public final class WhimRegistry
     {
         this.tracked.put(whim.id(), new Tracked(whim, visibility));
 
-        GlimmerWhim.LOGGER.info("[Whim] summon id={} dim={} anchor={} element={} lifetime={} visibility={}",
+        GlimmerWhim.log("[Whim] summon id={} dim={} anchor={} element={} lifetime={} visibility={}",
                 whim.id(), this.level.dimension().location(), whim.anchor().type(), whim.element(), whim.lifetime(),
                 visibility == WhimVisibility.ALL ? "all" : "filtered");
 
@@ -97,7 +97,7 @@ public final class WhimRegistry
             return;
         }
 
-        GlimmerWhim.LOGGER.info("[Whim] remove id={} dim={} reason={}", id, this.level.dimension().location(), reason);
+        GlimmerWhim.log("[Whim] remove id={} dim={} reason={}", id, this.level.dimension().location(), reason);
 
         // 谁还瞄着它，就把 AIMED 里的旧值清掉 —— 不然补全会给一个已经没了的 uuid。
         AIMED.values().removeIf(id::equals);
@@ -257,7 +257,7 @@ public final class WhimRegistry
     {
         if (!this.tracked.isEmpty())
         {
-            GlimmerWhim.LOGGER.info("[Whim] unload dim={} dropped={}", this.level.dimension().location(),
+            GlimmerWhim.log("[Whim] unload dim={} dropped={}", this.level.dimension().location(),
                     this.tracked.size());
         }
 

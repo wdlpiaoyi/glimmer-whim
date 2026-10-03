@@ -12,6 +12,9 @@ import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchors;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /** 瞄准：锥里碰到的、离准星最近的那条。纯客户端算，算完了告诉服务端一声。 */
@@ -28,6 +31,7 @@ public final class WhimAim
     {
         ClientWhimCache.WhimView best = null;
         double bestDot = -1.0D;
+        double maxDistance = WhimConfig.aimMaxDistance();
 
         for (ClientWhimCache.WhimView whim : ClientWhimCache.all())
         {
@@ -40,8 +44,21 @@ public final class WhimAim
             }
 
             Vec3 toIt = at.subtract(eye);
+            double distanceSqr = toIt.lengthSqr();
 
-            if (toIt.lengthSqr() < 1.0E-12D)
+            if (distanceSqr < 1.0E-12D)
+            {
+                continue;
+            }
+
+            // 超过 [aim] maxDistance 就压根不算瞄上；-1（或小于等于 0）表示不限。
+            if (maxDistance > 0.0D && distanceSqr > maxDistance * maxDistance)
+            {
+                continue;
+            }
+
+            // 配置里关掉"隔墙也算"的时候，中间挡着方块的就不算瞄上。
+            if (!WhimConfig.aimThroughWalls() && occluded(level, eye, at))
             {
                 continue;
             }
@@ -68,12 +85,12 @@ public final class WhimAim
 
             if (best == null)
             {
-                GlimmerWhim.LOGGER.info("[Whim] aim id=-");
+                GlimmerWhim.log("[Whim] aim id=-");
             }
             else
             {
                 double angle = Math.toDegrees(Math.acos(Math.min(1.0D, bestDot)));
-                GlimmerWhim.LOGGER.info("[Whim] aim id={} element={} angle={}",
+                GlimmerWhim.log("[Whim] aim id={} element={} angle={}",
                         best.id(), best.element(), String.format(Locale.ROOT, "%.1f", angle));
             }
 
@@ -85,5 +102,14 @@ public final class WhimAim
         }
 
         return aimed;
+    }
+
+    /** 眼睛到它中间有没有方块挡着。只有配置里把"隔墙也算"关掉的时候才会问一次。 */
+    private static boolean occluded(ClientLevel level, Vec3 eye, Vec3 at)
+    {
+        BlockHitResult hit = level.clip(new ClipContext(eye, at, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
+                Minecraft.getInstance().player));
+
+        return hit.getType() != HitResult.Type.MISS;
     }
 }

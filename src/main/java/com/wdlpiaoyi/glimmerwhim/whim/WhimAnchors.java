@@ -55,7 +55,8 @@ public final class WhimAnchors
         register(DevRemoveOnHighlightAnchor.TYPE, DevRemoveOnHighlightAnchor::read, DevRemoveOnHighlightAnchor::parse,
                 DevRemoveOnHighlightAnchor::suggestData, "不收锚数据，就在 0 0 0");
 
-        // 同上，但条件是"瞄上、松开、再瞄上并盯住 40 tick"，到了发一条 test 再给 10 点虚空伤害。
+        // 同上，但条件是"瞄上、松开、再瞄上并盯住若干 tick"（config 的 [anchor.dev_voidtest] holdTicks，默认 40），
+        // 到了往聊天栏发一条 test，再给几点虚空伤害（同节的 damage，默认 10 点）。
         register(DevVoidTestAnchor.TYPE, DevVoidTestAnchor::read, DevVoidTestAnchor::parse,
                 DevVoidTestAnchor::suggestData, "不收锚数据，就在 0 0 0");
     }

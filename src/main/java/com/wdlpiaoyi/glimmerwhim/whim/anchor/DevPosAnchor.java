@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchor;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimData;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimParams;
@@ -73,7 +74,7 @@ public final class DevPosAnchor implements WhimAnchor
             return List.of("~ ~ ~");
         }
 
-        Vec3 hit = player.pick(32.0D, 0.0F, false).getLocation();
+        Vec3 hit = player.pick(WhimConfig.commandSuggestReach(), 0.0F, false).getLocation();
 
         return List.of("~ ~ ~",
                 String.format(Locale.ROOT, "%.3f %.3f %.3f", hit.x, hit.y, hit.z),

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchor;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimData;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimEvent;
@@ -21,8 +22,9 @@ import net.minecraft.world.phys.Vec3;
 /**
  * 就在 0 0 0 待着，谁挨够一串高亮才还手 —— 试"多步条件 + 反应不止是移除"用的。
  * <p>
- * 条件（一串都得同一个人做）：高亮 → 取消高亮 → 再高亮 → 连着保持 {@value #HOLD_TICKS} tick。
- * 够了就往聊天栏发一条 test，顺手给他 {@value #DAMAGE} 点虚空伤害（= 5 颗心），
+ * 条件（一串都得同一个人做）：高亮 → 取消高亮 → 再高亮 → 连着保持
+ * {@code [anchor.dev_voidtest] holdTicks} 那么多 tick（默认 40，20 tick = 1 秒）。
+ * 够了就往聊天栏发一条 test，顺手给他 {@code [anchor.dev_voidtest] damage} 点虚空伤害（默认 10 点 = 5 颗心），
  * 然后把进度清回原样，可以接着再试。
  * <p>
  * 状态全在这一条锚自己身上（一条灵感一个锚实例），引擎只负责在高亮、取消高亮、过 tick 的时候叫它一声。
@@ -32,12 +34,6 @@ public final class DevVoidTestAnchor implements WhimAnchor
     public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev_voidtest");
 
     private static final String WRONG = "这种锚不收锚数据，它就在 0 0 0";
-
-    /** 第二次高亮之后要盯满多少 tick（20 tick = 1 秒）。 */
-    private static final int HOLD_TICKS = 40;
-
-    /** 虚空伤害给多少点，2 点 = 1 颗心。 */
-    private static final float DAMAGE = 10.0F;
 
     /** 这串条件的进度。 */
     private enum Step
@@ -143,10 +139,10 @@ public final class DevVoidTestAnchor implements WhimAnchor
         this.held = 0;
     }
 
-    /** 一秒 20 下 TICK，数够 {@value #HOLD_TICKS} 下就还手。 */
+    /** 一秒 20 下 TICK，数够配置里 {@code [anchor.dev_voidtest] holdTicks} 下就还手。 */
     private void hold(WhimEvent event)
     {
-        if (this.step != Step.HOLDING || ++this.held < HOLD_TICKS)
+        if (this.step != Step.HOLDING || ++this.held < WhimConfig.voidTestHoldTicks())
         {
             return;
         }
@@ -160,7 +156,7 @@ public final class DevVoidTestAnchor implements WhimAnchor
         if (target != null)
         {
             target.sendSystemMessage(Component.literal("test"));
-            target.hurt(target.damageSources().fellOutOfWorld(), DAMAGE);
+            target.hurt(target.damageSources().fellOutOfWorld(), (float) WhimConfig.voidTestDamage());
         }
     }
 }

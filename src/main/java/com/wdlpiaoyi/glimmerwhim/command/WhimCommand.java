@@ -18,6 +18,7 @@ import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 import com.wdlpiaoyi.glimmerwhim.whim.Whim;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchor;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchors;
@@ -49,14 +50,8 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 /** 调试入口。这版没有自动刷新。 */
 public final class WhimCommand
 {
-    private static final String DEFAULT_ANCHOR = DevRayAnchor.TYPE.getPath();
-
-    private static final int DEFAULT_TICKS = 1200;
-
     /** 那两个动作。写成 argument 而不是 literal —— literal 补完就没了，TAB 翻不到下一个。 */
     private static final List<String> ACTIONS = List.of("get", "kill");
-
-    private static final List<String> HELP = helpLines();
 
     private static final SimpleCommandExceptionType ERROR_PLAYER =
             new SimpleCommandExceptionType(Component.literal("只能由玩家执行"));
@@ -91,7 +86,7 @@ public final class WhimCommand
     public static void onRegisterCommands(RegisterCommandsEvent event)
     {
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("glimmerwhim")
-                .requires(source -> source.hasPermission(2));
+                .requires(source -> source.hasPermission(WhimConfig.commandPermissionLevel()));
 
         root.then(Commands.literal("help")
                 .executes(context -> help(context.getSource())));
@@ -110,10 +105,11 @@ public final class WhimCommand
                                 ResourceLocationArgument.getId(context, "dimension"))))));
 
         root.then(Commands.literal("summon")
-                .executes(context -> summon(context.getSource(), DEFAULT_TICKS, DEFAULT_ANCHOR, null))
+                .executes(context -> summon(context.getSource(), WhimConfig.defaultLifetimeTicks(),
+                        defaultAnchor().toString(), null))
                 .then(Commands.argument("ticks", IntegerArgumentType.integer(-1))
                         .executes(context -> summon(context.getSource(), IntegerArgumentType.getInteger(context, "ticks"),
-                                DEFAULT_ANCHOR, null))
+                                defaultAnchor().toString(), null))
                         .then(Commands.argument("anchortype", StringArgumentType.word())
                                 .suggests((context, builder) -> suggestAnchors(builder))
                                 .executes(context -> summon(context.getSource(),
@@ -174,6 +170,19 @@ public final class WhimCommand
         }
     }
 
+    /**
+     * summon 不写锚类型时用哪个：拿配置里 {@code [whim] defaultAnchor} 那个名字去找锚类型，
+     * 找不到（写错了、或者那种锚没登记）就退回 {@code dev_ray}。
+     * <p>
+     * 配置得在用的时候读，别在类加载的时候读 —— 那会儿配置还没加载。
+     */
+    private static ResourceLocation defaultAnchor()
+    {
+        return WhimAnchors.resolve(WhimConfig.defaultAnchor())
+                .filter(WhimAnchors.types()::contains)
+                .orElse(DevRayAnchor.TYPE);
+    }
+
     private static String anchorNames()
     {
         return WhimAnchors.types().stream().map(ResourceLocation::getPath).collect(Collectors.joining(", "));
@@ -184,8 +193,8 @@ public final class WhimCommand
     {
         return List.of(
                 "  /glimmerwhim list [维度|all]",
-                "  /glimmerwhim summon [tick=" + DEFAULT_TICKS + "｜-1=永久] [锚类型=" + DEFAULT_ANCHOR
-                        + "] [锚数据] {参数}",
+                "  /glimmerwhim summon [tick=" + WhimConfig.defaultLifetimeTicks() + "｜-1=永久] [锚类型="
+                        + defaultAnchor().getPath() + "] [锚数据] {参数}",
                 "  /glimmerwhim whim " + String.join("｜", ACTIONS) + " [uuid]（不给 uuid 就对正瞄着的那条）",
                 "  锚数据格式、{参数} 按 TAB 看");
     }
@@ -340,7 +349,7 @@ public final class WhimCommand
 
     private static int help(CommandSourceStack source)
     {
-        for (String line : HELP)
+        for (String line : helpLines())
         {
             source.sendSuccess(() -> Component.literal(line), false);
         }

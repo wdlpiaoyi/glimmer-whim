@@ -16,6 +16,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 import com.wdlpiaoyi.glimmerwhim.whim.Whim;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchor;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchors;
@@ -45,13 +46,6 @@ public final class WhimRenderer
     private record Drawable(ClientWhimCache.WhimView whim, WhimParams params, Vec3 at)
     {
     }
-
-    /** 高亮比本体宽出去多少。 */
-    private static final double OUTLINE = 0.08D;
-
-    private static final float[] PURPLE = { 1.0F, 0.0F, 1.0F, 1.0F };
-    private static final float[] BLACK = { 0.0F, 0.0F, 0.0F, 1.0F };
-    private static final float[] WHITE = { 1.0F, 1.0F, 1.0F, 1.0F };
 
     private static final Map<ResourceLocation, Drawer> DRAWERS = new LinkedHashMap<>();
 
@@ -109,6 +103,7 @@ public final class WhimRenderer
 
         // 深度测试是关的，前后关系全靠画家算法：远的先画。不排的话后画的远面会盖住近面。
         List<Drawable> drawable = new ArrayList<>();
+        double maxDistance = WhimConfig.renderMaxDistance();
 
         for (ClientWhimCache.WhimView whim : ClientWhimCache.all())
         {
@@ -117,6 +112,12 @@ public final class WhimRenderer
             Vec3 at = anchor.position(level, eye, partialTick, whim.data(), params).orElse(null);
 
             if (at == null || at.subtract(eye).lengthSqr() < 1.0E-8D)
+            {
+                continue;
+            }
+
+            // 比 [render] maxDistance 更远的灵感就不画了。
+            if (at.distanceToSqr(eye) > maxDistance * maxDistance)
             {
                 continue;
             }
@@ -153,26 +154,31 @@ public final class WhimRenderer
         boolean cube = "cube".equals(params.text(data, "shape", "cube"));
         // 画的时候要的是半边长。
         double half = params.number(data, "size", 1.0D) / 2.0D;
+        // 长什么样、宽多少、什么颜色，全在 config 的 [render] 里，改完当场生效。
+        double outline = WhimConfig.renderOutlineWidth();
+        float[] first = WhimConfig.renderColorElement();
+        float[] second = WhimConfig.renderColorElementAlt();
+        float[] aimedColor = WhimConfig.renderColorAimed();
 
-        if (aimed)
+        if (aimed && outline > 0.0D)
         {
             if (cube)
             {
-                cube(pose, half + OUTLINE, WHITE, WHITE);
+                cube(pose, half + outline, aimedColor, aimedColor);
             }
             else
             {
-                quad(pose, dir, half + OUTLINE, WHITE, WHITE);
+                quad(pose, dir, half + outline, aimedColor, aimedColor);
             }
         }
 
         if (cube)
         {
-            cube(pose, half, PURPLE, BLACK);
+            cube(pose, half, first, second);
         }
         else
         {
-            quad(pose, dir, half, PURPLE, BLACK);
+            quad(pose, dir, half, first, second);
         }
     }
 
@@ -231,6 +237,12 @@ public final class WhimRenderer
     /** 原版方块六面的明暗：上 1.0、南北 0.8、东西 0.6、下 0.5。少了这个看着就还是一张纸。 */
     private static double shade(Direction facing)
     {
+        if (!WhimConfig.renderFaceShade())
+        {
+            // 配置里关掉了就六面一样亮。
+            return 1.0D;
+        }
+
         return switch (facing)
         {
             case UP -> 1.0D;
@@ -240,18 +252,20 @@ public final class WhimRenderer
         };
     }
 
-    /** 一面切成 2x2 —— 就是原版贴图丢了那副样子。{@code shade} 是这一面该压多暗。 */
+    /** 一面切成几格棋盘（config 的 {@code render.checkerCells}，默认 2x2 —— 就是原版贴图丢了那副样子）。{@code shade} 是这一面该压多暗。 */
     private static void face(BufferBuilder builder, Matrix4f matrix, Vec3 origin, Vec3 u, Vec3 v, float[] first,
             float[] second, double shade)
     {
-        for (int i = 0; i < 2; i++)
+        int cells = WhimConfig.renderCheckerCells();
+
+        for (int i = 0; i < cells; i++)
         {
-            for (int j = 0; j < 2; j++)
+            for (int j = 0; j < cells; j++)
             {
-                double i0 = i / 2.0D;
-                double i1 = (i + 1) / 2.0D;
-                double j0 = j / 2.0D;
-                double j1 = (j + 1) / 2.0D;
+                double i0 = i / (double) cells;
+                double i1 = (i + 1) / (double) cells;
+                double j0 = j / (double) cells;
+                double j1 = (j + 1) / (double) cells;
                 float[] color = tint(((i + j) & 1) == 0 ? first : second, shade);
 
                 corner(builder, matrix, origin.add(u.scale(i0)).add(v.scale(j0)), color);
