@@ -27,6 +27,7 @@ import com.wdlpiaoyi.glimmerwhim.engine.WhimParam;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimRegistry;
 import com.wdlpiaoyi.glimmerwhim.anchor.DevRayAnchor;
+import com.wdlpiaoyi.glimmerwhim.whims.DevWhim;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -438,7 +439,7 @@ public final class WhimCommand
         source.sendSuccess(() -> Component.literal(whim.id().toString()), false);
         source.sendSuccess(() -> Component.literal("  维度=" + found.dimension().location()), false);
         source.sendSuccess(() -> Component.literal("  锚=" + whim.anchor().type()), false);
-        source.sendSuccess(() -> Component.literal("  元素=" + whim.element()), false);
+        source.sendSuccess(() -> Component.literal("  元素=" + whim.type().id()), false);
         source.sendSuccess(() -> Component.literal("  剩余=" + remaining(whim)), false);
 
         WhimParams params = WhimAnchors.params(whim.anchor().type());
@@ -513,7 +514,7 @@ public final class WhimCommand
             throw ERROR_DATA.create(e.getMessage());
         }
 
-        Whim whim = new Whim(UUID.randomUUID(), anchor, Whim.DEV_ELEMENT, data, ticks);
+        Whim whim = new Whim(UUID.randomUUID(), anchor, DevWhim.INSTANCE, data, ticks);
         WhimRegistry.of(player.serverLevel()).summon(whim);
 
         source.sendSuccess(() -> Component.literal("已生成灵感 " + whim.id() + "，"

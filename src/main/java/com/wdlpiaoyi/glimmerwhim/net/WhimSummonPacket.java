@@ -23,7 +23,7 @@ public record WhimSummonPacket(ResourceKey<Level> dimension, UUID id, WhimAnchor
 {
     public static WhimSummonPacket of(ResourceKey<Level> dimension, Whim whim)
     {
-        return new WhimSummonPacket(dimension, whim.id(), whim.anchor(), whim.element(), whim.data(), whim.lifetime());
+        return new WhimSummonPacket(dimension, whim.id(), whim.anchor(), whim.type().id(), whim.data(), whim.lifetime());
     }
 
     public static void encode(WhimSummonPacket packet, FriendlyByteBuf buf)

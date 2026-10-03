@@ -76,7 +76,7 @@ public final class WhimRegistry
         this.tracked.put(whim.id(), new Tracked(whim, visibility));
 
         GlimmerWhim.log("[Whim] summon id={} dim={} anchor={} element={} lifetime={} visibility={}",
-                whim.id(), this.level.dimension().location(), whim.anchor().type(), whim.element(), whim.lifetime(),
+                whim.id(), this.level.dimension().location(), whim.anchor().type(), whim.type().id(), whim.lifetime(),
                 visibility == WhimVisibility.ALL ? "all" : "filtered");
 
         for (ServerPlayer player : this.level.players())

@@ -1,29 +1,23 @@
 package com.wdlpiaoyi.glimmerwhim.engine;
 
 import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
+import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 
-import java.util.List;
 import java.util.UUID;
-
-import net.minecraft.resources.ResourceLocation;
 
 public final class Whim
 {
-    public static final ResourceLocation DEV_ELEMENT = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev");
-
-    public static final List<ResourceLocation> ELEMENTS = List.of(DEV_ELEMENT);
-
     private final UUID id;
     private final WhimAnchor anchor;
-    private final ResourceLocation element;
+    private final WhimType type;
     private final WhimData data;
     private int lifetime;
 
-    public Whim(UUID id, WhimAnchor anchor, ResourceLocation element, WhimData data, int lifetime)
+    public Whim(UUID id, WhimAnchor anchor, WhimType type, WhimData data, int lifetime)
     {
         this.id = id;
         this.anchor = anchor;
-        this.element = element;
+        this.type = type;
         this.data = data;
         this.lifetime = lifetime;
     }
@@ -38,9 +32,9 @@ public final class Whim
         return this.anchor;
     }
 
-    public ResourceLocation element()
+    public WhimType type()
     {
-        return this.element;
+        return this.type;
     }
 
     public WhimData data()

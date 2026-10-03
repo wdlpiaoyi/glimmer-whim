@@ -67,7 +67,7 @@ public final class WhimAim
                 continue;
             }
 
-            double hit = WhimRenderer.hit(whim.element()).test(eye, direction, at, whim.data(), params);
+            double hit = WhimRenderer.hit(whim.type().id()).test(eye, direction, at, whim.data(), params);
 
             if (hit < 0.0D || hit >= bestHit)
             {
@@ -93,7 +93,7 @@ public final class WhimAim
             {
                 double angle = Math.toDegrees(Math.acos(Math.min(1.0D, bestDot)));
                 GlimmerWhim.log("[Whim] aim id={} element={} angle={}",
-                        best.id(), best.element(), String.format(Locale.ROOT, "%.1f", angle));
+                        best.id(), best.type().id(), String.format(Locale.ROOT, "%.1f", angle));
             }
 
             if (Minecraft.getInstance().getConnection() != null)

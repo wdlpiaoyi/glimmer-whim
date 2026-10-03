@@ -9,11 +9,12 @@ import com.wdlpiaoyi.glimmerwhim.net.WhimRemovePacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimSummonPacket;
 import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
+import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
+import com.wdlpiaoyi.glimmerwhim.whims.Whims;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.event.TickEvent;
@@ -21,7 +22,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 public final class ClientWhimCache
 {
-    public record WhimView(UUID id, WhimAnchor anchor, ResourceLocation element, WhimData data, int lifetime)
+    public record WhimView(UUID id, WhimAnchor anchor, WhimType type, WhimData data, int lifetime)
     {
     }
 
@@ -39,7 +40,14 @@ public final class ClientWhimCache
             return;
         }
 
-        WHIMES.put(packet.id(), new WhimView(packet.id(), packet.anchor(), packet.element(), packet.data(), packet.lifetime()));
+        WhimType type = Whims.get(packet.element());
+
+        if (type == null)
+        {
+            return;
+        }
+
+        WHIMES.put(packet.id(), new WhimView(packet.id(), packet.anchor(), type, packet.data(), packet.lifetime()));
     }
 
     public static void remove(WhimRemovePacket packet)
