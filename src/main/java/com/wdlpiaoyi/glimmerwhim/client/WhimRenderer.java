@@ -18,7 +18,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
-/** 开发者占位。紫黑方块，能看见就算完。 */
+/** 开发者占位。紫黑面片，能看见就算完。 */
 public final class WhimRenderer
 {
     /** 摆多远。dev 用。 */
@@ -72,11 +72,12 @@ public final class WhimRenderer
                 continue;
             }
 
-            Vec3 position = eye.add(direction.normalize().scale(DEV_DISTANCE)).subtract(camera);
+            Vec3 dir = direction.normalize();
+            Vec3 position = eye.add(dir.scale(DEV_DISTANCE)).subtract(camera);
 
             pose.pushPose();
             pose.translate(position.x, position.y, position.z);
-            drawCube(pose);
+            drawQuad(pose, dir);
             pose.popPose();
         }
 
@@ -86,22 +87,27 @@ public final class WhimRenderer
         RenderSystem.disableBlend();
     }
 
-    private static void drawCube(PoseStack pose)
+    private static void drawQuad(PoseStack pose, Vec3 dir)
     {
         Matrix4f matrix = pose.last().pose();
         BufferBuilder builder = Tesselator.getInstance().getBuilder();
 
+        Vec3 right = dir.cross(new Vec3(0.0D, 1.0D, 0.0D));
+
+        if (right.lengthSqr() < 1.0E-6D)
+        {
+            right = new Vec3(1.0D, 0.0D, 0.0D);
+        }
+
+        right = right.normalize();
+
+        Vec3 up = right.cross(dir).normalize();
+        Vec3 origin = right.scale(-SIZE).add(up.scale(-SIZE));
+
         builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
 
-        double s = SIZE;
-
-        // 六个面，每个面切成 2x2 的紫黑棋盘 —— 就是原版贴图丢了那副样子。
-        face(builder, matrix, new Vec3(-s, -s, -s), new Vec3(0.0D, 0.0D, 2.0D * s), new Vec3(0.0D, 2.0D * s, 0.0D));
-        face(builder, matrix, new Vec3(s, -s, s), new Vec3(0.0D, 0.0D, -2.0D * s), new Vec3(0.0D, 2.0D * s, 0.0D));
-        face(builder, matrix, new Vec3(-s, -s, s), new Vec3(2.0D * s, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, -2.0D * s));
-        face(builder, matrix, new Vec3(-s, s, -s), new Vec3(2.0D * s, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, 2.0D * s));
-        face(builder, matrix, new Vec3(s, -s, -s), new Vec3(-2.0D * s, 0.0D, 0.0D), new Vec3(0.0D, 2.0D * s, 0.0D));
-        face(builder, matrix, new Vec3(-s, -s, s), new Vec3(2.0D * s, 0.0D, 0.0D), new Vec3(0.0D, 2.0D * s, 0.0D));
+        // 切成 2x2 的紫黑棋盘 —— 就是原版贴图丢了那副样子。
+        face(builder, matrix, origin, right.scale(2.0D * SIZE), up.scale(2.0D * SIZE));
 
         BufferUploader.drawWithShader(builder.end());
     }
