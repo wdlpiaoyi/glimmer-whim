@@ -4,10 +4,10 @@ import java.util.UUID;
 import java.util.function.Supplier;
 
 import com.wdlpiaoyi.glimmerwhim.client.ClientWhimCache;
-import com.wdlpiaoyi.glimmerwhim.whim.Whim;
-import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchor;
-import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchors;
-import com.wdlpiaoyi.glimmerwhim.whim.WhimData;
+import com.wdlpiaoyi.glimmerwhim.engine.Whim;
+import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
+import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchors;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;

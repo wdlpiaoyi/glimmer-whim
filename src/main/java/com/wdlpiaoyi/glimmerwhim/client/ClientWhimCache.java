@@ -7,8 +7,8 @@ import java.util.UUID;
 
 import com.wdlpiaoyi.glimmerwhim.net.WhimRemovePacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimSummonPacket;
-import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchor;
-import com.wdlpiaoyi.glimmerwhim.whim.WhimData;
+import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;

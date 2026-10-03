@@ -1,4 +1,6 @@
-package com.wdlpiaoyi.glimmerwhim.whim;
+package com.wdlpiaoyi.glimmerwhim.engine;
+
+import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
 
 import java.util.List;
 import java.util.UUID;

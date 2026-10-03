@@ -8,8 +8,8 @@ import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 import com.wdlpiaoyi.glimmerwhim.net.WhimAimPacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimNetwork;
-import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchors;
-import com.wdlpiaoyi.glimmerwhim.whim.WhimParams;
+import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchors;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;

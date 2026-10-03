@@ -6,7 +6,7 @@ import com.wdlpiaoyi.glimmerwhim.client.WhimInteractHandler;
 import com.wdlpiaoyi.glimmerwhim.command.WhimCommand;
 import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 import com.wdlpiaoyi.glimmerwhim.net.WhimNetwork;
-import com.wdlpiaoyi.glimmerwhim.whim.WhimRegistry;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimRegistry;
 
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;

@@ -4,7 +4,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 
 import com.wdlpiaoyi.glimmerwhim.client.ClientWhimCache;
-import com.wdlpiaoyi.glimmerwhim.whim.WhimRemoveReason;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimRemoveReason;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;

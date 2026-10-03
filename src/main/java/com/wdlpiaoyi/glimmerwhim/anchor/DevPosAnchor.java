@@ -1,4 +1,7 @@
-package com.wdlpiaoyi.glimmerwhim.whim.anchor;
+package com.wdlpiaoyi.glimmerwhim.anchor;
+
+import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 
 import java.util.Collection;
 import java.util.List;
@@ -8,9 +11,9 @@ import java.util.Optional;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
-import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchor;
-import com.wdlpiaoyi.glimmerwhim.whim.WhimData;
-import com.wdlpiaoyi.glimmerwhim.whim.WhimParams;
+import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.coordinates.Coordinates;

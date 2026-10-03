@@ -1,4 +1,8 @@
-package com.wdlpiaoyi.glimmerwhim.whim;
+package com.wdlpiaoyi.glimmerwhim.anchor;
+
+import com.wdlpiaoyi.glimmerwhim.engine.WhimParam;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -8,10 +12,10 @@ import java.util.Optional;
 import java.util.function.Function;
 
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
-import com.wdlpiaoyi.glimmerwhim.whim.anchor.DevPosAnchor;
-import com.wdlpiaoyi.glimmerwhim.whim.anchor.DevRayAnchor;
-import com.wdlpiaoyi.glimmerwhim.whim.anchor.DevRemoveOnUseAnchor;
-import com.wdlpiaoyi.glimmerwhim.whim.anchor.DevVoidTestAnchor;
+import com.wdlpiaoyi.glimmerwhim.anchor.DevPosAnchor;
+import com.wdlpiaoyi.glimmerwhim.anchor.DevRayAnchor;
+import com.wdlpiaoyi.glimmerwhim.anchor.DevRemoveOnUseAnchor;
+import com.wdlpiaoyi.glimmerwhim.anchor.DevVoidTestAnchor;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.FriendlyByteBuf;

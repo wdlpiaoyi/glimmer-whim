@@ -1,4 +1,7 @@
-package com.wdlpiaoyi.glimmerwhim.whim;
+package com.wdlpiaoyi.glimmerwhim.engine;
+
+import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
+import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchors;
 
 import java.util.ArrayList;
 import java.util.Collection;

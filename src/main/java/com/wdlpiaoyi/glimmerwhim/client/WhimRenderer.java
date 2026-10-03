@@ -17,11 +17,11 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
-import com.wdlpiaoyi.glimmerwhim.whim.Whim;
-import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchor;
-import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchors;
-import com.wdlpiaoyi.glimmerwhim.whim.WhimData;
-import com.wdlpiaoyi.glimmerwhim.whim.WhimParams;
+import com.wdlpiaoyi.glimmerwhim.engine.Whim;
+import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
+import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchors;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;

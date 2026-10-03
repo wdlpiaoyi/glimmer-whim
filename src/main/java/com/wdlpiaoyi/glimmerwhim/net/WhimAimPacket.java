@@ -3,7 +3,7 @@ package com.wdlpiaoyi.glimmerwhim.net;
 import java.util.UUID;
 import java.util.function.Supplier;
 
-import com.wdlpiaoyi.glimmerwhim.whim.WhimRegistry;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimRegistry;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
