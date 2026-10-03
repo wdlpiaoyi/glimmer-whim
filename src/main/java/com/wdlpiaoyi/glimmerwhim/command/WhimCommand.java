@@ -457,12 +457,29 @@ public final class WhimCommand
         source.sendSuccess(() -> Component.literal("  元素=" + whim.element()), false);
         source.sendSuccess(() -> Component.literal("  剩余=" + remaining(whim)), false);
 
-        if (!whim.data().isEmpty())
-        {
-            source.sendSuccess(() -> Component.literal("  参数=" + whim.data()), false);
-        }
+        WhimParams params = WhimAnchors.params(whim.anchor().type());
+
+        source.sendSuccess(() -> Component.literal(paramsLine(params, whim.data())), false);
 
         return 1;
+    }
+
+    /**
+     * 这条灵感那种锚认的参数，连现在生效的值一起列出来 —— 光看写没写 {@code {参数}} 看不出默认是多少。
+     * <p>
+     * 没写过的标一个"（默认）"。
+     */
+    private static String paramsLine(WhimParams params, WhimData data)
+    {
+        if (params.all().isEmpty())
+        {
+            return "  参数=（这种锚不收参数）";
+        }
+
+        return "  参数=" + params.all().stream()
+                .map(param -> param.name() + "=" + params.text(data, param.name())
+                        + (data.get(param.name()).isEmpty() ? "（默认）" : ""))
+                .collect(Collectors.joining("，"));
     }
 
     private static int kill(CommandSourceStack source, UUID id) throws CommandSyntaxException
@@ -521,7 +538,7 @@ public final class WhimCommand
 
         // 直接就是 tick 数，-1 是永久。
         Whim whim = new Whim(UUID.randomUUID(), anchor, Whim.DEV_ELEMENT, data, ticks);
-        WhimRegistry.of(player.serverLevel()).spawn(whim);
+        WhimRegistry.of(player.serverLevel()).summon(whim);
 
         source.sendSuccess(() -> Component.literal("已生成灵感 " + whim.id() + "，"
                 + (whim.permanent() ? "永久" : "存活 " + whim.lifetime() + " tick")

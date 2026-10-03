@@ -1,6 +1,9 @@
 package com.wdlpiaoyi.glimmerwhim.client;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -22,6 +25,7 @@ import com.wdlpiaoyi.glimmerwhim.whim.WhimParams;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
@@ -35,6 +39,11 @@ public final class WhimRenderer
     public interface Drawer
     {
         void draw(PoseStack pose, Vec3 dir, WhimData data, WhimParams params, boolean aimed);
+    }
+
+    /** 这一帧要画的一条：位置和参数表都算好了。 */
+    private record Drawable(ClientWhimCache.WhimView whim, WhimParams params, Vec3 at)
+    {
     }
 
     /** 高亮比本体宽出去多少。 */
@@ -96,31 +105,35 @@ public final class WhimRenderer
         RenderSystem.depthMask(false);
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
 
+        // 深度测试是关的，前后关系全靠画家算法：远的先画。不排的话后画的远面会盖住近面。
+        List<Drawable> drawable = new ArrayList<>();
+
         for (ClientWhimCache.WhimView whim : ClientWhimCache.all())
         {
             WhimAnchor anchor = whim.anchor();
             WhimParams params = WhimAnchors.params(anchor.type());
             Vec3 at = anchor.position(level, eye, partialTick, whim.data(), params).orElse(null);
 
-            if (at == null)
+            if (at == null || at.subtract(eye).lengthSqr() < 1.0E-8D)
             {
                 continue;
             }
 
-            Vec3 toIt = at.subtract(eye);
+            drawable.add(new Drawable(whim, params, at));
+        }
 
-            if (toIt.lengthSqr() < 1.0E-8D)
-            {
-                continue;
-            }
+        drawable.sort(Comparator.comparingDouble(entry -> -entry.at().distanceToSqr(eye)));
 
-            Vec3 dir = toIt.normalize();
-            Vec3 position = at.subtract(camera);
+        for (Drawable entry : drawable)
+        {
+            ClientWhimCache.WhimView whim = entry.whim();
+            Vec3 dir = entry.at().subtract(eye).normalize();
+            Vec3 position = entry.at().subtract(camera);
 
             pose.pushPose();
             pose.translate(position.x, position.y, position.z);
 
-            drawer(whim.element()).draw(pose, dir, whim.data(), params, whim.id().equals(aimed));
+            drawer(whim.element()).draw(pose, dir, whim.data(), entry.params(), whim.id().equals(aimed));
 
             pose.popPose();
         }
@@ -169,7 +182,8 @@ public final class WhimRenderer
         Vec3 up = right.cross(dir).normalize();
 
         builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        face(builder, matrix, right.scale(-half).add(up.scale(-half)), right.scale(2.0D * half), up.scale(2.0D * half), first, second);
+        face(builder, matrix, right.scale(-half).add(up.scale(-half)), right.scale(2.0D * half), up.scale(2.0D * half),
+                first, second, 1.0D);
         BufferUploader.drawWithShader(builder.end());
     }
 
@@ -178,21 +192,54 @@ public final class WhimRenderer
     {
         Matrix4f matrix = pose.last().pose();
         BufferBuilder builder = Tesselator.getInstance().getBuilder();
+        // 相机就在 pose 的原点上（位置已经减过相机了），所以按面心离原点多远排：远的先画。
+        List<Side> sides = new ArrayList<>(SIDES);
+        sides.sort(Comparator.comparingDouble(side -> -side.centre().lengthSqr()));
 
         builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
 
-        face(builder, matrix, new Vec3(-half, -half, -half), new Vec3(0.0D, 0.0D, 2.0D * half), new Vec3(0.0D, 2.0D * half, 0.0D), first, second);
-        face(builder, matrix, new Vec3(half, -half, half), new Vec3(0.0D, 0.0D, -2.0D * half), new Vec3(0.0D, 2.0D * half, 0.0D), first, second);
-        face(builder, matrix, new Vec3(-half, -half, half), new Vec3(2.0D * half, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, -2.0D * half), first, second);
-        face(builder, matrix, new Vec3(-half, half, -half), new Vec3(2.0D * half, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, 2.0D * half), first, second);
-        face(builder, matrix, new Vec3(half, -half, -half), new Vec3(-2.0D * half, 0.0D, 0.0D), new Vec3(0.0D, 2.0D * half, 0.0D), first, second);
-        face(builder, matrix, new Vec3(-half, -half, half), new Vec3(2.0D * half, 0.0D, 0.0D), new Vec3(0.0D, 2.0D * half, 0.0D), first, second);
+        for (Side side : sides)
+        {
+            face(builder, matrix, side.origin().scale(half), side.u().scale(half), side.v().scale(half),
+                    first, second, shade(side.facing()));
+        }
 
         BufferUploader.drawWithShader(builder.end());
     }
 
-    /** 一面切成 2x2 —— 就是原版贴图丢了那副样子。 */
-    private static void face(BufferBuilder builder, Matrix4f matrix, Vec3 origin, Vec3 u, Vec3 v, float[] first, float[] second)
+    /** 单位立方体的一个面，画的时候乘 half。{@code facing} 只用来取明暗。 */
+    private record Side(Vec3 origin, Vec3 u, Vec3 v, Direction facing)
+    {
+        Vec3 centre()
+        {
+            return this.origin.add(this.u.scale(0.5D)).add(this.v.scale(0.5D));
+        }
+    }
+
+    /** 单位立方体的六个面。 */
+    private static final List<Side> SIDES = List.of(
+            new Side(new Vec3(-1.0D, -1.0D, -1.0D), new Vec3(0.0D, 0.0D, 2.0D), new Vec3(0.0D, 2.0D, 0.0D), Direction.WEST),
+            new Side(new Vec3(1.0D, -1.0D, 1.0D), new Vec3(0.0D, 0.0D, -2.0D), new Vec3(0.0D, 2.0D, 0.0D), Direction.EAST),
+            new Side(new Vec3(-1.0D, -1.0D, 1.0D), new Vec3(2.0D, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, -2.0D), Direction.DOWN),
+            new Side(new Vec3(-1.0D, 1.0D, -1.0D), new Vec3(2.0D, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, 2.0D), Direction.UP),
+            new Side(new Vec3(1.0D, -1.0D, -1.0D), new Vec3(-2.0D, 0.0D, 0.0D), new Vec3(0.0D, 2.0D, 0.0D), Direction.NORTH),
+            new Side(new Vec3(-1.0D, -1.0D, 1.0D), new Vec3(2.0D, 0.0D, 0.0D), new Vec3(0.0D, 2.0D, 0.0D), Direction.SOUTH));
+
+    /** 原版方块六面的明暗：上 1.0、南北 0.8、东西 0.6、下 0.5。少了这个看着就还是一张纸。 */
+    private static double shade(Direction facing)
+    {
+        return switch (facing)
+        {
+            case UP -> 1.0D;
+            case DOWN -> 0.5D;
+            case NORTH, SOUTH -> 0.8D;
+            case WEST, EAST -> 0.6D;
+        };
+    }
+
+    /** 一面切成 2x2 —— 就是原版贴图丢了那副样子。{@code shade} 是这一面该压多暗。 */
+    private static void face(BufferBuilder builder, Matrix4f matrix, Vec3 origin, Vec3 u, Vec3 v, float[] first,
+            float[] second, double shade)
     {
         for (int i = 0; i < 2; i++)
         {
@@ -202,7 +249,7 @@ public final class WhimRenderer
                 double i1 = (i + 1) / 2.0D;
                 double j0 = j / 2.0D;
                 double j1 = (j + 1) / 2.0D;
-                float[] color = ((i + j) & 1) == 0 ? first : second;
+                float[] color = tint(((i + j) & 1) == 0 ? first : second, shade);
 
                 corner(builder, matrix, origin.add(u.scale(i0)).add(v.scale(j0)), color);
                 corner(builder, matrix, origin.add(u.scale(i1)).add(v.scale(j0)), color);
@@ -210,6 +257,13 @@ public final class WhimRenderer
                 corner(builder, matrix, origin.add(u.scale(i0)).add(v.scale(j1)), color);
             }
         }
+    }
+
+    /** 按明暗把颜色压一下；黑的地方压完还是黑的。 */
+    private static float[] tint(float[] color, double shade)
+    {
+        return new float[] { (float) (color[0] * shade), (float) (color[1] * shade), (float) (color[2] * shade),
+                color[3] };
     }
 
     private static Vec3 right(Vec3 dir)

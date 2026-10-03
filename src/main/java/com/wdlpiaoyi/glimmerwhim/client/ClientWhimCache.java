@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.wdlpiaoyi.glimmerwhim.net.WhimRemovePacket;
-import com.wdlpiaoyi.glimmerwhim.net.WhimSpawnPacket;
+import com.wdlpiaoyi.glimmerwhim.net.WhimSummonPacket;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchor;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimData;
 
@@ -35,7 +35,7 @@ public final class ClientWhimCache
     {
     }
 
-    public static void accept(WhimSpawnPacket packet)
+    public static void accept(WhimSummonPacket packet)
     {
         if (!sameWorld(packet.dimension()))
         {

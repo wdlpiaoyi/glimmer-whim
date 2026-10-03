@@ -19,20 +19,20 @@ import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
 /**
- * 一条灵感出生。
+ * 一条灵感出现。
  * <p>
  * 带上维度是为了让客户端知道"这还是不是同一个世界" —— 收到别的维度的包就先把缓存清了。
  * 不带 visibility：能不能用是发包那一刻的事，用不了的人根本收不到。
  */
-public record WhimSpawnPacket(ResourceKey<Level> dimension, UUID id, WhimAnchor anchor, ResourceLocation element,
+public record WhimSummonPacket(ResourceKey<Level> dimension, UUID id, WhimAnchor anchor, ResourceLocation element,
         WhimData data, int lifetime)
 {
-    public static WhimSpawnPacket of(ResourceKey<Level> dimension, Whim whim)
+    public static WhimSummonPacket of(ResourceKey<Level> dimension, Whim whim)
     {
-        return new WhimSpawnPacket(dimension, whim.id(), whim.anchor(), whim.element(), whim.data(), whim.lifetime());
+        return new WhimSummonPacket(dimension, whim.id(), whim.anchor(), whim.element(), whim.data(), whim.lifetime());
     }
 
-    public static void encode(WhimSpawnPacket packet, FriendlyByteBuf buf)
+    public static void encode(WhimSummonPacket packet, FriendlyByteBuf buf)
     {
         buf.writeResourceLocation(packet.dimension.location());
         buf.writeUUID(packet.id);
@@ -42,7 +42,7 @@ public record WhimSpawnPacket(ResourceKey<Level> dimension, UUID id, WhimAnchor 
         buf.writeVarInt(packet.lifetime);
     }
 
-    public static WhimSpawnPacket decode(FriendlyByteBuf buf)
+    public static WhimSummonPacket decode(FriendlyByteBuf buf)
     {
         ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, buf.readResourceLocation());
         UUID id = buf.readUUID();
@@ -51,10 +51,10 @@ public record WhimSpawnPacket(ResourceKey<Level> dimension, UUID id, WhimAnchor 
         WhimData data = WhimData.read(buf);
         int lifetime = buf.readVarInt();
 
-        return new WhimSpawnPacket(dimension, id, anchor, element, data, lifetime);
+        return new WhimSummonPacket(dimension, id, anchor, element, data, lifetime);
     }
 
-    public static void handle(WhimSpawnPacket packet, Supplier<NetworkEvent.Context> context)
+    public static void handle(WhimSummonPacket packet, Supplier<NetworkEvent.Context> context)
     {
         context.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientWhimCache.accept(packet)));
         context.get().setPacketHandled(true);

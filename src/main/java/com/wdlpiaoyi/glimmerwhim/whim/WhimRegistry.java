@@ -13,7 +13,7 @@ import java.util.UUID;
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.net.WhimNetwork;
 import com.wdlpiaoyi.glimmerwhim.net.WhimRemovePacket;
-import com.wdlpiaoyi.glimmerwhim.net.WhimSpawnPacket;
+import com.wdlpiaoyi.glimmerwhim.net.WhimSummonPacket;
 
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -64,21 +64,21 @@ public final class WhimRegistry
     }
 
     /** 出现，所有人可见。 */
-    public void spawn(Whim whim)
+    public void summon(Whim whim)
     {
-        this.spawn(whim, WhimVisibility.ALL);
+        this.summon(whim, WhimVisibility.ALL);
     }
 
     /** 出现，只发给能用它的人。 */
-    public void spawn(Whim whim, WhimVisibility visibility)
+    public void summon(Whim whim, WhimVisibility visibility)
     {
         this.tracked.put(whim.id(), new Tracked(whim, visibility));
 
-        GlimmerWhim.LOGGER.info("[Whim] spawn id={} dim={} anchor={} element={} lifetime={} visibility={}",
+        GlimmerWhim.LOGGER.info("[Whim] summon id={} dim={} anchor={} element={} lifetime={} visibility={}",
                 whim.id(), this.level.dimension().location(), whim.anchor().type(), whim.element(), whim.lifetime(),
                 visibility == WhimVisibility.ALL ? "all" : "filtered");
 
-        WhimSpawnPacket packet = WhimSpawnPacket.of(this.level.dimension(), whim);
+        WhimSummonPacket packet = WhimSummonPacket.of(this.level.dimension(), whim);
 
         for (ServerPlayer player : this.level.players())
         {
@@ -136,7 +136,7 @@ public final class WhimRegistry
         {
             if (entry.visibility().canUse(player, entry.whim()))
             {
-                WhimNetwork.sendTo(player, WhimSpawnPacket.of(this.level.dimension(), entry.whim()));
+                WhimNetwork.sendTo(player, WhimSummonPacket.of(this.level.dimension(), entry.whim()));
             }
         }
     }
