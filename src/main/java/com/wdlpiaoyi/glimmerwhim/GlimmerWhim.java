@@ -11,11 +11,10 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 
 /**
- * Glimmer Whim - 微光奇想.
+ * Glimmer Whim - 微光奇想。
  *
- * <p>Core premise: the player is not the owner of magic, but its channel. Inspiration is
- * supplied by the world, never stored on the player, so there is no mana bar and no cooldown.
- * See 设计纲要.md in the project root before adding any system here.</p>
+ * <p>灵感由世界提供，不存到玩家身上：没有法力条，也没有冷却。
+ * 动手加任何系统之前，先读项目根目录的 设计纲要.md。</p>
  */
 @Mod(GlimmerWhim.MODID)
 public final class GlimmerWhim
