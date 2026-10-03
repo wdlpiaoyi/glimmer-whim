@@ -37,6 +37,11 @@ public final class WhimParam
         return new WhimParam("lifetime", defaultValue, WhimParam::isLifetime, "正整数或 -1（永久）", List.of());
     }
 
+    public static WhimParam player(String name, String defaultValue)
+    {
+        return new WhimParam(name, defaultValue, value -> !value.isBlank(), "all、me 或玩家名", List.of("all", "me"));
+    }
+
     private static boolean isPositive(String value)
     {
         try

@@ -78,7 +78,7 @@ public final class WhimRegistry
 
         GlimmerWhim.log("[Whim] summon id={} dim={} anchor={} element={} lifetime={} visibility={}",
                 whim.id(), this.level.dimension().location(), whim.anchor().type(), whim.type().id(), whim.lifetime(),
-                visibility == WhimVisibility.ALL ? "all" : "filtered");
+                whim.data().get(Whim.VISIBILITY).orElse("all"));
 
         for (ServerPlayer player : this.level.players())
         {
@@ -155,7 +155,7 @@ public final class WhimRegistry
         {
             Whim whim = entry.whim();
 
-            if (!entry.visibility().canUse(player, whim))
+            if (!entry.visibility().canUse(player))
             {
                 continue;
             }
@@ -223,7 +223,7 @@ public final class WhimRegistry
 
         for (ServerPlayer player : this.level.players())
         {
-            if (!entry.visibility().canUse(player, entry.whim()))
+            if (!entry.visibility().canUse(player))
             {
                 continue;
             }
@@ -383,7 +383,7 @@ public final class WhimRegistry
         {
             Tracked tracked = registry.tracked.get(id);
 
-            if (tracked == null || !tracked.visibility().canUse(player, tracked.whim()) || !sent.contains(id))
+            if (tracked == null || !tracked.visibility().canUse(player) || !sent.contains(id))
             {
                 if (resolved.isEmpty())
                 {
@@ -456,7 +456,7 @@ public final class WhimRegistry
         {
             Tracked tracked = registry.tracked.get(id);
 
-            if (tracked == null || !tracked.visibility().canUse(player, tracked.whim()) || !sent.contains(id))
+            if (tracked == null || !tracked.visibility().canUse(player) || !sent.contains(id))
             {
                 continue;
             }
@@ -500,7 +500,7 @@ public final class WhimRegistry
             return false;
         }
 
-        if (!tracked.visibility().canUse(player, tracked.whim())
+        if (!tracked.visibility().canUse(player)
                 || !registry.sent.getOrDefault(player.getUUID(), Set.of()).contains(id))
         {
             GlimmerWhim.log("[Whim] hold rejected player={} id={}", player.getUUID(), id);

@@ -34,6 +34,11 @@ public final class WhimParams
         return new WhimParams(List.of(WhimParam.lifetime(Integer.toString(defaultValue))));
     }
 
+    public static WhimParams visibility()
+    {
+        return new WhimParams(List.of(WhimParam.player(Whim.VISIBILITY, "all")));
+    }
+
     public Collection<WhimParam> all()
     {
         return this.params.values();

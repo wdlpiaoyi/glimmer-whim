@@ -27,6 +27,7 @@ import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParam;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimRegistry;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimVisibility;
 import com.wdlpiaoyi.glimmerwhim.anchor.RayAnchor;
 import com.wdlpiaoyi.glimmerwhim.whims.DevWhim;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
@@ -45,6 +46,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
@@ -196,7 +198,7 @@ public final class WhimCommand
         return List.of(
                 "  /glimmerwhim list [维度|all]",
                 "  /glimmerwhim summon <灵感类型> [锚类型=" + defaultAnchor().getPath()
-                        + "] [锚数据] {参数}（lifetime 默认取灵感类型自身，-1 = 永久）",
+                        + "] [锚数据] {参数}（lifetime 默认取灵感类型自身，-1 = 永久；visibility 默认 all）",
                 "  /glimmerwhim whim " + String.join("｜", ACTIONS) + " [uuid]（省略 uuid 时作用于当前瞄准的灵感）",
                 "  锚数据格式与 {参数} 可通过 TAB 查看");
     }
@@ -248,6 +250,36 @@ public final class WhimCommand
         return WhimAnchors.resolve(token).filter(WhimAnchors.types()::contains).orElse(defaultAnchor());
     }
 
+    private static WhimVisibility resolveVisibility(MinecraftServer server, ServerPlayer player, String raw)
+            throws CommandSyntaxException
+    {
+        if (raw.equals("all"))
+        {
+            return WhimVisibility.ALL;
+        }
+
+        if (raw.equals("me"))
+        {
+            return new WhimVisibility(player.getUUID());
+        }
+
+        ServerPlayer target = server.getPlayerList().getPlayerByName(raw);
+
+        if (target != null)
+        {
+            return new WhimVisibility(target.getUUID());
+        }
+
+        try
+        {
+            return new WhimVisibility(UUID.fromString(raw));
+        }
+        catch (IllegalArgumentException e)
+        {
+            throw ERROR_DATA.create("找不到玩家: " + raw);
+        }
+    }
+
     private static ResourceLocation suggestionAnchor(String first, String second)
     {
         if (second != null && isAnchor(second))
@@ -262,7 +294,7 @@ public final class WhimCommand
     {
         WhimType whim = first != null && isWhim(first) ? resolveWhim(first) : DevWhim.INSTANCE;
 
-        return whim.params().plus(WhimParams.lifetime(whim.defaultLifetime()));
+        return whim.params().plus(WhimParams.lifetime(whim.defaultLifetime())).plus(WhimParams.visibility());
     }
 
     private static CompletableFuture<Suggestions> suggestTypes(SuggestionsBuilder builder)
@@ -518,6 +550,10 @@ public final class WhimCommand
         source.sendSuccess(() -> Component.literal("  元素=" + whim.type().id()), false);
         source.sendSuccess(() -> Component.literal("  剩余=" + remaining(whim)), false);
 
+        String visibility = whim.data().get(Whim.VISIBILITY).orElse("all");
+
+        source.sendSuccess(() -> Component.literal("  可见性=" + visibility), false);
+
         WhimParams params = whim.type().params();
 
         source.sendSuccess(() -> Component.literal(paramsLine(params, whim.data())), false);
@@ -586,7 +622,7 @@ public final class WhimCommand
 
         WhimData.Split split;
         WhimData userData;
-        WhimParams params = whim.params().plus(WhimParams.lifetime(whim.defaultLifetime()));
+        WhimParams params = whim.params().plus(WhimParams.lifetime(whim.defaultLifetime())).plus(WhimParams.visibility());
 
         try
         {
@@ -611,8 +647,10 @@ public final class WhimCommand
 
         int lifetime = Integer.parseInt(userData.get(Whim.LIFETIME).orElse(Integer.toString(whim.defaultLifetime())));
         WhimData data = lifetime < 0 ? userData : userData.with(Whim.LIFETIME, Integer.toString(lifetime));
+        WhimVisibility visibility = resolveVisibility(source.getServer(), player,
+                userData.get(Whim.VISIBILITY).orElse("all"));
         Whim summoned = new Whim(UUID.randomUUID(), anchor, whim, data);
-        WhimRegistry.of(player.serverLevel()).summon(summoned);
+        WhimRegistry.of(player.serverLevel()).summon(summoned, visibility);
 
         source.sendSuccess(() -> Component.literal("已生成灵感 " + summoned.id() + "，"
                 + (summoned.permanent() ? "永久" : "存活 " + summoned.lifetime() + " tick")

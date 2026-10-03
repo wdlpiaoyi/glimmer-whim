@@ -1,11 +1,27 @@
 package com.wdlpiaoyi.glimmerwhim.engine;
 
+import java.util.UUID;
+
 import net.minecraft.server.level.ServerPlayer;
 
-@FunctionalInterface
-public interface WhimVisibility
+public final class WhimVisibility
 {
-    WhimVisibility ALL = (player, whim) -> true;
+    public static final WhimVisibility ALL = new WhimVisibility(null);
 
-    boolean canUse(ServerPlayer player, Whim whim);
+    private final UUID player;
+
+    public WhimVisibility(UUID player)
+    {
+        this.player = player;
+    }
+
+    public boolean canUse(ServerPlayer player)
+    {
+        return this.player == null || this.player.equals(player.getUUID());
+    }
+
+    public String describe()
+    {
+        return this.player == null ? "all" : this.player.toString();
+    }
 }
