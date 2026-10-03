@@ -93,8 +93,9 @@ public final class WhimRenderer
 
         float partialTick = event.getPartialTick();
         Vec3 eye = minecraft.player.getEyePosition(partialTick);
-        // 自由视角开着的时候这一句问出来的已经是镜头的方向（见 mixin 里的 getViewVector）。
-        Vec3 look = minecraft.player.getViewVector(partialTick);
+        // "瞄"问的是镜头看向哪儿：自由视角开着的时候高亮跟着镜头走（准星在屏幕正中间），
+        // 没开的时候和原版的 getViewVector 等价。挖、放、打那些动作不归这里管。
+        Vec3 look = FreeLook.viewVector(minecraft.player, partialTick);
         Vec3 camera = event.getCamera().getPosition();
         PoseStack pose = event.getPoseStack();
         UUID aimed = WhimAim.update(level, eye, look, partialTick);

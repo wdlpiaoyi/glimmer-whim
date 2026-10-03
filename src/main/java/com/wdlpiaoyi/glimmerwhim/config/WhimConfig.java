@@ -36,9 +36,9 @@ public final class WhimConfig
 
         builder.comment("瞄准。");
         builder.push("aim");
-        DEFAULT_CONE = builder.comment("瞄准锥半角（度）。没在 cone 里单独写的元素用这个。")
+        DEFAULT_CONE = builder.comment("瞄准锥半角（度）。没在 cone 里单独写的元素用这个。默认 10。")
                 .defineInRange("defaultConeDegrees", 10.0D, 0.0D, 180.0D);
-        builder.comment("按元素覆盖。");
+        builder.comment("按元素覆盖：元素 id = 瞄准锥半角（度）。默认 10。");
         builder.push("cone");
 
         for (ResourceLocation element : Whim.ELEMENTS)
@@ -50,9 +50,9 @@ public final class WhimConfig
 
         builder.comment("自由视角：镜头和人的朝向分家，人站哪儿镜头就在哪儿。键位在 选项 → 控制 里改。");
         builder.push("freelook");
-        FREE_LOOK_MODE = builder.comment("按住还是切换。HOLD = 按住才看，TOGGLE = 按一下切换。")
+        FREE_LOOK_MODE = builder.comment("按住还是切换。HOLD = 按住才看，TOGGLE = 按一下切换。默认 HOLD。")
                 .defineEnum("mode", FreeLookMode.HOLD);
-        FREE_LOOK_FADE = builder.comment("松手以后镜头退回人的朝向用多久（毫秒）。0 = 立刻弹回去。")
+        FREE_LOOK_FADE = builder.comment("松手以后镜头退回人的朝向用多久（毫秒）。0 = 立刻弹回去。默认 180。")
                 .defineInRange("fadeMillis", 180, 0, 5000);
         builder.pop();
 

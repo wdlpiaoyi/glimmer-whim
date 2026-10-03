@@ -5,12 +5,14 @@ import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * 自由视角：镜头和人的朝向分家。人站哪儿镜头就在哪儿，只有"往哪儿看"归镜头自己管。
  * <p>
- * 只管"看"：镜头随便转，人的朝向冻在原地 —— 准星判定、挖掘、放置、攻击、拉弓，还有我们
- * 自己的瞄准，全都是照人的朝向算的，一点没碰；松手以后镜头淡回人的朝向。
+ * 只管"看"：镜头随便转，人的朝向冻在原地 —— 挖掘、放置、攻击、拉弓这些**动手的事**照旧全按人的
+ * 朝向算，一点没碰；只有"瞄"（高亮）跟着镜头走，因为准星在屏幕正中间，高亮得跟眼睛一致；
+ * 松手以后镜头淡回人的朝向。
  * <p>
  * 这里只管几个数：开着没、镜头朝哪儿、松手以后往人的朝向上退的那一下。
  * 按键和事件在 {@link FreeLookHandler}；把"鼠标转人"那一刀掐掉、改成转镜头的是
@@ -93,6 +95,18 @@ public final class FreeLook
             default:
                 return body;
         }
+    }
+
+    /**
+     * 镜头现在看向哪个方向。
+     * <p>
+     * "瞄"（高亮）问的就是这个方向 —— 准星在屏幕正中间，自由视角开着的时候准星指的是镜头，
+     * 拿人冻在原地的朝向去算，就会出现"我明明看着它，它不亮"。没开的时候这个方向就是人自己
+     * 的视线，跟原版一模一样（原版的 {@code getViewVector} 也是这两个角算出来的）。
+     */
+    public static Vec3 viewVector(Player player, float partialTick)
+    {
+        return Vec3.directionFromRotation(viewPitch(player, partialTick), viewYaw(player, partialTick));
     }
 
     /** 开的时候照着人当下的朝向起手，免得镜头跳一下；关的时候开始往人的朝向上退。 */
