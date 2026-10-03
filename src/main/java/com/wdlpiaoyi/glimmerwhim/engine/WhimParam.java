@@ -32,11 +32,29 @@ public final class WhimParam
         return new WhimParam(name, defaultValue, WhimParam::isPositive, "正数", List.of());
     }
 
+    public static WhimParam lifetime(String defaultValue)
+    {
+        return new WhimParam("lifetime", defaultValue, WhimParam::isLifetime, "正整数或 -1（永久）", List.of());
+    }
+
     private static boolean isPositive(String value)
     {
         try
         {
             return Double.parseDouble(value) > 0.0D;
+        }
+        catch (NumberFormatException e)
+        {
+            return false;
+        }
+    }
+
+    private static boolean isLifetime(String value)
+    {
+        try
+        {
+            long parsed = Long.parseLong(value);
+            return parsed == -1L || parsed > 0L && parsed <= Integer.MAX_VALUE;
         }
         catch (NumberFormatException e)
         {

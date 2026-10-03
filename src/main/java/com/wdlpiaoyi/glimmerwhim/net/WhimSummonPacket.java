@@ -19,11 +19,11 @@ import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
 public record WhimSummonPacket(ResourceKey<Level> dimension, UUID id, WhimAnchor anchor, ResourceLocation element,
-        WhimData data, int lifetime)
+        WhimData data)
 {
     public static WhimSummonPacket of(ResourceKey<Level> dimension, Whim whim)
     {
-        return new WhimSummonPacket(dimension, whim.id(), whim.anchor(), whim.type().id(), whim.data(), whim.lifetime());
+        return new WhimSummonPacket(dimension, whim.id(), whim.anchor(), whim.type().id(), whim.data());
     }
 
     public static void encode(WhimSummonPacket packet, FriendlyByteBuf buf)
@@ -33,7 +33,6 @@ public record WhimSummonPacket(ResourceKey<Level> dimension, UUID id, WhimAnchor
         WhimAnchors.write(buf, packet.anchor);
         buf.writeResourceLocation(packet.element);
         packet.data.write(buf);
-        buf.writeVarInt(packet.lifetime);
     }
 
     public static WhimSummonPacket decode(FriendlyByteBuf buf)
@@ -43,9 +42,8 @@ public record WhimSummonPacket(ResourceKey<Level> dimension, UUID id, WhimAnchor
         WhimAnchor anchor = WhimAnchors.read(buf);
         ResourceLocation element = buf.readResourceLocation();
         WhimData data = WhimData.read(buf);
-        int lifetime = buf.readVarInt();
 
-        return new WhimSummonPacket(dimension, id, anchor, element, data, lifetime);
+        return new WhimSummonPacket(dimension, id, anchor, element, data);
     }
 
     public static void handle(WhimSummonPacket packet, Supplier<NetworkEvent.Context> context)

@@ -34,6 +34,13 @@ public final class WhimData
         return of(Map.of(name, value));
     }
 
+    public WhimData with(String name, String value)
+    {
+        Map<String, String> copy = new LinkedHashMap<>(this.values);
+        copy.put(name, value);
+        return new WhimData(copy);
+    }
+
     public Optional<String> get(String name)
     {
         return Optional.ofNullable(this.values.get(name));

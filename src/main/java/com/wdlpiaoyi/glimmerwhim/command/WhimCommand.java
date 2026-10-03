@@ -11,7 +11,6 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -111,33 +110,26 @@ public final class WhimCommand
                                 ResourceLocationArgument.getId(context, "dimension"))))));
 
         root.then(Commands.literal("summon")
-                .executes(context -> summon(context.getSource(), WhimConfig.defaultLifetimeTicks(), null, null, null))
-                .then(Commands.argument("ticks", IntegerArgumentType.integer(-1))
+                .then(Commands.argument("whim", StringArgumentType.word())
+                        .suggests((context, builder) -> suggestTypes(builder))
                         .executes(context -> summon(context.getSource(),
-                                IntegerArgumentType.getInteger(context, "ticks"), null, null, null))
-                        .then(Commands.argument("whim", StringArgumentType.word())
-                                .suggests((context, builder) -> suggestTypes(builder))
+                                StringArgumentType.getString(context, "whim"), null, null))
+                        .then(Commands.argument("anchor", StringArgumentType.word())
+                                .suggests((context, builder) -> suggestAnchors(builder))
                                 .executes(context -> summon(context.getSource(),
-                                        IntegerArgumentType.getInteger(context, "ticks"),
-                                        StringArgumentType.getString(context, "whim"), null, null))
-                                .then(Commands.argument("anchor", StringArgumentType.word())
-                                        .suggests((context, builder) -> suggestAnchors(builder))
+                                        StringArgumentType.getString(context, "whim"),
+                                        StringArgumentType.getString(context, "anchor"), null))
+                                .then(Commands.argument("data", StringArgumentType.greedyString())
+                                        .suggests((context, builder) -> suggestTail(
+                                                suggestionAnchor(StringArgumentType.getString(context, "whim"),
+                                                        StringArgumentType.getString(context, "anchor")),
+                                                summonParams(StringArgumentType.getString(context, "whim"),
+                                                        StringArgumentType.getString(context, "anchor")),
+                                                context.getSource(), builder))
                                         .executes(context -> summon(context.getSource(),
-                                                IntegerArgumentType.getInteger(context, "ticks"),
                                                 StringArgumentType.getString(context, "whim"),
-                                                StringArgumentType.getString(context, "anchor"), null))
-                                        .then(Commands.argument("data", StringArgumentType.greedyString())
-                                                .suggests((context, builder) -> suggestTail(
-                                                        suggestionAnchor(StringArgumentType.getString(context, "whim"),
-                                                                StringArgumentType.getString(context, "anchor")),
-                                                        summonParams(StringArgumentType.getString(context, "whim"),
-                                                                StringArgumentType.getString(context, "anchor")),
-                                                        context.getSource(), builder))
-                                                .executes(context -> summon(context.getSource(),
-                                                        IntegerArgumentType.getInteger(context, "ticks"),
-                                                        StringArgumentType.getString(context, "whim"),
-                                                        StringArgumentType.getString(context, "anchor"),
-                                                        StringArgumentType.getString(context, "data"))))))));
+                                                StringArgumentType.getString(context, "anchor"),
+                                                StringArgumentType.getString(context, "data")))))));
 
         root.then(Commands.literal("whim")
                 .then(Commands.argument("action", StringArgumentType.word())
@@ -203,9 +195,8 @@ public final class WhimCommand
     {
         return List.of(
                 "  /glimmerwhim list [维度|all]",
-                "  /glimmerwhim summon [tick=" + WhimConfig.defaultLifetimeTicks() + "｜-1=永久] [灵感类型="
-                        + DevWhim.INSTANCE.id().getPath() + "] [锚类型=" + defaultAnchor().getPath()
-                        + "] [锚数据] {参数}",
+                "  /glimmerwhim summon <灵感类型> [锚类型=" + defaultAnchor().getPath()
+                        + "] [锚数据] {参数}（lifetime 默认取灵感类型自身，-1 = 永久）",
                 "  /glimmerwhim whim " + String.join("｜", ACTIONS) + " [uuid]（省略 uuid 时作用于当前瞄准的灵感）",
                 "  锚数据格式与 {参数} 可通过 TAB 查看");
     }
@@ -271,7 +262,7 @@ public final class WhimCommand
     {
         WhimType whim = first != null && isWhim(first) ? resolveWhim(first) : DevWhim.INSTANCE;
 
-        return whim.params();
+        return whim.params().plus(WhimParams.lifetime(whim.defaultLifetime()));
     }
 
     private static CompletableFuture<Suggestions> suggestTypes(SuggestionsBuilder builder)
@@ -558,7 +549,7 @@ public final class WhimCommand
         return 1;
     }
 
-    private static int summon(CommandSourceStack source, int ticks, String first, String second, String tail)
+    private static int summon(CommandSourceStack source, String first, String second, String tail)
             throws CommandSyntaxException
     {
         ServerPlayer player = source.getPlayer();
@@ -594,12 +585,13 @@ public final class WhimCommand
         String rest = tail == null ? "" : tail;
 
         WhimData.Split split;
-        WhimData data;
+        WhimData userData;
+        WhimParams params = whim.params().plus(WhimParams.lifetime(whim.defaultLifetime()));
 
         try
         {
             split = WhimData.split(rest);
-            data = whim.params().parse(split.data());
+            userData = params.parse(split.data());
         }
         catch (IllegalArgumentException e)
         {
@@ -617,12 +609,14 @@ public final class WhimCommand
             throw ERROR_DATA.create(e.getMessage());
         }
 
-        Whim summoned = new Whim(UUID.randomUUID(), anchor, whim, data, ticks);
+        int lifetime = Integer.parseInt(userData.get(Whim.LIFETIME).orElse(Integer.toString(whim.defaultLifetime())));
+        WhimData data = lifetime < 0 ? userData : userData.with(Whim.LIFETIME, Integer.toString(lifetime));
+        Whim summoned = new Whim(UUID.randomUUID(), anchor, whim, data);
         WhimRegistry.of(player.serverLevel()).summon(summoned);
 
         source.sendSuccess(() -> Component.literal("已生成灵感 " + summoned.id() + "，"
                 + (summoned.permanent() ? "永久" : "存活 " + summoned.lifetime() + " tick")
-                + (data.isEmpty() ? "" : "，参数 " + data)), true);
+                + (userData.isEmpty() ? "" : "，参数 " + userData)), true);
         return 1;
     }
 }

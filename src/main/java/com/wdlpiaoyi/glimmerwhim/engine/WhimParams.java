@@ -29,6 +29,11 @@ public final class WhimParams
         return new WhimParams(List.of(params));
     }
 
+    public static WhimParams lifetime(int defaultValue)
+    {
+        return new WhimParams(List.of(WhimParam.lifetime(Integer.toString(defaultValue))));
+    }
+
     public Collection<WhimParam> all()
     {
         return this.params.values();

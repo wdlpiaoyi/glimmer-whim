@@ -7,19 +7,19 @@ import java.util.UUID;
 
 public final class Whim
 {
+    public static final String LIFETIME = "lifetime";
+
     private final UUID id;
     private final WhimAnchor anchor;
     private final WhimType type;
-    private final WhimData data;
-    private int lifetime;
+    private WhimData data;
 
-    public Whim(UUID id, WhimAnchor anchor, WhimType type, WhimData data, int lifetime)
+    public Whim(UUID id, WhimAnchor anchor, WhimType type, WhimData data)
     {
         this.id = id;
         this.anchor = anchor;
         this.type = type;
         this.data = data;
-        this.lifetime = lifetime;
     }
 
     public UUID id()
@@ -44,22 +44,33 @@ public final class Whim
 
     public int lifetime()
     {
-        return this.lifetime;
+        try
+        {
+            return Integer.parseInt(this.data.get(LIFETIME).orElse("-1"));
+        }
+        catch (NumberFormatException e)
+        {
+            return -1;
+        }
     }
 
     public boolean permanent()
     {
-        return this.lifetime < 0;
+        return this.lifetime() < 0;
     }
 
     public int tick()
     {
-        if (this.permanent())
+        int lifetime = this.lifetime();
+
+        if (lifetime < 0)
         {
-            return this.lifetime;
+            return lifetime;
         }
 
-        this.lifetime = Math.max(0, this.lifetime - 1);
-        return this.lifetime;
+        lifetime = Math.max(0, lifetime - 1);
+        this.data = this.data.with(LIFETIME, Integer.toString(lifetime));
+
+        return lifetime;
     }
 }

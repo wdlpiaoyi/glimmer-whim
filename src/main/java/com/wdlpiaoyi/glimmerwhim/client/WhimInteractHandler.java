@@ -1,9 +1,9 @@
 package com.wdlpiaoyi.glimmerwhim.client;
 
-import java.util.Objects;
 import java.util.UUID;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimTarget;
 import com.wdlpiaoyi.glimmerwhim.net.WhimHoldPacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimNetwork;
 import com.wdlpiaoyi.glimmerwhim.net.WhimUsePacket;
@@ -73,11 +73,12 @@ public final class WhimInteractHandler
         }
         else if (held != null)
         {
-            boolean success = Objects.equals(WhimAim.aimed(), held) && ClientWhimCache.contains(held);
-
-            if (minecraft.getConnection() != null)
+            if (minecraft.getConnection() != null && minecraft.level != null)
             {
-                WhimNetwork.CHANNEL.sendToServer(new WhimUsePacket(held, success));
+                WhimTarget target = WhimTargeting.pick(minecraft.level, player, player.getEyePosition(),
+                        FreeLook.viewVector(player, 1.0F));
+
+                WhimNetwork.CHANNEL.sendToServer(new WhimUsePacket(held, target));
             }
 
             held = null;

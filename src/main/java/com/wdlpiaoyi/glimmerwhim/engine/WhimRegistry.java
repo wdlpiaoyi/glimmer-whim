@@ -145,6 +145,7 @@ public final class WhimRegistry
 
         Set<UUID> known = this.sent.computeIfAbsent(player.getUUID(), key -> new HashSet<>());
         Set<UUID> want = new HashSet<>();
+        List<UUID> tooFar = new ArrayList<>();
         Vec3 eye = player.getEyePosition();
         double reach = loadDistance(player);
 
@@ -159,8 +160,14 @@ public final class WhimRegistry
 
             Vec3 at = position(whim, this.level, eye);
 
-            if (at == null || eye.distanceToSqr(at) > reach * reach)
+            if (at == null)
             {
+                continue;
+            }
+
+            if (eye.distanceToSqr(at) > reach * reach)
+            {
+                tooFar.add(whim.id());
                 continue;
             }
 
@@ -172,6 +179,14 @@ public final class WhimRegistry
             if (known.add(id))
             {
                 WhimNetwork.sendTo(player, WhimSummonPacket.of(this.level.dimension(), this.tracked.get(id).whim()));
+            }
+        }
+
+        for (UUID id : tooFar)
+        {
+            if (!this.anyPlayerInRange(id))
+            {
+                this.removeWhim(id, WhimRemoveReason.OUT_OF_RANGE);
             }
         }
 
@@ -193,6 +208,35 @@ public final class WhimRegistry
     private static Vec3 position(Whim whim, Level level, Vec3 eye)
     {
         return whim.anchor().position(level, eye, 1.0F).orElse(null);
+    }
+
+    private boolean anyPlayerInRange(UUID id)
+    {
+        Tracked entry = this.tracked.get(id);
+
+        if (entry == null)
+        {
+            return false;
+        }
+
+        for (ServerPlayer player : this.level.players())
+        {
+            if (!entry.visibility().canUse(player, entry.whim()))
+            {
+                continue;
+            }
+
+            Vec3 eye = player.getEyePosition();
+            Vec3 at = position(entry.whim(), this.level, eye);
+            double reach = loadDistance(player);
+
+            if (at != null && eye.distanceToSqr(at) <= reach * reach)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static double loadDistance(ServerPlayer player)
@@ -260,13 +304,18 @@ public final class WhimRegistry
 
     private static void fire(WhimEvent.Kind kind, UUID id, ServerPlayer player)
     {
+        fire(kind, id, player, null);
+    }
+
+    private static void fire(WhimEvent.Kind kind, UUID id, ServerPlayer player, WhimTarget target)
+    {
         for (WhimRegistry registry : REGISTRIES.values())
         {
             Tracked tracked = registry.tracked.get(id);
 
             if (tracked != null)
             {
-                WhimEvent event = new WhimEvent(kind, registry.level, tracked.whim(), player);
+                WhimEvent event = new WhimEvent(kind, registry.level, tracked.whim(), player, target);
 
                 tracked.whim().type().on(event);
 
@@ -306,7 +355,7 @@ public final class WhimRegistry
         return AIMED.get(player.getUUID());
     }
 
-    public static boolean use(ServerPlayer player, UUID id, boolean success)
+    public static boolean use(ServerPlayer player, UUID id, WhimTarget target)
     {
         WhimRegistry registry = of(player.serverLevel());
         Tracked tracked = registry.tracked.get(id);
@@ -323,15 +372,36 @@ public final class WhimRegistry
             return false;
         }
 
-        GlimmerWhim.log("[Whim] use player={} id={} success={}", player.getUUID(), id, success);
+        GlimmerWhim.log("[Whim] use player={} id={} target={}", player.getUUID(), id,
+                target == null ? "none" : target.describe());
 
-        if (success)
-        {
-            fire(WhimEvent.Kind.USE, id, player);
-        }
-        else if (registry.tracked.containsKey(id))
+        if (target == null || !validTarget(player, target) || !tracked.whim().type().acceptsTarget(target))
         {
             registry.removeWhim(id, WhimRemoveReason.DROPPED);
+            return true;
+        }
+
+        fire(WhimEvent.Kind.USE, id, player, target);
+        return true;
+    }
+
+    private static boolean validTarget(ServerPlayer player, WhimTarget target)
+    {
+        if (target.point() == null)
+        {
+            return false;
+        }
+
+        double reach = loadDistance(player);
+
+        if (player.getEyePosition().distanceToSqr(target.point()) > reach * reach)
+        {
+            return false;
+        }
+
+        if (target.entity() != null)
+        {
+            return player.serverLevel().getEntities().get(target.entity()) != null;
         }
 
         return true;

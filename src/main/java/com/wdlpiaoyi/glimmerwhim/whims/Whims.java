@@ -16,6 +16,10 @@ public final class Whims
     static
     {
         register(DevWhim.INSTANCE);
+        register(DevMarkWhim.INSTANCE);
+        register(DevEntityWhim.INSTANCE);
+        register(DevCoordWhim.INSTANCE);
+        register(ExpiresWhim.INSTANCE);
         register(RemoveOnHoldWhim.INSTANCE);
         register(RemoveOnReleaseWhim.INSTANCE);
         register(VoidTestWhim.INSTANCE);

@@ -44,8 +44,6 @@ public final class WhimConfig
 
     private static final float[] FALLBACK_AIMED = { 1.0F, 1.0F, 1.0F, 1.0F };
 
-    private static final ForgeConfigSpec.IntValue DEFAULT_LIFETIME_TICKS;
-
     private static final ForgeConfigSpec.ConfigValue<String> DEFAULT_ANCHOR;
 
     private static final ForgeConfigSpec.IntValue COMMAND_PERMISSION_LEVEL;
@@ -115,9 +113,6 @@ public final class WhimConfig
 
         builder.comment("灵感：/glimmerwhim summon 的默认行为。");
         builder.push("whim");
-        DEFAULT_LIFETIME_TICKS = builder
-                .comment("summon 省略 tick 时的存活时长（1200 tick = 60 秒）；-1 = 永久。默认 1200。")
-                .defineInRange("defaultLifetimeTicks", 1200, -1, 72000);
         DEFAULT_ANCHOR = builder
                 .comment("summon 省略锚类型时使用的默认锚（填写锚的路径名，如 ray、pos）；无效值回退到 ray。默认 ray。")
                 .define("defaultAnchor", "ray");
@@ -211,11 +206,6 @@ public final class WhimConfig
     public static float[] renderColorAimed()
     {
         return color(RENDER_COLOR_AIMED.get(), FALLBACK_AIMED);
-    }
-
-    public static int defaultLifetimeTicks()
-    {
-        return DEFAULT_LIFETIME_TICKS.get();
     }
 
     public static String defaultAnchor()

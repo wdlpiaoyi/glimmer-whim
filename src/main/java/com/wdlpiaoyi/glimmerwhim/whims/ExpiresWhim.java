@@ -1,0 +1,36 @@
+package com.wdlpiaoyi.glimmerwhim.whims;
+
+import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
+
+import net.minecraft.resources.ResourceLocation;
+
+public final class ExpiresWhim implements WhimType
+{
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "expires");
+
+    public static final ExpiresWhim INSTANCE = new ExpiresWhim();
+
+    private static final int DEFAULT_LIFETIME = 300;
+
+    private ExpiresWhim()
+    {
+    }
+
+    @Override
+    public ResourceLocation id()
+    {
+        return ID;
+    }
+
+    @Override
+    public WhimParams params()
+    {
+        return WhimParams.NONE;
+    }
+
+    @Override
+    public int defaultLifetime()
+    {
+        return DEFAULT_LIFETIME;
+    }
+}
