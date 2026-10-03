@@ -1,5 +1,7 @@
 package com.wdlpiaoyi.glimmerwhim.client;
 
+import java.util.UUID;
+
 import org.joml.Matrix4f;
 
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -27,8 +29,12 @@ public final class WhimRenderer
     /** 半个边长。 */
     private static final double SIZE = 0.25D;
 
+    /** 高亮比面片宽出去多少。 */
+    private static final double OUTLINE = 0.08D;
+
     private static final float[] PURPLE = { 1.0F, 0.0F, 1.0F, 1.0F };
     private static final float[] BLACK = { 0.0F, 0.0F, 0.0F, 1.0F };
+    private static final float[] WHITE = { 1.0F, 1.0F, 1.0F, 1.0F };
 
     private WhimRenderer()
     {
@@ -52,8 +58,10 @@ public final class WhimRenderer
 
         float partialTick = event.getPartialTick();
         Vec3 eye = minecraft.player.getEyePosition(partialTick);
+        Vec3 look = minecraft.player.getViewVector(partialTick);
         Vec3 camera = event.getCamera().getPosition();
         PoseStack pose = event.getPoseStack();
+        UUID aimed = WhimAim.update(level, eye, look, partialTick);
 
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
@@ -77,7 +85,16 @@ public final class WhimRenderer
 
             pose.pushPose();
             pose.translate(position.x, position.y, position.z);
-            drawQuad(pose, dir);
+
+            if (whim.id().equals(aimed))
+            {
+                WhimTypes.highlight(whim.element()).draw(pose, dir);
+            }
+            else
+            {
+                checkerboard(pose, dir);
+            }
+
             pose.popPose();
         }
 
@@ -87,33 +104,31 @@ public final class WhimRenderer
         RenderSystem.disableBlend();
     }
 
-    private static void drawQuad(PoseStack pose, Vec3 dir)
+    /** dev 元素的高亮：外面套一圈白边。 */
+    public static void whiteOutline(PoseStack pose, Vec3 dir)
+    {
+        quad(pose, dir, SIZE + OUTLINE, WHITE, WHITE);
+        checkerboard(pose, dir);
+    }
+
+    private static void checkerboard(PoseStack pose, Vec3 dir)
+    {
+        quad(pose, dir, SIZE, PURPLE, BLACK);
+    }
+
+    private static void quad(PoseStack pose, Vec3 dir, double size, float[] first, float[] second)
     {
         Matrix4f matrix = pose.last().pose();
         BufferBuilder builder = Tesselator.getInstance().getBuilder();
-
-        Vec3 right = dir.cross(new Vec3(0.0D, 1.0D, 0.0D));
-
-        if (right.lengthSqr() < 1.0E-6D)
-        {
-            right = new Vec3(1.0D, 0.0D, 0.0D);
-        }
-
-        right = right.normalize();
-
+        Vec3 right = right(dir);
         Vec3 up = right.cross(dir).normalize();
-        Vec3 origin = right.scale(-SIZE).add(up.scale(-SIZE));
+        Vec3 origin = right.scale(-size).add(up.scale(-size));
+        Vec3 u = right.scale(2.0D * size);
+        Vec3 v = up.scale(2.0D * size);
 
         builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
 
-        // 切成 2x2 的紫黑棋盘 —— 就是原版贴图丢了那副样子。
-        face(builder, matrix, origin, right.scale(2.0D * SIZE), up.scale(2.0D * SIZE));
-
-        BufferUploader.drawWithShader(builder.end());
-    }
-
-    private static void face(BufferBuilder builder, Matrix4f matrix, Vec3 origin, Vec3 u, Vec3 v)
-    {
+        // 切成 2x2 —— 就是原版贴图丢了那副样子。
         for (int i = 0; i < 2; i++)
         {
             for (int j = 0; j < 2; j++)
@@ -122,8 +137,7 @@ public final class WhimRenderer
                 double i1 = (i + 1) / 2.0D;
                 double j0 = j / 2.0D;
                 double j1 = (j + 1) / 2.0D;
-
-                float[] color = ((i + j) & 1) == 0 ? PURPLE : BLACK;
+                float[] color = ((i + j) & 1) == 0 ? first : second;
 
                 corner(builder, matrix, origin.add(u.scale(i0)).add(v.scale(j0)), color);
                 corner(builder, matrix, origin.add(u.scale(i1)).add(v.scale(j0)), color);
@@ -131,6 +145,20 @@ public final class WhimRenderer
                 corner(builder, matrix, origin.add(u.scale(i0)).add(v.scale(j1)), color);
             }
         }
+
+        BufferUploader.drawWithShader(builder.end());
+    }
+
+    private static Vec3 right(Vec3 dir)
+    {
+        Vec3 right = dir.cross(new Vec3(0.0D, 1.0D, 0.0D));
+
+        if (right.lengthSqr() < 1.0E-6D)
+        {
+            right = new Vec3(1.0D, 0.0D, 0.0D);
+        }
+
+        return right.normalize();
     }
 
     private static void corner(BufferBuilder builder, Matrix4f matrix, Vec3 position, float[] color)

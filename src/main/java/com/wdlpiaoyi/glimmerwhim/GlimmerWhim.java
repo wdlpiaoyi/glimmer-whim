@@ -2,12 +2,16 @@ package com.wdlpiaoyi.glimmerwhim;
 
 import com.mojang.logging.LogUtils;
 import com.wdlpiaoyi.glimmerwhim.command.WhimCommand;
+import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 import com.wdlpiaoyi.glimmerwhim.net.WhimNetwork;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimRegistry;
 
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import org.slf4j.Logger;
 
 /**
@@ -24,6 +28,12 @@ public final class GlimmerWhim
         WhimNetwork.register();
         MinecraftForge.EVENT_BUS.register(WhimRegistry.class);
         MinecraftForge.EVENT_BUS.register(WhimCommand.class);
+
+        if (FMLEnvironment.dist == Dist.CLIENT)
+        {
+            context.registerConfig(ModConfig.Type.CLIENT, WhimConfig.CLIENT_SPEC);
+        }
+
         LOGGER.info("Glimmer Whim loaded: 魔法流经你。");
     }
 }
