@@ -19,9 +19,6 @@ import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
-/**
- * 客户端这边的镜像：服务端发过来什么，这里就是什么，不做判断也不做过滤。
- */
 public final class ClientWhimCache
 {
     public record WhimView(UUID id, WhimAnchor anchor, ResourceLocation element, WhimData data, int lifetime)
@@ -60,17 +57,17 @@ public final class ClientWhimCache
         return WHIMES.values();
     }
 
+    public static boolean contains(UUID id)
+    {
+        return WHIMES.containsKey(id);
+    }
+
     public static void clear()
     {
         WHIMES.clear();
         dimension = null;
     }
 
-    /**
-     * 这个包是不是我这个世界的。
-     * <p>
-     * 是——顺手把上一个世界的清了；不是——丢掉，别让旧包的维度把现在的表带歪。
-     */
     private static boolean sameWorld(ResourceKey<Level> incoming)
     {
         if (incoming.equals(dimension))
@@ -90,10 +87,6 @@ public final class ClientWhimCache
         return true;
     }
 
-    /**
-     * 玩家自己走的地方（换维度、回主菜单）不一定有包过来 —— 所以每 tick 对一次自己的维度。
-     * 新维度里一条灵感都没有的时候，就靠这一下把上一个维度的清掉。
-     */
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event)
     {

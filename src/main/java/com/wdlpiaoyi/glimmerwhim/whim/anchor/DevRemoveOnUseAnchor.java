@@ -16,40 +16,31 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
-/**
- * 就在 0 0 0 待着，谁瞄上它它就没了 —— 试"高亮即消失"用的。
- * <p>
- * 什么都不要：锚数据写不下（它没有位置可写），{@code {参数}} 一个都不认，
- * 画出来什么样由渲染那边定（参数表空着就按一个立方体、边长 1 画）。
- */
-public final class DevRemoveOnHighlightAnchor implements WhimAnchor
+public final class DevRemoveOnUseAnchor implements WhimAnchor
 {
     public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("glimmerwhim",
-            "dev_removeonhighlight");
+            "dev_removeonuse");
 
     private static final String WRONG = "这种锚不收锚数据，它就在 0 0 0";
 
-    /** 什么都不收。 */
-    public static DevRemoveOnHighlightAnchor parse(CommandSourceStack source, String data)
+    public static DevRemoveOnUseAnchor parse(CommandSourceStack source, String data)
     {
         if (data != null && !data.isBlank())
         {
             throw new IllegalArgumentException(WRONG);
         }
 
-        return new DevRemoveOnHighlightAnchor();
+        return new DevRemoveOnUseAnchor();
     }
 
-    /** 没得可补。 */
     public static Collection<String> suggestData(CommandSourceStack source)
     {
         return List.of();
     }
 
-    /** 身上什么都没带，读的时候也不用读。 */
-    public static DevRemoveOnHighlightAnchor read(FriendlyByteBuf buf)
+    public static DevRemoveOnUseAnchor read(FriendlyByteBuf buf)
     {
-        return new DevRemoveOnHighlightAnchor();
+        return new DevRemoveOnUseAnchor();
     }
 
     @Override
@@ -61,7 +52,6 @@ public final class DevRemoveOnHighlightAnchor implements WhimAnchor
     @Override
     public void write(FriendlyByteBuf buf)
     {
-        // 没有字段，什么都不用写。
     }
 
     @Override
@@ -70,11 +60,10 @@ public final class DevRemoveOnHighlightAnchor implements WhimAnchor
         return Optional.of(Vec3.ZERO);
     }
 
-    /** 被高亮就是要它走 —— 条件就这一句，写在自己身上。 */
     @Override
     public void on(WhimEvent event)
     {
-        if (event.kind() == WhimEvent.Kind.HIGHLIGHT)
+        if (event.kind() == WhimEvent.Kind.USE)
         {
             event.remove(WhimRemoveReason.USED);
         }

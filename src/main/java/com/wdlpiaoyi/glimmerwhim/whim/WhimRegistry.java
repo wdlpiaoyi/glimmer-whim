@@ -4,10 +4,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
@@ -19,34 +22,31 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.level.LevelEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
-/**
- * 一个维度一张表：这个维度里现在还活着的灵感。
- * <p>
- * {@link #removeWhim} 是唯一的出口。
- */
 public final class WhimRegistry
 {
     private static final Map<ResourceKey<Level>, WhimRegistry> REGISTRIES = new HashMap<>();
 
-    /** 玩家 UUID -> 他现在瞄着的那条。客户端说了才算，只给命令补全用。 */
     private static final Map<UUID, UUID> AIMED = new HashMap<>();
+
+    private static final int SYNC_INTERVAL = 20;
 
     private record Tracked(Whim whim, WhimVisibility visibility)
     {
     }
 
-    /** 找到的一条灵感落在哪个维度。 */
     public record Found(ResourceKey<Level> dimension, Whim whim)
     {
     }
 
     private final ServerLevel level;
     private final Map<UUID, Tracked> tracked = new LinkedHashMap<>();
+    private final Map<UUID, Set<UUID>> sent = new HashMap<>();
 
     private WhimRegistry(ServerLevel level)
     {
@@ -63,13 +63,11 @@ public final class WhimRegistry
         return this.level;
     }
 
-    /** 出现，所有人可见。 */
     public void summon(Whim whim)
     {
         this.summon(whim, WhimVisibility.ALL);
     }
 
-    /** 出现，只发给能用它的人。 */
     public void summon(Whim whim, WhimVisibility visibility)
     {
         this.tracked.put(whim.id(), new Tracked(whim, visibility));
@@ -78,18 +76,12 @@ public final class WhimRegistry
                 whim.id(), this.level.dimension().location(), whim.anchor().type(), whim.element(), whim.lifetime(),
                 visibility == WhimVisibility.ALL ? "all" : "filtered");
 
-        WhimSummonPacket packet = WhimSummonPacket.of(this.level.dimension(), whim);
-
         for (ServerPlayer player : this.level.players())
         {
-            if (visibility.canUse(player, whim))
-            {
-                WhimNetwork.sendTo(player, packet);
-            }
+            this.sync(player);
         }
     }
 
-    /** 唯一出口。 */
     public void removeWhim(UUID id, WhimRemoveReason reason)
     {
         if (this.tracked.remove(id) == null)
@@ -99,18 +91,26 @@ public final class WhimRegistry
 
         GlimmerWhim.log("[Whim] remove id={} dim={} reason={}", id, this.level.dimension().location(), reason);
 
-        // 谁还瞄着它，就把 AIMED 里的旧值清掉 —— 不然补全会给一个已经没了的 uuid。
         AIMED.values().removeIf(id::equals);
 
         WhimRemovePacket packet = new WhimRemovePacket(this.level.dimension(), id, reason);
 
-        for (ServerPlayer player : this.level.players())
+        for (Map.Entry<UUID, Set<UUID>> entry : this.sent.entrySet())
         {
-            WhimNetwork.sendTo(player, packet);
+            if (!entry.getValue().remove(id))
+            {
+                continue;
+            }
+
+            ServerPlayer player = this.level.getServer().getPlayerList().getPlayer(entry.getKey());
+
+            if (player != null)
+            {
+                WhimNetwork.sendTo(player, packet);
+            }
         }
     }
 
-    /** 过一 tick：谁的 lifetime 见底了，谁走；还留着的都叫一声。永久的一直是负数，不会撞上 0。 */
     public void tick()
     {
         for (Whim whim : this.all())
@@ -124,18 +124,79 @@ public final class WhimRegistry
                 fire(WhimEvent.Kind.TICK, whim.id(), null);
             }
         }
-    }
 
-    /** 给某个玩家补一份快照 —— 上线、换维度都走这儿。 */
-    public void sendSnapshot(ServerPlayer player)
-    {
-        for (Tracked entry : this.tracked.values())
+        if (this.level.getGameTime() % SYNC_INTERVAL == 0)
         {
-            if (entry.visibility().canUse(player, entry.whim()))
+            for (ServerPlayer player : this.level.players())
             {
-                WhimNetwork.sendTo(player, WhimSummonPacket.of(this.level.dimension(), entry.whim()));
+                this.sync(player);
             }
         }
+    }
+
+    private void sync(ServerPlayer player)
+    {
+        if (player.serverLevel() != this.level)
+        {
+            return;
+        }
+
+        Set<UUID> known = this.sent.computeIfAbsent(player.getUUID(), key -> new HashSet<>());
+        Set<UUID> want = new HashSet<>();
+        Vec3 eye = player.getEyePosition();
+        double reach = loadDistance(player);
+
+        for (Tracked entry : this.tracked.values())
+        {
+            Whim whim = entry.whim();
+
+            if (!entry.visibility().canUse(player, whim))
+            {
+                continue;
+            }
+
+            Vec3 at = position(whim, this.level, eye);
+
+            if (at == null || eye.distanceToSqr(at) > reach * reach)
+            {
+                continue;
+            }
+
+            want.add(whim.id());
+        }
+
+        for (UUID id : want)
+        {
+            if (known.add(id))
+            {
+                WhimNetwork.sendTo(player, WhimSummonPacket.of(this.level.dimension(), this.tracked.get(id).whim()));
+            }
+        }
+
+        Iterator<UUID> gone = known.iterator();
+
+        while (gone.hasNext())
+        {
+            UUID id = gone.next();
+
+            if (!want.contains(id))
+            {
+                gone.remove();
+                WhimNetwork.sendTo(player,
+                        new WhimRemovePacket(this.level.dimension(), id, WhimRemoveReason.OUT_OF_RANGE));
+            }
+        }
+    }
+
+    private static Vec3 position(Whim whim, Level level, Vec3 eye)
+    {
+        return whim.anchor().position(level, eye, 1.0F, whim.data(), WhimAnchors.params(whim.anchor().type()))
+                .orElse(null);
+    }
+
+    private static double loadDistance(ServerPlayer player)
+    {
+        return player.serverLevel().getServer().getPlayerList().getViewDistance() * 16.0D;
     }
 
     public Collection<Whim> all()
@@ -150,7 +211,6 @@ public final class WhimRegistry
         return Collections.unmodifiableList(whimes);
     }
 
-    /** 所有维度加一块儿，空的不列。 */
     public static Map<ResourceKey<Level>, Collection<Whim>> allDimensions()
     {
         Map<ResourceKey<Level>, Collection<Whim>> dimensions = new LinkedHashMap<>();
@@ -168,7 +228,6 @@ public final class WhimRegistry
         return dimensions;
     }
 
-    /** 按 id 找，跨维度。 */
     public static Optional<Found> find(UUID id)
     {
         for (Map.Entry<ResourceKey<Level>, WhimRegistry> entry : REGISTRIES.entrySet())
@@ -184,7 +243,6 @@ public final class WhimRegistry
         return Optional.empty();
     }
 
-    /** 按 id 移除，跨维度。 */
     public static boolean kill(UUID id)
     {
         for (WhimRegistry registry : REGISTRIES.values())
@@ -199,11 +257,6 @@ public final class WhimRegistry
         return false;
     }
 
-    /**
-     * 叫一条灵感一声；它要是回话说"让它走"，就在这儿移掉。
-     * <p>
-     * 引擎只认 {@link WhimEvent.Kind}，不认识任何具体条件 —— 加条件的活全在锚里。
-     */
     private static void fire(WhimEvent.Kind kind, UUID id, ServerPlayer player)
     {
         for (WhimRegistry registry : REGISTRIES.values())
@@ -223,7 +276,6 @@ public final class WhimRegistry
         }
     }
 
-    /** 客户端说它现在瞄着哪条，null 表示没瞄。瞄上、不瞄了各叫一声。 */
     public static void setAimed(ServerPlayer player, UUID id)
     {
         UUID before = AIMED.get(player.getUUID());
@@ -253,6 +305,37 @@ public final class WhimRegistry
         return AIMED.get(player.getUUID());
     }
 
+    public static boolean use(ServerPlayer player, UUID id, boolean success)
+    {
+        WhimRegistry registry = of(player.serverLevel());
+        Tracked tracked = registry.tracked.get(id);
+
+        if (tracked == null)
+        {
+            return false;
+        }
+
+        if (!tracked.visibility().canUse(player, tracked.whim())
+                || !registry.sent.getOrDefault(player.getUUID(), Set.of()).contains(id))
+        {
+            GlimmerWhim.log("[Whim] use rejected player={} id={}", player.getUUID(), id);
+            return false;
+        }
+
+        GlimmerWhim.log("[Whim] use player={} id={} success={}", player.getUUID(), id, success);
+
+        if (success)
+        {
+            fire(WhimEvent.Kind.USE, id, player);
+        }
+        else if (registry.tracked.containsKey(id))
+        {
+            registry.removeWhim(id, WhimRemoveReason.DROPPED);
+        }
+
+        return true;
+    }
+
     private void unload()
     {
         if (!this.tracked.isEmpty())
@@ -262,9 +345,8 @@ public final class WhimRegistry
         }
 
         this.tracked.clear();
+        this.sent.clear();
     }
-
-    // ---- Forge 事件 ----
 
     @SubscribeEvent
     public static void onLevelTick(TickEvent.LevelTickEvent event)
@@ -280,7 +362,7 @@ public final class WhimRegistry
     {
         if (event.getEntity() instanceof ServerPlayer player)
         {
-            of(player.serverLevel()).sendSnapshot(player);
+            of(player.serverLevel()).sync(player);
         }
     }
 
@@ -289,9 +371,9 @@ public final class WhimRegistry
     {
         if (event.getEntity() instanceof ServerPlayer player)
         {
-            // 刚瞄的那条留在上一个维度了。
             AIMED.remove(player.getUUID());
-            of(player.serverLevel()).sendSnapshot(player);
+            forget(player);
+            of(player.serverLevel()).sync(player);
         }
     }
 
@@ -301,6 +383,15 @@ public final class WhimRegistry
         if (event.getEntity() instanceof ServerPlayer player)
         {
             AIMED.remove(player.getUUID());
+            forget(player);
+        }
+    }
+
+    private static void forget(ServerPlayer player)
+    {
+        for (WhimRegistry registry : REGISTRIES.values())
+        {
+            registry.sent.remove(player.getUUID());
         }
     }
 
