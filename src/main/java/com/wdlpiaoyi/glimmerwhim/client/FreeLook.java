@@ -9,12 +9,14 @@ import net.minecraft.world.entity.player.Player;
 /**
  * 自由视角：镜头和人的朝向分家。人站哪儿镜头就在哪儿，只有"往哪儿看"归镜头自己管。
  * <p>
+ * 只管"看"：镜头随便转，人的朝向冻在原地 —— 准星判定、挖掘、放置、攻击、拉弓，还有我们
+ * 自己的瞄准，全都是照人的朝向算的，一点没碰；松手以后镜头淡回人的朝向。
+ * <p>
  * 这里只管几个数：开着没、镜头朝哪儿、松手以后往人的朝向上退的那一下。
  * 按键和事件在 {@link FreeLookHandler}；把"鼠标转人"那一刀掐掉、改成转镜头的是
- * {@code mixin.client.EntityTurnMixin}；让准星、手、我们自己的瞄准也听镜头的是
- * {@code mixin.client.LocalPlayerLookMixin}。
+ * {@code mixin.client.EntityTurnMixin}。
  * <p>
- * 那些 mixin 会早早碰到这个类，所以除了这几个数，什么也别往里放。
+ * 那个 mixin 会早早碰到这个类，所以除了这几个数，什么也别往里放。
  */
 public final class FreeLook
 {
