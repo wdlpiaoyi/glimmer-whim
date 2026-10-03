@@ -154,36 +154,37 @@ public final class WhimRenderer
         boolean cube = "cube".equals(params.text(data, "shape", "cube"));
         // 画的时候要的是半边长。
         double half = params.number(data, "size", 1.0D) / 2.0D;
-        // 长什么样、宽多少、什么颜色，全在 config 的 [render] 里，改完当场生效。
+        // 棋盘几格、两色是什么，是这个元素自己的事，在 config 的 [render.dev] 里；高亮的宽窄和颜色是通用的，在 [render] 里。
+        int cells = WhimConfig.renderDevCheckerCells();
         double outline = WhimConfig.renderOutlineWidth();
-        float[] first = WhimConfig.renderColorElement();
-        float[] second = WhimConfig.renderColorElementAlt();
+        float[] first = WhimConfig.renderDevColorElement();
+        float[] second = WhimConfig.renderDevColorElementAlt();
         float[] aimedColor = WhimConfig.renderColorAimed();
 
         if (aimed && outline > 0.0D)
         {
             if (cube)
             {
-                cube(pose, half + outline, aimedColor, aimedColor);
+                cube(pose, half + outline, aimedColor, aimedColor, cells);
             }
             else
             {
-                quad(pose, dir, half + outline, aimedColor, aimedColor);
+                quad(pose, dir, half + outline, aimedColor, aimedColor, cells);
             }
         }
 
         if (cube)
         {
-            cube(pose, half, first, second);
+            cube(pose, half, first, second, cells);
         }
         else
         {
-            quad(pose, dir, half, first, second);
+            quad(pose, dir, half, first, second, cells);
         }
     }
 
-    /** 正对玩家的一张方片。{@code half} 是半边长。 */
-    private static void quad(PoseStack pose, Vec3 dir, double half, float[] first, float[] second)
+    /** 正对玩家的一张方片。{@code half} 是半边长，{@code cells} 是一面切成几格。 */
+    private static void quad(PoseStack pose, Vec3 dir, double half, float[] first, float[] second, int cells)
     {
         Matrix4f matrix = pose.last().pose();
         BufferBuilder builder = Tesselator.getInstance().getBuilder();
@@ -192,12 +193,12 @@ public final class WhimRenderer
 
         builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
         face(builder, matrix, right.scale(-half).add(up.scale(-half)), right.scale(2.0D * half), up.scale(2.0D * half),
-                first, second, 1.0D);
+                first, second, 1.0D, cells);
         BufferUploader.drawWithShader(builder.end());
     }
 
-    /** 六个面。{@code half} 是半边长。 */
-    private static void cube(PoseStack pose, double half, float[] first, float[] second)
+    /** 六个面。{@code half} 是半边长，{@code cells} 是一面切成几格。 */
+    private static void cube(PoseStack pose, double half, float[] first, float[] second, int cells)
     {
         Matrix4f matrix = pose.last().pose();
         BufferBuilder builder = Tesselator.getInstance().getBuilder();
@@ -210,7 +211,7 @@ public final class WhimRenderer
         for (Side side : sides)
         {
             face(builder, matrix, side.origin().scale(half), side.u().scale(half), side.v().scale(half),
-                    first, second, shade(side.facing()));
+                    first, second, shade(side.facing()), cells);
         }
 
         BufferUploader.drawWithShader(builder.end());
@@ -252,12 +253,10 @@ public final class WhimRenderer
         };
     }
 
-    /** 一面切成几格棋盘（config 的 {@code render.checkerCells}，默认 2x2 —— 就是原版贴图丢了那副样子）。{@code shade} 是这一面该压多暗。 */
+    /** 一面切成 {@code cells} 格棋盘 —— 就是原版贴图丢了那副样子。{@code shade} 是这一面该压多暗。 */
     private static void face(BufferBuilder builder, Matrix4f matrix, Vec3 origin, Vec3 u, Vec3 v, float[] first,
-            float[] second, double shade)
+            float[] second, double shade, int cells)
     {
-        int cells = WhimConfig.renderCheckerCells();
-
         for (int i = 0; i < cells; i++)
         {
             for (int j = 0; j < cells; j++)

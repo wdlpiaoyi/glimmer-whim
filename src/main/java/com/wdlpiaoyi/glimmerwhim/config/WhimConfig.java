@@ -40,24 +40,26 @@ public final class WhimConfig
 
     private static final ForgeConfigSpec.DoubleValue RENDER_OUTLINE;
 
-    private static final ForgeConfigSpec.IntValue RENDER_CHECKER_CELLS;
-
     private static final ForgeConfigSpec.BooleanValue RENDER_FACE_SHADE;
-
-    private static final ForgeConfigSpec.ConfigValue<String> RENDER_COLOR_ELEMENT;
-
-    private static final ForgeConfigSpec.ConfigValue<String> RENDER_COLOR_ELEMENT_ALT;
 
     private static final ForgeConfigSpec.ConfigValue<String> RENDER_COLOR_AIMED;
 
     private static final ForgeConfigSpec.DoubleValue RENDER_MAX_DISTANCE;
 
+    // ---- [render.dev]：dev 元素自己的样子（棋盘格），别的元素各有各的 ----
+
+    private static final ForgeConfigSpec.IntValue RENDER_DEV_CHECKER_CELLS;
+
+    private static final ForgeConfigSpec.ConfigValue<String> RENDER_DEV_COLOR_ELEMENT;
+
+    private static final ForgeConfigSpec.ConfigValue<String> RENDER_DEV_COLOR_ELEMENT_ALT;
+
     private static final Map<ResourceLocation, ForgeConfigSpec.DoubleValue> CONES = new HashMap<>();
 
     /** 颜色写错的时候用的兜底。 */
-    private static final float[] FALLBACK_ELEMENT = { 1.0F, 0.0F, 1.0F, 1.0F };
+    private static final float[] FALLBACK_DEV_ELEMENT = { 1.0F, 0.0F, 1.0F, 1.0F };
 
-    private static final float[] FALLBACK_ELEMENT_ALT = { 0.0F, 0.0F, 0.0F, 1.0F };
+    private static final float[] FALLBACK_DEV_ELEMENT_ALT = { 0.0F, 0.0F, 0.0F, 1.0F };
 
     private static final float[] FALLBACK_AIMED = { 1.0F, 1.0F, 1.0F, 1.0F };
 
@@ -111,23 +113,28 @@ public final class WhimConfig
                 .defineInRange("pitchLimitDegrees", 90.0D, 1.0D, 90.0D);
         builder.pop();
 
-        builder.comment("画：灵感画出来长什么样。");
+        builder.comment("画：灵感画出来长什么样。",
+                "所有元素通用的放这一层；某个元素自己长什么样，放到 [render.<元素>] 里（现在只有 [render.dev]）。");
         builder.push("render");
         RENDER_OUTLINE = builder.comment("被瞄上的时候，那层高亮比本体宽出去多少（格）。0 = 不画高亮。默认 0.08。")
                 .defineInRange("outlineWidth", 0.08D, 0.0D, 0.5D);
-        RENDER_CHECKER_CELLS = builder.comment("一面切成几格棋盘。2 = 原版贴图丢了的那副样子。默认 2。")
-                .defineInRange("checkerCells", 2, 1, 8);
         RENDER_FACE_SHADE = builder.comment("六面要不要按原版那样分明暗（上亮下暗）。关掉就是六面一样亮。默认 true。")
                 .define("faceShade", true);
-        RENDER_COLOR_ELEMENT = builder.comment("本体棋盘的第一色，RRGGBB 或 AARRGGBB（可带 #）。默认 FF00FF 紫。")
-                .define("colorElement", "FF00FF");
-        RENDER_COLOR_ELEMENT_ALT = builder.comment("本体棋盘的第二色。默认 000000 黑。")
-                .define("colorElementAlt", "000000");
         RENDER_COLOR_AIMED = builder.comment("被瞄上时那层的颜色。默认 FFFFFF 白。")
                 .define("colorAimed", "FFFFFF");
         RENDER_MAX_DISTANCE = builder.comment("比这更远的灵感就不画了（格）。默认 64。")
                 .defineInRange("maxDistance", 64.0D, 1.0D, 512.0D);
-        builder.pop();
+
+        builder.comment("dev 元素长什么样：一副紫黑棋盘格。",
+                "正式的元素各写各的，不吃这一套 —— 棋盘格只是拿来看位置的。");
+        builder.push("dev");
+        RENDER_DEV_CHECKER_CELLS = builder.comment("一面切成几格棋盘。2 = 原版贴图丢了的那副样子。默认 2。")
+                .defineInRange("checkerCells", 2, 1, 8);
+        RENDER_DEV_COLOR_ELEMENT = builder.comment("棋盘的第一色，RRGGBB 或 AARRGGBB（可带 #）。默认 FF00FF 紫。")
+                .define("colorElement", "FF00FF");
+        RENDER_DEV_COLOR_ELEMENT_ALT = builder.comment("棋盘的第二色。默认 000000 黑。")
+                .define("colorElementAlt", "000000");
+        builder.pop(2);
 
         CLIENT_SPEC = builder.build();
     }
@@ -226,10 +233,10 @@ public final class WhimConfig
         return RENDER_OUTLINE.get();
     }
 
-    /** 一面切成几格棋盘。 */
-    public static int renderCheckerCells()
+    /** dev 元素：一面切成几格棋盘。 */
+    public static int renderDevCheckerCells()
     {
-        return RENDER_CHECKER_CELLS.get();
+        return RENDER_DEV_CHECKER_CELLS.get();
     }
 
     /** 六面分不分原版那套明暗。 */
@@ -238,16 +245,16 @@ public final class WhimConfig
         return RENDER_FACE_SHADE.get();
     }
 
-    /** 本体棋盘的第一色。 */
-    public static float[] renderColorElement()
+    /** dev 元素：棋盘的第一色。 */
+    public static float[] renderDevColorElement()
     {
-        return color(RENDER_COLOR_ELEMENT.get(), FALLBACK_ELEMENT);
+        return color(RENDER_DEV_COLOR_ELEMENT.get(), FALLBACK_DEV_ELEMENT);
     }
 
-    /** 本体棋盘的第二色。 */
-    public static float[] renderColorElementAlt()
+    /** dev 元素：棋盘的第二色。 */
+    public static float[] renderDevColorElementAlt()
     {
-        return color(RENDER_COLOR_ELEMENT_ALT.get(), FALLBACK_ELEMENT_ALT);
+        return color(RENDER_DEV_COLOR_ELEMENT_ALT.get(), FALLBACK_DEV_ELEMENT_ALT);
     }
 
     /** 被瞄上时那层的颜色。 */
