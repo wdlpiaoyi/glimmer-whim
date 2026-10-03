@@ -153,6 +153,24 @@ public final class WhimRegistry
         return Collections.unmodifiableList(whimes);
     }
 
+    /** 所有维度加一块儿，空的不列。 */
+    public static Map<ResourceKey<Level>, Collection<Whim>> allDimensions()
+    {
+        Map<ResourceKey<Level>, Collection<Whim>> dimensions = new LinkedHashMap<>();
+
+        for (Map.Entry<ResourceKey<Level>, WhimRegistry> entry : REGISTRIES.entrySet())
+        {
+            Collection<Whim> whimes = entry.getValue().all();
+
+            if (!whimes.isEmpty())
+            {
+                dimensions.put(entry.getKey(), whimes);
+            }
+        }
+
+        return dimensions;
+    }
+
     /** 按 id 找，跨维度。 */
     public static Optional<Found> find(UUID id)
     {
