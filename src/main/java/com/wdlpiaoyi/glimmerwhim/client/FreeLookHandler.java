@@ -4,7 +4,9 @@ import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.client.event.ViewportEvent;
 import net.minecraftforge.event.TickEvent;
@@ -24,6 +26,9 @@ public final class FreeLookHandler
 
     /** 上一 tick 自由视角键按着没有：切换模式只看"按下去那一下"，不看按住了多久。 */
     private static boolean wasDown;
+
+    /** 上一 tick 镜头有没有盖住人的朝向：松开那一下要拿它决定补不补一条朝向给服务端。 */
+    private static boolean wasOverriding;
 
     private FreeLookHandler()
     {
@@ -60,6 +65,7 @@ public final class FreeLookHandler
             }
 
             wasDown = KEY.isDown();
+            wasOverriding = false;
             return;
         }
 
@@ -95,6 +101,29 @@ public final class FreeLookHandler
 
             wasDown = down;
         }
+
+        // 服务端也得知道"我在看哪儿"：自由视角开着（以及正往回退）的时候，每 tick 补一条朝向包。
+        // 拉弓、扔珍珠、放楼梯的朝向都是服务端拿玩家的 yRot / xRot 现算的
+        // （BowItem 里就是 player.getXRot() / player.getYRot()），不补的话画面跟着镜头、
+        // 箭却照着身体的朝向飞，两边对不上。松开时再补一条人的朝向，把服务端换回来。
+        boolean overriding = FreeLook.overriding();
+        ClientPacketListener connection = Minecraft.getInstance().getConnection();
+
+        if (connection != null)
+        {
+            if (overriding)
+            {
+                connection.send(new ServerboundMovePlayerPacket.Rot(
+                        FreeLook.viewYaw(player, 1.0F), FreeLook.viewPitch(player, 1.0F), player.onGround()));
+            }
+            else if (wasOverriding)
+            {
+                connection.send(new ServerboundMovePlayerPacket.Rot(
+                        player.getYRot(), player.getXRot(), player.onGround()));
+            }
+        }
+
+        wasOverriding = overriding;
     }
 
     /** 镜头的角度：开着（以及刚松开正往回退）的时候交给我们自己算，人转不转是另一回事。 */
