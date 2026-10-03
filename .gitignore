@@ -1,0 +1,30 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Forge dev runs
+run/
+run-data/
+logs/
+crash-reports/
+
+# Locally provisioned JDK for ForgeGradle (build tooling, not part of the mod)
+.toolchain/
+
+# Sandbox-local Gradle home, used only when ~/.gradle is not writable
+.gradle-home/
+
+# Local machine notes — `环境提示.md` 明确要求不提交到 git
+环境提示.md
+
+# 策划案 / 研发日志 — 私人记录，不提交到 git
+设计纲要.md
+
+# IDE
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+bin/
