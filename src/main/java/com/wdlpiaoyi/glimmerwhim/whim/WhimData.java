@@ -18,8 +18,11 @@ public final class WhimData
 {
     public static final WhimData EMPTY = new WhimData(Map.of());
 
-    /** 命令尾巴里的一组 {@code {名字:值}}。 */
-    private static final Pattern GROUP = Pattern.compile("\\{([^{}:]+):([^{}]*)\\}");
+    /** 命令尾巴里的一个花括号。 */
+    private static final Pattern GROUP = Pattern.compile("\\{([^{}]*)\\}");
+
+    /** 一个花括号里分隔多个参数。 */
+    private static final Pattern SEPARATOR = Pattern.compile("[,;]");
 
     private final Map<String, String> values;
 
@@ -65,13 +68,63 @@ public final class WhimData
         while (matcher.find())
         {
             rest.append(text, end, matcher.start()).append(' ');
-            values.put(matcher.group(1).trim(), matcher.group(2).trim());
+            put(values, matcher.group(1));
             end = matcher.end();
         }
 
         rest.append(text.substring(end));
+        String anchorData = rest.toString().trim().replaceAll("\\s+", " ");
 
-        return new Split(of(values), rest.toString().trim().replaceAll("\\s+", " "));
+        if (anchorData.indexOf('{') >= 0 || anchorData.indexOf('}') >= 0)
+        {
+            throw new IllegalArgumentException("参数得写成 {名字:值}，这里多了半个括号: " + text);
+        }
+
+        return new Split(of(values), anchorData);
+    }
+
+    /** 拆一个花括号里的内容，{@code {shape:cube}} 和 {@code {shape:cube,size:1}} 都收。 */
+    private static void put(Map<String, String> values, String group)
+    {
+        for (String chunk : SEPARATOR.split(group))
+        {
+            String pair = chunk.trim();
+
+            if (pair.isEmpty())
+            {
+                continue;
+            }
+
+            int cut = cut(pair);
+
+            if (cut < 0)
+            {
+                throw new IllegalArgumentException("参数得写成 名字:值，这里没写分隔: " + pair);
+            }
+
+            String name = pair.substring(0, cut).trim();
+
+            if (name.isEmpty())
+            {
+                throw new IllegalArgumentException("参数没写名字: " + pair);
+            }
+
+            values.put(name, pair.substring(cut + 1).trim());
+        }
+    }
+
+    /** 名字和值之间的那个分隔符，冒号和等号都认。 */
+    private static int cut(String pair)
+    {
+        int colon = pair.indexOf(':');
+        int equals = pair.indexOf('=');
+
+        if (colon < 0)
+        {
+            return equals;
+        }
+
+        return equals < 0 ? colon : Math.min(colon, equals);
     }
 
     public void write(FriendlyByteBuf buf)

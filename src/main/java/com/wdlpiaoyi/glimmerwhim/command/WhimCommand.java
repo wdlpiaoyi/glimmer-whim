@@ -43,15 +43,10 @@ public final class WhimCommand
     private static final String DEFAULT_ANCHOR = RayAnchor.TYPE.getPath();
 
     private static final List<String> USAGE = List.of(
-            "用法:",
-            "  /glimmerwhim list [dimension] —— 列出该维度中存活的灵感",
-            "  /glimmerwhim spawn [seconds] [anchortype] [锚数据和参数...] —— 生成一条灵感",
-            "参数:",
-            "  seconds —— 存活秒数，默认 60",
-            "  anchortype —— 锚类型，默认 " + DEFAULT_ANCHOR,
-            "  锚数据 —— " + DEFAULT_ANCHOR + " 的格式是 dx dy dz，省略则取执行者视线方向",
-            "  灵感参数 —— 写成 {名字:值}，跟在锚数据后面",
-            "  " + Whim.DEV_ELEMENT.getPath() + " 的参数 —— " + paramUsage());
+            "  /glimmerwhim list [维度] —— 列出活着的灵感",
+            "  /glimmerwhim spawn [秒数=60] [锚类型=" + DEFAULT_ANCHOR + "] [锚数据] {参数}",
+            "    " + DEFAULT_ANCHOR + " 的锚数据 dx dy dz（省略取视线）；"
+                    + Whim.DEV_ELEMENT.getPath() + " 参数 " + paramUsage());
 
     private static final SimpleCommandExceptionType ERROR_PLAYER =
             new SimpleCommandExceptionType(Component.literal("只能由玩家执行"));
@@ -122,7 +117,7 @@ public final class WhimCommand
     private static String paramUsage()
     {
         return WhimTypes.params(Whim.DEV_ELEMENT).stream()
-                .map(param -> param.name() + " = " + param.hint() + "（默认 " + param.defaultValue() + "）")
+                .map(param -> param.name() + "=" + param.hint() + "（默认 " + param.defaultValue() + "）")
                 .collect(Collectors.joining("，"));
     }
 
@@ -216,11 +211,12 @@ public final class WhimCommand
         }
 
         // 尾巴里的 {名字:值} 是灵感参数，抠掉之后剩下的才是锚数据。
-        WhimData.Split split = WhimData.split(tail);
+        WhimData.Split split;
         WhimData data;
 
         try
         {
+            split = WhimData.split(tail);
             data = WhimTypes.parse(Whim.DEV_ELEMENT, split.data());
         }
         catch (IllegalArgumentException e)
