@@ -99,7 +99,8 @@ public final class WhimRenderer
         for (ClientWhimCache.WhimView whim : ClientWhimCache.all())
         {
             WhimAnchor anchor = whim.anchor();
-            Vec3 at = anchor.position(level, eye, partialTick).orElse(null);
+            WhimParams params = WhimAnchors.params(anchor.type());
+            Vec3 at = anchor.position(level, eye, partialTick, whim.data(), params).orElse(null);
 
             if (at == null)
             {
@@ -115,7 +116,6 @@ public final class WhimRenderer
 
             Vec3 dir = toIt.normalize();
             Vec3 position = at.subtract(camera);
-            WhimParams params = WhimAnchors.params(whim.anchor().type());
 
             pose.pushPose();
             pose.translate(position.x, position.y, position.z);

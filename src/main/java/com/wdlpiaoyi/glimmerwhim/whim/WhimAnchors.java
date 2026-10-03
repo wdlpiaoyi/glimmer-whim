@@ -42,11 +42,12 @@ public final class WhimAnchors
     {
         register(DevRayAnchor.TYPE, DevRayAnchor::read, DevRayAnchor::parse, DevRayAnchor::suggestData, "dx dy dz，~ 取视线",
                 WhimParam.choice("shape", "quad", "quad", "cube"),
-                WhimParam.positiveNumber("size", "0.25"));
+                WhimParam.positiveNumber("size", "1"),
+                WhimParam.positiveNumber("distance", "8"));
 
         register(DevPosAnchor.TYPE, DevPosAnchor::read, DevPosAnchor::parse, DevPosAnchor::suggestData, "x y z，~ 取当前位置",
-                WhimParam.choice("shape", "quad", "quad", "cube"),
-                WhimParam.positiveNumber("size", "0.25"));
+                WhimParam.choice("shape", "cube", "quad", "cube"),
+                WhimParam.positiveNumber("size", "1"));
     }
 
     private WhimAnchors()

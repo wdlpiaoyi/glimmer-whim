@@ -25,7 +25,7 @@ public interface WhimAnchor
     /**
      * 客户端：它现在在哪。
      * <p>
-     * 可以没有距离 —— 只知道自己朝哪的锚，自己挑一个距离补上就行。返回空表示这一帧算不出来。
+     * 可以没有距离 —— 只知道自己朝哪的锚，从 {@code params} 里挑一个距离补上就行。返回空表示这一帧算不出来。
      */
-    Optional<Vec3> position(Level level, Vec3 eye, float partialTick);
+    Optional<Vec3> position(Level level, Vec3 eye, float partialTick, WhimData data, WhimParams params);
 }

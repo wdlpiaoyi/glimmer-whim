@@ -8,6 +8,7 @@ import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 import com.wdlpiaoyi.glimmerwhim.net.WhimAimPacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimNetwork;
+import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchors;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -30,7 +31,8 @@ public final class WhimAim
 
         for (ClientWhimCache.WhimView whim : ClientWhimCache.all())
         {
-            Vec3 at = whim.anchor().position(level, eye, partialTick).orElse(null);
+            Vec3 at = whim.anchor().position(level, eye, partialTick, whim.data(),
+                    WhimAnchors.params(whim.anchor().type())).orElse(null);
 
             if (at == null)
             {

@@ -6,6 +6,8 @@ import java.util.Locale;
 import java.util.Optional;
 
 import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchor;
+import com.wdlpiaoyi.glimmerwhim.whim.WhimData;
+import com.wdlpiaoyi.glimmerwhim.whim.WhimParams;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.FriendlyByteBuf;
@@ -15,16 +17,13 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * 一个世界方向，没有距离 —— 画的时候摆在 {@link #DISTANCE} 格以外。
+ * 一个世界方向，没有距离 —— 画的时候摆在 {@code distance} 格以外。
  * <p>
  * 调试用。
  */
 public final class DevRayAnchor implements WhimAnchor
 {
     public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev_ray");
-
-    /** ray 没有距离，画的时候给它挑一个。 */
-    private static final double DISTANCE = 8.0D;
 
     private final Vec3 direction;
 
@@ -48,9 +47,9 @@ public final class DevRayAnchor implements WhimAnchor
     }
 
     @Override
-    public Optional<Vec3> position(Level level, Vec3 eye, float partialTick)
+    public Optional<Vec3> position(Level level, Vec3 eye, float partialTick, WhimData data, WhimParams params)
     {
-        return Optional.of(eye.add(this.direction.scale(DISTANCE)));
+        return Optional.of(eye.add(this.direction.scale(params.number(data, "distance"))));
     }
 
     public static DevRayAnchor read(FriendlyByteBuf buf)

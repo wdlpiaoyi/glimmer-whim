@@ -24,13 +24,13 @@ public final class WhimConfig
         builder.comment("瞄准。");
         builder.push("aim");
         DEFAULT_CONE = builder.comment("瞄准锥半角（度）。没在 cone 里单独写的元素用这个。")
-                .defineInRange("defaultConeDegrees", 3.0D, 0.0D, 180.0D);
+                .defineInRange("defaultConeDegrees", 10.0D, 0.0D, 180.0D);
         builder.comment("按元素覆盖。");
         builder.push("cone");
 
         for (ResourceLocation element : Whim.ELEMENTS)
         {
-            CONES.put(element, builder.defineInRange(element.toString(), 3.0D, 0.0D, 180.0D));
+            CONES.put(element, builder.defineInRange(element.toString(), 10.0D, 0.0D, 180.0D));
         }
 
         builder.pop(2);

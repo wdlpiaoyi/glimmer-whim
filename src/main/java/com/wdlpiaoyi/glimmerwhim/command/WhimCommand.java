@@ -53,10 +53,10 @@ public final class WhimCommand
 
     private static final int DEFAULT_TICKS = 1200;
 
-    /** uuid 后面那两个动作。写成 argument 而不是 literal —— literal 补完就没了，TAB 翻不到下一个。 */
+    /** 那两个动作。写成 argument 而不是 literal —— literal 补完就没了，TAB 翻不到下一个。 */
     private static final List<String> ACTIONS = List.of("get", "kill");
 
-    private static final List<String> USAGE = usageLines();
+    private static final List<String> HELP = helpLines();
 
     private static final SimpleCommandExceptionType ERROR_PLAYER =
             new SimpleCommandExceptionType(Component.literal("只能由玩家执行"));
@@ -80,6 +80,9 @@ public final class WhimCommand
             new DynamicCommandExceptionType(action -> Component.literal("不像是动作: " + action
                     + "（可用: " + String.join(", ", ACTIONS) + "）"));
 
+    private static final SimpleCommandExceptionType ERROR_NO_AIM =
+            new SimpleCommandExceptionType(Component.literal("没瞄着哪条灵感，把 uuid 写上"));
+
     private WhimCommand()
     {
     }
@@ -88,8 +91,10 @@ public final class WhimCommand
     public static void onRegisterCommands(RegisterCommandsEvent event)
     {
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("glimmerwhim")
-                .requires(source -> source.hasPermission(2))
-                .executes(context -> usage(context.getSource()));
+                .requires(source -> source.hasPermission(2));
+
+        root.then(Commands.literal("help")
+                .executes(context -> help(context.getSource())));
 
         root.then(Commands.literal("list")
                 .executes(context -> list(context.getSource(), context.getSource().getLevel().dimension()))
@@ -104,18 +109,14 @@ public final class WhimCommand
                         .executes(context -> list(context.getSource(), ResourceKey.create(Registries.DIMENSION,
                                 ResourceLocationArgument.getId(context, "dimension"))))));
 
-        root.then(Commands.literal("spawn")
-                .executes(context -> spawn(context.getSource(), DEFAULT_TICKS, DEFAULT_ANCHOR, null))
+        root.then(Commands.literal("summon")
+                .executes(context -> summon(context.getSource(), DEFAULT_TICKS, DEFAULT_ANCHOR, null))
                 .then(Commands.argument("ticks", IntegerArgumentType.integer(-1))
-                        .executes(context -> spawn(context.getSource(), IntegerArgumentType.getInteger(context, "ticks"),
+                        .executes(context -> summon(context.getSource(), IntegerArgumentType.getInteger(context, "ticks"),
                                 DEFAULT_ANCHOR, null))
                         .then(Commands.argument("anchortype", StringArgumentType.word())
-                                .suggests((context, builder) -> SharedSuggestionProvider.suggest(
-                                        WhimAnchors.types().stream()
-                                                .map(ResourceLocation::getPath)
-                                                .collect(Collectors.toList()),
-                                        builder))
-                                .executes(context -> spawn(context.getSource(),
+                                .suggests((context, builder) -> suggestAnchors(builder))
+                                .executes(context -> summon(context.getSource(),
                                         IntegerArgumentType.getInteger(context, "ticks"),
                                         StringArgumentType.getString(context, "anchortype"), null))
                                 .then(Commands.argument("data", StringArgumentType.greedyString())
@@ -123,41 +124,39 @@ public final class WhimCommand
                                                 WhimAnchors.resolve(StringArgumentType.getString(context, "anchortype"))
                                                         .orElse(null),
                                                 context.getSource(), builder))
-                                        .executes(context -> spawn(context.getSource(),
+                                        .executes(context -> summon(context.getSource(),
                                                 IntegerArgumentType.getInteger(context, "ticks"),
                                                 StringArgumentType.getString(context, "anchortype"),
                                                 StringArgumentType.getString(context, "data")))))));
 
         root.then(Commands.literal("whim")
-                .then(Commands.argument("id", StringArgumentType.word())
-                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(aliveIds(context.getSource()), builder))
-                        .then(Commands.argument("action", StringArgumentType.word())
-                                .suggests((context, builder) -> suggestWords(ACTIONS, builder))
+                .then(Commands.argument("action", StringArgumentType.word())
+                        .suggests((context, builder) -> suggestWords(ACTIONS, builder))
+                        .executes(context -> act(context.getSource(), null,
+                                StringArgumentType.getString(context, "action")))
+                        .then(Commands.argument("id", StringArgumentType.word())
+                                .suggests((context, builder) -> SharedSuggestionProvider.suggest(aliveIds(context.getSource()), builder))
                                 .executes(context -> act(context.getSource(), uuid(context, "id"),
                                         StringArgumentType.getString(context, "action"))))));
 
         event.getDispatcher().register(root);
     }
 
-    /** 只给正瞄着的那条。别的一条都不列 —— list 里那些 uuid 点一下就能填进聊天框。 */
-    private static List<String> aliveIds(CommandSourceStack source)
+    /** 正瞄着的那条 —— 它可能已经走了，AIMED 里还留着旧 id，所以得真查一遍。没有就是 null。 */
+    private static UUID aimed(CommandSourceStack source)
     {
         ServerPlayer player = source.getPlayer();
+        UUID id = player == null ? null : WhimRegistry.aimed(player);
 
-        if (player == null)
-        {
-            return List.of();
-        }
+        return id != null && WhimRegistry.find(id).isPresent() ? id : null;
+    }
 
-        UUID aimed = WhimRegistry.aimed(player);
+    /** 补全只给正瞄着的那条。别的一条都不列 —— list 里那些 uuid 点一下就能填进聊天框。 */
+    private static List<String> aliveIds(CommandSourceStack source)
+    {
+        UUID id = aimed(source);
 
-        // 瞄着的那条可能已经走了，AIMED 里还留着旧 id，所以得真查一遍。
-        if (aimed == null || WhimRegistry.find(aimed).isEmpty())
-        {
-            return List.of();
-        }
-
-        return List.of(aimed.toString());
+        return id == null ? List.of() : List.of(id.toString());
     }
 
     private static UUID uuid(CommandContext<CommandSourceStack> context, String name)
@@ -180,36 +179,15 @@ public final class WhimCommand
         return WhimAnchors.types().stream().map(ResourceLocation::getPath).collect(Collectors.joining(", "));
     }
 
-    /** 用法。每种锚一行：锚数据怎么写、认哪些参数。加一种锚只用改注册表。 */
-    private static List<String> usageLines()
+    /** 用法。不列每种锚 —— 锚会越加越多，锚数据格式挪到锚类型补全的悬浮提示上，参数按 TAB 看。 */
+    private static List<String> helpLines()
     {
-        List<String> lines = new ArrayList<>();
-
-        lines.add("  /glimmerwhim list [维度|all]");
-        lines.add("  /glimmerwhim spawn [tick=" + DEFAULT_TICKS + "｜-1=永久] [锚类型=" + DEFAULT_ANCHOR
-                + "] [锚数据] {参数}");
-
-        for (ResourceLocation type : WhimAnchors.types())
-        {
-            lines.add("    " + type.getPath() + ": " + WhimAnchors.hint(type) + paramsUsage(WhimAnchors.params(type)));
-        }
-
-        lines.add("  /glimmerwhim whim <uuid> " + String.join("｜", ACTIONS));
-
-        return List.copyOf(lines);
-    }
-
-    /** 这份参数表怎么写。一个参数都不认就什么都不加。 */
-    private static String paramsUsage(WhimParams params)
-    {
-        if (params.all().isEmpty())
-        {
-            return "";
-        }
-
-        return "；参数 " + params.all().stream()
-                .map(param -> param.name() + "=" + param.hint() + "（默认 " + param.defaultValue() + "）")
-                .collect(Collectors.joining("，"));
+        return List.of(
+                "  /glimmerwhim list [维度|all]",
+                "  /glimmerwhim summon [tick=" + DEFAULT_TICKS + "｜-1=永久] [锚类型=" + DEFAULT_ANCHOR
+                        + "] [锚数据] {参数}",
+                "  /glimmerwhim whim " + String.join("｜", ACTIONS) + " [uuid]（不给 uuid 就对正瞄着的那条）",
+                "  锚数据格式、{参数} 按 TAB 看");
     }
 
     /**
@@ -296,6 +274,24 @@ public final class WhimCommand
         return false;
     }
 
+    /**
+     * 锚类型。锚数据怎么写挂在悬浮提示上 —— 用法提示里不列这些了，锚会越加越多。
+     */
+    private static CompletableFuture<Suggestions> suggestAnchors(SuggestionsBuilder builder)
+    {
+        String typed = builder.getRemaining().toLowerCase(Locale.ROOT);
+
+        for (ResourceLocation type : WhimAnchors.types())
+        {
+            if (type.getPath().toLowerCase(Locale.ROOT).startsWith(typed))
+            {
+                builder.suggest(type.getPath(), Component.literal(WhimAnchors.hint(type)));
+            }
+        }
+
+        return builder.buildFuture();
+    }
+
     /** 按已经打出来的字过一遍，跟原版一个脾气。 */
     private static CompletableFuture<Suggestions> suggestText(Collection<String> candidates, SuggestionsBuilder builder)
     {
@@ -342,9 +338,9 @@ public final class WhimCommand
         return builder.buildFuture();
     }
 
-    private static int usage(CommandSourceStack source)
+    private static int help(CommandSourceStack source)
     {
-        for (String line : USAGE)
+        for (String line : HELP)
         {
             source.sendSuccess(() -> Component.literal(line), false);
         }
@@ -412,7 +408,7 @@ public final class WhimCommand
     /** 一条 uuid 的可点文本：点一下把命令填进聊天框，不是直接跑 —— 想 kill 就把 get 改掉。 */
     private static MutableComponent link(UUID id)
     {
-        String command = "/glimmerwhim whim " + id + " get";
+        String command = "/glimmerwhim whim get " + id;
 
         return Component.literal(id.toString()).withStyle(Style.EMPTY
                 .withColor(ChatFormatting.AQUA)
@@ -426,13 +422,20 @@ public final class WhimCommand
         return whim.permanent() ? "永久" : whim.lifetime() + "t";
     }
 
-    /** uuid 后面那个动作。 */
+    /** 动作。没写 uuid 就对正瞄着的那条。 */
     private static int act(CommandSourceStack source, UUID id, String action) throws CommandSyntaxException
     {
+        UUID target = id != null ? id : aimed(source);
+
+        if (target == null)
+        {
+            throw ERROR_NO_AIM.create();
+        }
+
         return switch (action)
         {
-            case "get" -> get(source, id);
-            case "kill" -> kill(source, id);
+            case "get" -> get(source, target);
+            case "kill" -> kill(source, target);
             default -> throw ERROR_ACTION.create(action);
         };
     }
@@ -473,7 +476,7 @@ public final class WhimCommand
         return 1;
     }
 
-    private static int spawn(CommandSourceStack source, int ticks, String anchorType, String tail)
+    private static int summon(CommandSourceStack source, int ticks, String anchorType, String tail)
             throws CommandSyntaxException
     {
         ServerPlayer player = source.getPlayer();
