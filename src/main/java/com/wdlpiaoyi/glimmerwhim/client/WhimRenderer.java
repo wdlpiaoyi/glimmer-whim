@@ -25,7 +25,7 @@ public final class WhimRenderer
     private static final double DEV_DISTANCE = 8.0D;
 
     /** 半个边长。 */
-    private static final double SIZE = 0.5D;
+    private static final double SIZE = 0.25D;
 
     private static final float[] PURPLE = { 1.0F, 0.0F, 1.0F, 1.0F };
     private static final float[] BLACK = { 0.0F, 0.0F, 0.0F, 1.0F };
