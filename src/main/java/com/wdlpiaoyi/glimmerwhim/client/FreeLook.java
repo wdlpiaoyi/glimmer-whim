@@ -164,9 +164,14 @@ public final class FreeLook
      * 原版的下一步是 {@code Entity.turn} 里的 {@code * 0.15F}，那一刀被我们掐了，所以在这儿补上 ——
      * 不补的话镜头会比原版快上一大截。补完再乘配置里的 {@code freelook.sensitivity}（默认 1.0，就是原版那份）。
      * <p>
+     * 上下按 {@code freelook.pitchLimitDegrees} 掐（绝对角度，原版那份 ±90 就是最大）；
+     * 左右按 {@code freelook.yawLimitDegrees} 掐，这一条是相对**人当下的朝向**算的：人冻在原地，
+     * 镜头最多从正前方偏出去那么多度，180 就是不限、和原版一样。转过来的量先按角度归一化，
+     * 免得人正好在 359 度、镜头刚偏过去就被算成偏了 359 度。
+     * <p>
      * 返回 true 表示这一刀别落到人身上，转镜头就行了。
      */
-    public static boolean turn(double yRot, double xRot)
+    public static boolean turn(Player player, double yRot, double xRot)
     {
         if (state != State.ACTIVE)
         {
@@ -175,9 +180,13 @@ public final class FreeLook
 
         float step = (float) (0.15D * WhimConfig.freeLookSensitivity());
         float limit = (float) WhimConfig.freeLookPitchLimitDegrees();
+        float yawLimit = (float) WhimConfig.freeLookYawLimitDegrees();
 
         yaw += (float) yRot * step;
         pitch = Mth.clamp(pitch + (float) xRot * step, -limit, limit);
+
+        float body = player.getYRot();
+        yaw = body + Mth.clamp(Mth.wrapDegrees(yaw - body), -yawLimit, yawLimit);
 
         return true;
     }

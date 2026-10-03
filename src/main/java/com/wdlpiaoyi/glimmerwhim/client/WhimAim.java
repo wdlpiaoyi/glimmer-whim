@@ -31,7 +31,7 @@ public final class WhimAim
     {
         ClientWhimCache.WhimView best = null;
         double bestDot = -1.0D;
-        double maxDistance = WhimConfig.aimMaxDistance();
+        double reach = WhimReach.blocks();
 
         for (ClientWhimCache.WhimView whim : ClientWhimCache.all())
         {
@@ -51,8 +51,8 @@ public final class WhimAim
                 continue;
             }
 
-            // 超过 [aim] maxDistance 就压根不算瞄上；-1（或小于等于 0）表示不限。
-            if (maxDistance > 0.0D && distanceSqr > maxDistance * maxDistance)
+            // 原版渲染距离以外的东西屏幕上根本看不见，不用算瞄上没瞄上。
+            if (distanceSqr > reach * reach)
             {
                 continue;
             }

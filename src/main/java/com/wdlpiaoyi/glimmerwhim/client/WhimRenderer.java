@@ -103,7 +103,7 @@ public final class WhimRenderer
 
         // 深度测试是关的，前后关系全靠画家算法：远的先画。不排的话后画的远面会盖住近面。
         List<Drawable> drawable = new ArrayList<>();
-        double maxDistance = WhimConfig.renderMaxDistance();
+        double reach = WhimReach.blocks();
 
         for (ClientWhimCache.WhimView whim : ClientWhimCache.all())
         {
@@ -116,8 +116,8 @@ public final class WhimRenderer
                 continue;
             }
 
-            // 比 [render] maxDistance 更远的灵感就不画了。
-            if (at.distanceToSqr(eye) > maxDistance * maxDistance)
+            // 原版渲染距离以外的灵感不画：屏幕上本来也看不见。
+            if (at.distanceToSqr(eye) > reach * reach)
             {
                 continue;
             }
