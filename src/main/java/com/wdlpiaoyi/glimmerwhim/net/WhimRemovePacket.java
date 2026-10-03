@@ -14,7 +14,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
-/** 一条灵感消失。原因客户端暂时不用，但留着 —— 以后"它溜走了"要有话说。 */
+/** 一条灵感消失。 */
 public record WhimRemovePacket(ResourceKey<Level> dimension, UUID id, WhimRemoveReason reason)
 {
     public static void encode(WhimRemovePacket packet, FriendlyByteBuf buf)

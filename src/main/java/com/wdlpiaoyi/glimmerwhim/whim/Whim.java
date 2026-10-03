@@ -8,7 +8,7 @@ import net.minecraft.resources.ResourceLocation;
  * 一条灵感。
  * <p>
  * 只有四个必填字段，可选字段（intensity、source、visibility）这一版一个都不写。
- * 不是实体，不落盘 —— 活几十秒的东西没有存档价值，重启后世界里本来就会重新长。
+ * 不是实体，不落盘 —— 活几十秒的东西没有存档价值。
  */
 public final class Whim
 {

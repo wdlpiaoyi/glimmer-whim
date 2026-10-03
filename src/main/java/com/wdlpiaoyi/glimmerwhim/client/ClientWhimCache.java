@@ -16,9 +16,7 @@ import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 /**
- * 客户端这边的镜像：服务端发过来什么，这里就是什么。
- * <p>
- * 它不做判断、不做过滤 —— 能被过滤掉的压根不会发过来。这一层只负责记住。
+ * 客户端这边的镜像：服务端发过来什么，这里就是什么，不做判断也不做过滤。
  */
 public final class ClientWhimCache
 {

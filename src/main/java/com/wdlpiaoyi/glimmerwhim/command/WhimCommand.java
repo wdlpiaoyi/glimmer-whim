@@ -32,9 +32,7 @@ import net.minecraft.world.level.Level;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
-/**
- * 调试入口。这不是玩法 —— 刷新条件是你的事，这版没有自动刷新。
- */
+/** 调试入口。这版没有自动刷新。 */
 public final class WhimCommand
 {
     private static final String DEFAULT_ANCHOR = RayAnchor.TYPE.getPath();

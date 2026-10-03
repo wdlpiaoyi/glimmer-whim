@@ -49,7 +49,6 @@ minecraft {
         client {
         }
 
-        // The inspiration lifecycle is server-authoritative, so the mod must load on both sides.
         server {
             args '--nogui'
         }

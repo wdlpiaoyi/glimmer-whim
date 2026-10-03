@@ -17,7 +17,7 @@ import net.minecraft.world.phys.Vec3;
 /**
  * 一个世界方向，没有距离。
  * <p>
- * 调试用。它故意是最"没有位置"的那种锚：你没法走到它跟前，只能朝那个方向看过去。
+ * 调试用。
  */
 public final class RayAnchor implements WhimAnchor
 {

@@ -26,8 +26,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 /**
  * 一个维度一张表：这个维度里现在还活着的灵感。
  * <p>
- * {@link #removeWhim} 是唯一的出口。灵感不会从别的地方消失 —— 调用它的只有四个地方：
- * tick 到点、施法结算、松手、维度卸载。
+ * {@link #removeWhim} 是唯一的出口。调用它的只有四个地方：tick 到点、施法结算、松手、维度卸载。
  */
 public final class WhimRegistry
 {
@@ -61,7 +60,7 @@ public final class WhimRegistry
         this.spawn(whim, WhimVisibility.ALL);
     }
 
-    /** 出现，只发给能用它的人。用不了的人连包都收不到。 */
+    /** 出现，只发给能用它的人。 */
     public void spawn(Whim whim, WhimVisibility visibility)
     {
         this.tracked.put(whim.id(), new Tracked(whim, visibility));

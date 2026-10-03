@@ -2,9 +2,6 @@ modLoader="javafml" #mandatory
 loaderVersion="${loader_version_range}" #mandatory
 license="${mod_license}"
 
-# NOTE: clientSideOnly is deliberately NOT set. The inspiration lifecycle is
-# server-authoritative, so this mod must load on dedicated servers as well.
-
 [[mods]] #mandatory
 modId="${mod_id}" #mandatory
 version="${mod_version}" #mandatory

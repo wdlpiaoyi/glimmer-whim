@@ -19,7 +19,6 @@ import net.minecraft.resources.ResourceLocation;
  * <p>
  * 一种锚在这里登记三件事：怎么把包读回成 {@link WhimAnchor}、怎么从命令参数造一条、
  * 以及 {@code anchordata} 该写成什么样子（命令补全用）。
- * 加一种锚 = 加一个类 + 在这里注册一行，别处不动。
  */
 public final class WhimAnchors
 {

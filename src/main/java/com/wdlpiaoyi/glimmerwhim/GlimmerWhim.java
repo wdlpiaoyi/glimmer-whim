@@ -12,8 +12,6 @@ import org.slf4j.Logger;
 
 /**
  * Glimmer Whim - 微光奇想。
- *
- * <p>动手加任何系统之前，先读项目根目录的 设计纲要.md。</p>
  */
 @Mod(GlimmerWhim.MODID)
 public final class GlimmerWhim
