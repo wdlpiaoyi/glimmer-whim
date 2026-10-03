@@ -25,18 +25,35 @@ public final class DevRender
     {
     }
 
-    public static void draw(PoseStack pose, Vec3 dir, WhimData data, WhimParams params, boolean aimed)
+    public static void draw(PoseStack pose, Vec3 dir, WhimData data, WhimParams params)
     {
         boolean cube = "cube".equals(params.text(data, "shape", "cube"));
         double half = params.number(data, "size", 1.0D) / 2.0D;
         int cells = WhimConfig.renderDevCheckerCells();
-        double outline = WhimConfig.renderOutlineWidth();
         float[] first = WhimConfig.renderDevColorElement();
         float[] second = WhimConfig.renderDevColorElementAlt();
-        float[] aimedColor = WhimConfig.renderColorAimed();
 
-        if (aimed && outline > 0.0D)
+        if (cube)
         {
+            cube(pose, half, first, second, cells);
+        }
+        else
+        {
+            quad(pose, dir, half, first, second, cells);
+        }
+    }
+
+    public static void outline(PoseStack pose, Vec3 dir, WhimData data, WhimParams params)
+    {
+        double outline = WhimConfig.renderOutlineWidth();
+
+        if (outline > 0.0D)
+        {
+            boolean cube = "cube".equals(params.text(data, "shape", "cube"));
+            double half = params.number(data, "size", 1.0D) / 2.0D;
+            int cells = WhimConfig.renderDevCheckerCells();
+            float[] aimedColor = WhimConfig.renderColorAimed();
+
             if (cube)
             {
                 cube(pose, half + outline, aimedColor, aimedColor, cells);
@@ -47,6 +64,18 @@ public final class DevRender
             }
         }
 
+        draw(pose, dir, data, params);
+    }
+
+    public static void hue(PoseStack pose, Vec3 dir, WhimData data, WhimParams params)
+    {
+        boolean cube = "cube".equals(params.text(data, "shape", "cube"));
+        double half = params.number(data, "size", 1.0D) / 2.0D;
+        int cells = WhimConfig.renderDevCheckerCells();
+        float shift = (float) ((System.currentTimeMillis() % 5000L) / 5000.0D);
+        float[] first = rotateHue(WhimConfig.renderDevColorElement(), shift);
+        float[] second = rotateHue(WhimConfig.renderDevColorElementAlt(), shift);
+
         if (cube)
         {
             cube(pose, half, first, second, cells);
@@ -55,6 +84,33 @@ public final class DevRender
         {
             quad(pose, dir, half, first, second, cells);
         }
+    }
+
+    private static float[] rotateHue(float[] color, float shift)
+    {
+        double angle = shift * 2.0D * Math.PI;
+        double cos = Math.cos(angle);
+        double sin = Math.sin(angle);
+        double r = color[0];
+        double g = color[1];
+        double b = color[2];
+
+        double nr = (0.213D + cos * 0.787D - sin * 0.213D) * r
+                + (0.715D - cos * 0.715D - sin * 0.715D) * g
+                + (0.072D - cos * 0.072D + sin * 0.928D) * b;
+        double ng = (0.213D - cos * 0.213D + sin * 0.143D) * r
+                + (0.715D + cos * 0.285D + sin * 0.140D) * g
+                + (0.072D - cos * 0.072D - sin * 0.283D) * b;
+        double nb = (0.213D - cos * 0.213D - sin * 0.787D) * r
+                + (0.715D - cos * 0.715D + sin * 0.715D) * g
+                + (0.072D + cos * 0.928D + sin * 0.072D) * b;
+
+        return new float[] { clamp(nr), clamp(ng), clamp(nb), color[3] };
+    }
+
+    private static float clamp(double value)
+    {
+        return (float) Math.max(0.0D, Math.min(1.0D, value));
     }
 
     public static double hit(Vec3 eye, Vec3 look, Vec3 at, WhimData data, WhimParams params)

@@ -13,6 +13,7 @@ import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.whims.DevWhim;
+import com.wdlpiaoyi.glimmerwhim.whims.HighlightTestWhim;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 import com.wdlpiaoyi.glimmerwhim.whims.client.DevRender;
 
@@ -29,13 +30,19 @@ public final class WhimRenderer
     @FunctionalInterface
     public interface Drawer
     {
-        void draw(PoseStack pose, Vec3 dir, WhimData data, WhimParams params, boolean aimed);
+        void draw(PoseStack pose, Vec3 dir, WhimData data, WhimParams params);
     }
 
     @FunctionalInterface
     public interface Hit
     {
         double test(Vec3 eye, Vec3 look, Vec3 at, WhimData data, WhimParams params);
+    }
+
+    @FunctionalInterface
+    public interface Highlight
+    {
+        void draw(PoseStack pose, Vec3 dir, WhimData data, WhimParams params);
     }
 
     private record Drawable(ClientWhimCache.WhimView whim, WhimParams params, Vec3 at)
@@ -46,19 +53,23 @@ public final class WhimRenderer
 
     private static final Map<ResourceLocation, Hit> HITS = new LinkedHashMap<>();
 
+    private static final Map<ResourceLocation, Highlight> HIGHLIGHTS = new LinkedHashMap<>();
+
     static
     {
-        register(DevWhim.INSTANCE, DevRender::draw, DevRender::hit);
+        register(DevWhim.INSTANCE, DevRender::draw, DevRender::hit, DevRender::outline);
+        register(HighlightTestWhim.INSTANCE, DevRender::draw, DevRender::hit, DevRender::hue);
     }
 
     private WhimRenderer()
     {
     }
 
-    public static void register(WhimType type, Drawer drawer, Hit hit)
+    public static void register(WhimType type, Drawer drawer, Hit hit, Highlight highlight)
     {
         DRAWERS.put(type.id(), drawer);
         HITS.put(type.id(), hit);
+        HIGHLIGHTS.put(type.id(), highlight);
     }
 
     public static Drawer drawer(ResourceLocation id)
@@ -69,6 +80,11 @@ public final class WhimRenderer
     public static Hit hit(ResourceLocation id)
     {
         return HITS.getOrDefault(id, DevRender::hit);
+    }
+
+    public static Highlight highlight(ResourceLocation id)
+    {
+        return HIGHLIGHTS.getOrDefault(id, DevRender::outline);
     }
 
     @SubscribeEvent
@@ -133,7 +149,14 @@ public final class WhimRenderer
             pose.pushPose();
             pose.translate(position.x, position.y, position.z);
 
-            drawer(whim.type().id()).draw(pose, dir, whim.data(), entry.params(), whim.id().equals(aimed));
+            if (whim.id().equals(aimed))
+            {
+                highlight(whim.type().id()).draw(pose, dir, whim.data(), entry.params());
+            }
+            else
+            {
+                drawer(whim.type().id()).draw(pose, dir, whim.data(), entry.params());
+            }
 
             pose.popPose();
         }
