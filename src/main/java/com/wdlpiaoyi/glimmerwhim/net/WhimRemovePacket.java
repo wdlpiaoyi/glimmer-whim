@@ -14,7 +14,6 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
-/** 一条灵感消失。 */
 public record WhimRemovePacket(ResourceKey<Level> dimension, UUID id, WhimRemoveReason reason)
 {
     public static void encode(WhimRemovePacket packet, FriendlyByteBuf buf)

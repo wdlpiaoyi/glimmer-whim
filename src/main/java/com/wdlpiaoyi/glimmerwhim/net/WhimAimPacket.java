@@ -9,12 +9,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
-/**
- * 客户端唯一会往上说的那句话：我现在瞄着哪条。
- * <p>
- * 瞄是客户端算的（方向可以没有距离，只有客户端能算），但命令补全在服务端，所以要过个话。
- * {@code id} 是 null 表示现在没瞄。
- */
 public record WhimAimPacket(UUID id)
 {
     public static void encode(WhimAimPacket packet, FriendlyByteBuf buf)

@@ -6,14 +6,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * 一份参数表：谁认哪些 {@code {名字:值}}，谁就拿着它。
- * <p>
- * 参数在命令那一侧校验完才进 {@link WhimData}，客户端收到的已经是过完这一关的。
- */
 public final class WhimParams
 {
-    /** 一个参数都不认。 */
     public static final WhimParams NONE = new WhimParams(List.of());
 
     private final Map<String, WhimParam> params;
@@ -35,7 +29,6 @@ public final class WhimParams
         return new WhimParams(List.of(params));
     }
 
-    /** 表里的参数，顺序就是声明顺序。 */
     public Collection<WhimParam> all()
     {
         return this.params.values();
@@ -46,7 +39,6 @@ public final class WhimParams
         return this.params.get(name);
     }
 
-    /** 没写就用声明里的默认值。 */
     public String text(WhimData data, String name)
     {
         WhimParam param = get(name);
@@ -54,13 +46,11 @@ public final class WhimParams
         return data.get(name).orElse(param == null ? "" : param.defaultValue());
     }
 
-    /** 同上，但这张表压根没收这个参数时用 {@code fallback}。 */
     public String text(WhimData data, String name, String fallback)
     {
         return get(name) == null ? fallback : text(data, name);
     }
 
-    /** 读一个数参数；读不成数就退回默认值。 */
     public double number(WhimData data, String name)
     {
         String value = data.get(name).orElse(null);
@@ -73,7 +63,6 @@ public final class WhimParams
             }
             catch (NumberFormatException e)
             {
-                // 命令那侧校验过了，走到这儿说明数据不是本模组发的 —— 退回默认值。
             }
         }
 
@@ -82,17 +71,11 @@ public final class WhimParams
         return param == null ? 0.0D : Double.parseDouble(param.defaultValue());
     }
 
-    /** 同上，但这张表压根没收这个参数时用 {@code fallback}。 */
     public double number(WhimData data, String name, double fallback)
     {
         return get(name) == null ? fallback : number(data, name);
     }
 
-    /**
-     * 校验一条灵感的数据：不认识的名字、不合法值都抛 {@link IllegalArgumentException}。
-     *
-     * @return 只含这张表认的那些参数
-     */
     public WhimData parse(WhimData raw)
     {
         if (raw.isEmpty())

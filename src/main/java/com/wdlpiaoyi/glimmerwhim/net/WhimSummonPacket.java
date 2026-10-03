@@ -18,12 +18,6 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
-/**
- * 一条灵感出现。
- * <p>
- * 带上维度是为了让客户端知道"这还是不是同一个世界" —— 收到别的维度的包就先把缓存清了。
- * 不带 visibility：能不能用是发包那一刻的事，用不了的人根本收不到。
- */
 public record WhimSummonPacket(ResourceKey<Level> dimension, UUID id, WhimAnchor anchor, ResourceLocation element,
         WhimData data, int lifetime)
 {

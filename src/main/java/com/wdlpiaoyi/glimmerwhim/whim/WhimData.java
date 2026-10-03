@@ -9,19 +9,12 @@ import java.util.regex.Pattern;
 
 import net.minecraft.network.FriendlyByteBuf;
 
-/**
- * 一条灵感自己带的数据，就是命令里写的那些 {@code {名字:值}}。
- * <p>
- * 有哪些名字、值合不合法，由它那种锚说了算；这里只管装。
- */
 public final class WhimData
 {
     public static final WhimData EMPTY = new WhimData(Map.of());
 
-    /** 命令尾巴里的一个花括号。 */
     private static final Pattern GROUP = Pattern.compile("\\{([^{}]*)\\}");
 
-    /** 一个花括号里分隔多个参数。 */
     private static final Pattern SEPARATOR = Pattern.compile("[,;]");
 
     private final Map<String, String> values;
@@ -56,7 +49,6 @@ public final class WhimData
         return this.values.isEmpty();
     }
 
-    /** 从命令尾巴里把 {@code {名字:值}} 全抠出来，剩下的当锚数据。 */
     public static Split split(String tail)
     {
         String text = tail == null ? "" : tail;
@@ -83,7 +75,6 @@ public final class WhimData
         return new Split(of(values), anchorData);
     }
 
-    /** 拆一个花括号里的内容，{@code {shape:cube}} 和 {@code {shape:cube,size:1}} 都收。 */
     private static void put(Map<String, String> values, String group)
     {
         for (String chunk : SEPARATOR.split(group))
@@ -113,7 +104,6 @@ public final class WhimData
         }
     }
 
-    /** 名字和值之间的那个分隔符，冒号和等号都认。 */
     private static int cut(String pair)
     {
         int colon = pair.indexOf(':');
@@ -150,12 +140,10 @@ public final class WhimData
         return of(values);
     }
 
-    /** 抠完参数之后剩下的那段。 */
     public record Split(WhimData data, String anchorData)
     {
     }
 
-    /** 写回 {@code {名字:值}} 的样子。 */
     @Override
     public String toString()
     {

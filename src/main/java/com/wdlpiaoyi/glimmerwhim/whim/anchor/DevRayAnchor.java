@@ -16,11 +16,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
-/**
- * 一个世界方向，没有距离 —— 画的时候摆在 {@code distance} 格以外。
- * <p>
- * 调试用。
- */
 public final class DevRayAnchor implements WhimAnchor
 {
     public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev_ray");
@@ -57,7 +52,6 @@ public final class DevRayAnchor implements WhimAnchor
         return new DevRayAnchor(new Vec3(buf.readFloat(), buf.readFloat(), buf.readFloat()));
     }
 
-    /** {@code anchordata} 的格式就是这三个数。补全给 {@code ~ ~ ~}（即视线）和当前视线的三个数。 */
     public static Collection<String> suggestData(CommandSourceStack source)
     {
         ServerPlayer player = source.getPlayer();
@@ -66,12 +60,6 @@ public final class DevRayAnchor implements WhimAnchor
         return List.of("~ ~ ~", String.format(Locale.ROOT, "%.3f %.3f %.3f", look.x, look.y, look.z));
     }
 
-    /**
-     * 从命令参数造一个。
-     *
-     * @param data 三个数 {@code dx dy dz}，其中任一个写成 {@code ~} 就取执行者视线的对应分量；
-     *             不给就是执行者正前方
-     */
     public static DevRayAnchor parse(CommandSourceStack source, String data)
     {
         if (data == null || data.isBlank())

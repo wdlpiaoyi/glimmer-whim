@@ -3,7 +3,6 @@ package com.wdlpiaoyi.glimmerwhim.whim;
 import java.util.List;
 import java.util.function.Predicate;
 
-/** 元素类型认的一个参数，写在命令里就是 {@code {名字:值}}。 */
 public final class WhimParam
 {
     private final String name;
@@ -21,7 +20,6 @@ public final class WhimParam
         this.choices = choices;
     }
 
-    /** 只能从那几个词里挑一个。 */
     public static WhimParam choice(String name, String defaultValue, String... choices)
     {
         List<String> list = List.of(choices);
@@ -29,7 +27,6 @@ public final class WhimParam
         return new WhimParam(name, defaultValue, list::contains, String.join(" 或 ", list), list);
     }
 
-    /** 一个正数。 */
     public static WhimParam positiveNumber(String name, String defaultValue)
     {
         return new WhimParam(name, defaultValue, WhimParam::isPositive, "正数", List.of());
@@ -57,13 +54,11 @@ public final class WhimParam
         return this.defaultValue;
     }
 
-    /** 值不对时告诉玩家能写什么。 */
     public String hint()
     {
         return this.hint;
     }
 
-    /** 补全候选；数值参数没有候选。 */
     public List<String> choices()
     {
         return this.choices;
