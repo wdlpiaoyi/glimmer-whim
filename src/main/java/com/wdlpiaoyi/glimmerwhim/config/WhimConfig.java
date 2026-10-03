@@ -46,6 +46,8 @@ public final class WhimConfig
 
     private static final ForgeConfigSpec.ConfigValue<String> DEFAULT_ANCHOR;
 
+    private static final ForgeConfigSpec.IntValue MAX_CHAIN_LENGTH;
+
     private static final ForgeConfigSpec.IntValue COMMAND_PERMISSION_LEVEL;
 
     private static final ForgeConfigSpec.DoubleValue COMMAND_SUGGEST_REACH;
@@ -116,6 +118,9 @@ public final class WhimConfig
         DEFAULT_ANCHOR = builder
                 .comment("summon 省略锚类型时使用的默认锚（填写锚的路径名，如 ray、pos）；无效值回退到 ray。默认 ray。")
                 .define("defaultAnchor", "ray");
+        MAX_CHAIN_LENGTH = builder
+                .comment("一次施法最多串联的灵感条数（含根）；0 = 禁止串联（只能用根）。默认 8。")
+                .defineInRange("maxChainLength", 8, 0, 64);
         builder.pop();
 
         builder.comment("命令：/glimmerwhim 的权限与补全。");
@@ -211,6 +216,11 @@ public final class WhimConfig
     public static String defaultAnchor()
     {
         return DEFAULT_ANCHOR.get();
+    }
+
+    public static int maxChainLength()
+    {
+        return MAX_CHAIN_LENGTH.get();
     }
 
     public static int commandPermissionLevel()

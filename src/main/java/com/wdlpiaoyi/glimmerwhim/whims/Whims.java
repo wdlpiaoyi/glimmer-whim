@@ -19,6 +19,10 @@ public final class Whims
         register(DevMarkWhim.INSTANCE);
         register(DevEntityWhim.INSTANCE);
         register(DevCoordWhim.INSTANCE);
+        register(DevRootWhim.INSTANCE);
+        register(DevBoostWhim.INSTANCE);
+        register(DevPowerWhim.INSTANCE);
+        register(DevRangeWhim.INSTANCE);
         register(ExpiresWhim.INSTANCE);
         register(RemoveOnHoldWhim.INSTANCE);
         register(RemoveOnReleaseWhim.INSTANCE);

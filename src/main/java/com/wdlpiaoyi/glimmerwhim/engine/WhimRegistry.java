@@ -16,9 +16,11 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
+import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 import com.wdlpiaoyi.glimmerwhim.net.WhimNetwork;
 import com.wdlpiaoyi.glimmerwhim.net.WhimRemovePacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimSummonPacket;
+import com.wdlpiaoyi.glimmerwhim.whims.WhimRole;
 
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -304,18 +306,13 @@ public final class WhimRegistry
 
     private static void fire(WhimEvent.Kind kind, UUID id, ServerPlayer player)
     {
-        fire(kind, id, player, null);
-    }
-
-    private static void fire(WhimEvent.Kind kind, UUID id, ServerPlayer player, WhimTarget target)
-    {
         for (WhimRegistry registry : REGISTRIES.values())
         {
             Tracked tracked = registry.tracked.get(id);
 
             if (tracked != null)
             {
-                WhimEvent event = new WhimEvent(kind, registry.level, tracked.whim(), player, target);
+                WhimEvent event = new WhimEvent(kind, registry.level, tracked.whim(), player, null);
 
                 tracked.whim().type().on(event);
 
@@ -324,6 +321,21 @@ public final class WhimRegistry
                 return;
             }
         }
+    }
+
+    private static void fireChain(WhimRegistry registry, WhimChain chain, ServerPlayer player)
+    {
+        WhimEvent event = new WhimEvent(WhimEvent.Kind.USE, registry.level, chain.root(), player, chain);
+
+        chain.root().type().on(event);
+
+        event.removal().ifPresent(reason ->
+        {
+            for (Whim whim : chain.order())
+            {
+                registry.removeWhim(whim.id(), reason);
+            }
+        });
     }
 
     public static void setAimed(ServerPlayer player, UUID id)
@@ -355,33 +367,104 @@ public final class WhimRegistry
         return AIMED.get(player.getUUID());
     }
 
-    public static boolean use(ServerPlayer player, UUID id, WhimTarget target)
+    public static boolean use(ServerPlayer player, List<UUID> chain, WhimTarget target)
     {
+        if (chain == null || chain.isEmpty())
+        {
+            return false;
+        }
+
         WhimRegistry registry = of(player.serverLevel());
-        Tracked tracked = registry.tracked.get(id);
+        Set<UUID> sent = registry.sent.getOrDefault(player.getUUID(), Set.of());
+        int limit = Math.max(1, WhimConfig.maxChainLength());
+        List<Whim> resolved = new ArrayList<>();
 
-        if (tracked == null)
+        for (UUID id : chain)
+        {
+            Tracked tracked = registry.tracked.get(id);
+
+            if (tracked == null || !tracked.visibility().canUse(player, tracked.whim()) || !sent.contains(id))
+            {
+                if (resolved.isEmpty())
+                {
+                    GlimmerWhim.log("[Whim] chain rejected player={} id={}", player.getUUID(), id);
+                    return false;
+                }
+
+                continue;
+            }
+
+            Set<WhimRole> roles = tracked.whim().type().roles();
+
+            if (resolved.isEmpty())
+            {
+                if (!roles.contains(WhimRole.ELEMENT))
+                {
+                    GlimmerWhim.log("[Whim] chain rejected player={} id={} roles={}", player.getUUID(), id, roles);
+                    return false;
+                }
+            }
+            else if (!roles.contains(WhimRole.MODIFIER))
+            {
+                continue;
+            }
+
+            if (resolved.size() >= limit)
+            {
+                break;
+            }
+
+            resolved.add(tracked.whim());
+        }
+
+        if (resolved.isEmpty())
         {
             return false;
         }
 
-        if (!tracked.visibility().canUse(player, tracked.whim())
-                || !registry.sent.getOrDefault(player.getUUID(), Set.of()).contains(id))
-        {
-            GlimmerWhim.log("[Whim] use rejected player={} id={}", player.getUUID(), id);
-            return false;
-        }
+        WhimChain built = new WhimChain(resolved, target);
 
-        GlimmerWhim.log("[Whim] use player={} id={} target={}", player.getUUID(), id,
+        GlimmerWhim.log("[Whim] use player={} chain={} target={}", player.getUUID(),
+                resolved.stream().map(whim -> whim.type().id().toString()).toList(),
                 target == null ? "none" : target.describe());
 
-        if (target == null || !validTarget(player, target) || !tracked.whim().type().acceptsTarget(target))
+        if (target == null || !validTarget(player, target) || !built.root().type().acceptsTarget(target))
         {
-            registry.removeWhim(id, WhimRemoveReason.DROPPED);
+            for (Whim whim : resolved)
+            {
+                registry.removeWhim(whim.id(), WhimRemoveReason.DROPPED);
+            }
+
             return true;
         }
 
-        fire(WhimEvent.Kind.USE, id, player, target);
+        fireChain(registry, built, player);
+        return true;
+    }
+
+    public static boolean voidChain(ServerPlayer player, List<UUID> chain)
+    {
+        if (chain == null || chain.isEmpty())
+        {
+            return false;
+        }
+
+        WhimRegistry registry = of(player.serverLevel());
+        Set<UUID> sent = registry.sent.getOrDefault(player.getUUID(), Set.of());
+
+        for (UUID id : chain)
+        {
+            Tracked tracked = registry.tracked.get(id);
+
+            if (tracked == null || !tracked.visibility().canUse(player, tracked.whim()) || !sent.contains(id))
+            {
+                continue;
+            }
+
+            GlimmerWhim.log("[Whim] void player={} id={}", player.getUUID(), id);
+            registry.removeWhim(id, WhimRemoveReason.DROPPED);
+        }
+
         return true;
     }
 

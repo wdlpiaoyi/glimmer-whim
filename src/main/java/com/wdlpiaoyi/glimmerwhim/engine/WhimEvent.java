@@ -20,16 +20,16 @@ public final class WhimEvent
     private final ServerLevel level;
     private final Whim whim;
     private final ServerPlayer player;
-    private final WhimTarget target;
+    private final WhimChain chain;
     private WhimRemoveReason removal;
 
-    WhimEvent(Kind kind, ServerLevel level, Whim whim, ServerPlayer player, WhimTarget target)
+    WhimEvent(Kind kind, ServerLevel level, Whim whim, ServerPlayer player, WhimChain chain)
     {
         this.kind = kind;
         this.level = level;
         this.whim = whim;
         this.player = player;
-        this.target = target;
+        this.chain = chain;
     }
 
     public Kind kind()
@@ -54,7 +54,12 @@ public final class WhimEvent
 
     public Optional<WhimTarget> target()
     {
-        return Optional.ofNullable(this.target);
+        return this.chain == null ? Optional.empty() : Optional.ofNullable(this.chain.target());
+    }
+
+    public Optional<WhimChain> chain()
+    {
+        return Optional.ofNullable(this.chain);
     }
 
     public void remove(WhimRemoveReason reason)

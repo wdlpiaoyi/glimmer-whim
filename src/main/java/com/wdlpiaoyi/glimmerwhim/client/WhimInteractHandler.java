@@ -1,5 +1,7 @@
 package com.wdlpiaoyi.glimmerwhim.client;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import com.mojang.blaze3d.platform.InputConstants;
@@ -7,6 +9,8 @@ import com.wdlpiaoyi.glimmerwhim.engine.WhimTarget;
 import com.wdlpiaoyi.glimmerwhim.net.WhimHoldPacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimNetwork;
 import com.wdlpiaoyi.glimmerwhim.net.WhimUsePacket;
+import com.wdlpiaoyi.glimmerwhim.net.WhimVoidPacket;
+import com.wdlpiaoyi.glimmerwhim.whims.WhimRole;
 
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -21,7 +25,7 @@ public final class WhimInteractHandler
     private static final KeyMapping INTERACT = new KeyMapping("key.glimmerwhim.interact", InputConstants.Type.MOUSE,
             GLFW.GLFW_MOUSE_BUTTON_RIGHT, "key.categories.glimmerwhim");
 
-    private static UUID held;
+    private static List<UUID> chain;
     private static boolean wasDown;
 
     private WhimInteractHandler()
@@ -47,7 +51,7 @@ public final class WhimInteractHandler
 
         if (player == null || minecraft.screen != null)
         {
-            held = null;
+            chain = null;
             wasDown = INTERACT.isDown();
             return;
         }
@@ -58,32 +62,72 @@ public final class WhimInteractHandler
         {
             if (!wasDown)
             {
-                held = WhimAim.aimed();
+                chain = null;
+                UUID root = WhimAim.aimed();
+                ClientWhimCache.WhimView view = root == null ? null : ClientWhimCache.view(root);
 
-                if (held != null && ClientWhimCache.contains(held))
+                if (view != null && view.type().roles().contains(WhimRole.ELEMENT))
                 {
-                    WhimNetwork.CHANNEL.sendToServer(new WhimHoldPacket(held));
+                    chain = new ArrayList<>();
+                    chain.add(root);
+                    WhimNetwork.CHANNEL.sendToServer(new WhimHoldPacket(root));
                 }
             }
 
-            if (held != null && !ClientWhimCache.contains(held))
+            if (chain != null)
             {
-                held = null;
+                if (!ClientWhimCache.contains(chain.get(0)))
+                {
+                    if (minecraft.getConnection() != null)
+                    {
+                        WhimNetwork.CHANNEL.sendToServer(new WhimVoidPacket(List.copyOf(chain)));
+                    }
+
+                    chain = null;
+                }
+                else
+                {
+                    chain.removeIf(id -> !ClientWhimCache.contains(id));
+
+                    if (chain.isEmpty())
+                    {
+                        chain = null;
+                    }
+                    else
+                    {
+                        append(WhimAim.aimed());
+                    }
+                }
             }
         }
-        else if (held != null)
+        else if (chain != null)
         {
             if (minecraft.getConnection() != null && minecraft.level != null)
             {
                 WhimTarget target = WhimTargeting.pick(minecraft.level, player, player.getEyePosition(),
                         FreeLook.viewVector(player, 1.0F));
 
-                WhimNetwork.CHANNEL.sendToServer(new WhimUsePacket(held, target));
+                WhimNetwork.CHANNEL.sendToServer(new WhimUsePacket(List.copyOf(chain), target));
             }
 
-            held = null;
+            chain = null;
         }
 
         wasDown = down;
+    }
+
+    private static void append(UUID id)
+    {
+        if (id == null || chain.contains(id))
+        {
+            return;
+        }
+
+        ClientWhimCache.WhimView view = ClientWhimCache.view(id);
+
+        if (view != null && view.type().roles().contains(WhimRole.MODIFIER))
+        {
+            chain.add(id);
+        }
     }
 }

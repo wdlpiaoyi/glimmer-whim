@@ -1,5 +1,7 @@
 package com.wdlpiaoyi.glimmerwhim.net;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -11,11 +13,17 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkEvent;
 
-public record WhimUsePacket(UUID id, WhimTarget target)
+public record WhimUsePacket(List<UUID> chain, WhimTarget target)
 {
     public static void encode(WhimUsePacket packet, FriendlyByteBuf buf)
     {
-        buf.writeUUID(packet.id);
+        buf.writeVarInt(packet.chain.size());
+
+        for (UUID id : packet.chain)
+        {
+            buf.writeUUID(id);
+        }
+
         buf.writeBoolean(packet.target != null);
 
         if (packet.target != null)
@@ -35,17 +43,23 @@ public record WhimUsePacket(UUID id, WhimTarget target)
 
     public static WhimUsePacket decode(FriendlyByteBuf buf)
     {
-        UUID id = buf.readUUID();
+        int size = buf.readVarInt();
+        List<UUID> chain = new ArrayList<>(size);
+
+        for (int i = 0; i < size; i++)
+        {
+            chain.add(buf.readUUID());
+        }
 
         if (!buf.readBoolean())
         {
-            return new WhimUsePacket(id, null);
+            return new WhimUsePacket(chain, null);
         }
 
         UUID entity = buf.readBoolean() ? buf.readUUID() : null;
         Vec3 point = new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble());
 
-        return new WhimUsePacket(id, new WhimTarget(entity, point));
+        return new WhimUsePacket(chain, new WhimTarget(entity, point));
     }
 
     public static void handle(WhimUsePacket packet, Supplier<NetworkEvent.Context> context)
@@ -55,7 +69,7 @@ public record WhimUsePacket(UUID id, WhimTarget target)
 
         if (player != null)
         {
-            ctx.enqueueWork(() -> WhimRegistry.use(player, packet.id, packet.target));
+            ctx.enqueueWork(() -> WhimRegistry.use(player, packet.chain, packet.target));
         }
 
         ctx.setPacketHandled(true);

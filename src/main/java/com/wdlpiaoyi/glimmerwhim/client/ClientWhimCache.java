@@ -75,6 +75,11 @@ public final class ClientWhimCache
         return WHIMES.containsKey(id);
     }
 
+    public static WhimView view(UUID id)
+    {
+        return WHIMES.get(id);
+    }
+
     public static void clear()
     {
         WHIMES.clear();
