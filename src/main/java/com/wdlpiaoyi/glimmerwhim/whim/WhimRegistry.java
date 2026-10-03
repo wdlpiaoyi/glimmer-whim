@@ -110,22 +110,19 @@ public final class WhimRegistry
         }
     }
 
-    /** 过一 tick：谁的 lifetime 见底了，谁走。永久的一直是负数，不会撞上 0。 */
+    /** 过一 tick：谁的 lifetime 见底了，谁走；还留着的都叫一声。永久的一直是负数，不会撞上 0。 */
     public void tick()
     {
-        List<UUID> expired = new ArrayList<>();
-
-        for (Tracked entry : this.tracked.values())
+        for (Whim whim : this.all())
         {
-            if (entry.whim().tick() == 0)
+            if (whim.tick() == 0)
             {
-                expired.add(entry.whim().id());
+                this.removeWhim(whim.id(), WhimRemoveReason.EXPIRED);
             }
-        }
-
-        for (UUID id : expired)
-        {
-            this.removeWhim(id, WhimRemoveReason.EXPIRED);
+            else
+            {
+                fire(WhimEvent.Kind.TICK, whim.id(), null);
+            }
         }
     }
 
@@ -202,31 +199,52 @@ public final class WhimRegistry
         return false;
     }
 
-    /** 客户端说它现在瞄着哪条，null 表示没瞄。 */
-    public static void setAimed(ServerPlayer player, UUID id)
+    /**
+     * 叫一条灵感一声；它要是回话说"让它走"，就在这儿移掉。
+     * <p>
+     * 引擎只认 {@link WhimEvent.Kind}，不认识任何具体条件 —— 加条件的活全在锚里。
+     */
+    private static void fire(WhimEvent.Kind kind, UUID id, ServerPlayer player)
     {
-        if (id == null)
-        {
-            AIMED.remove(player.getUUID());
-            return;
-        }
-
-        AIMED.put(player.getUUID(), id);
-
-        // 有的锚一被高亮就自己走（锚自己说了算）。高亮只有客户端算得出来，所以这件事只能在这儿落地。
         for (WhimRegistry registry : REGISTRIES.values())
         {
             Tracked tracked = registry.tracked.get(id);
 
             if (tracked != null)
             {
-                if (tracked.whim().anchor().removeOnHighlight())
-                {
-                    registry.removeWhim(id, WhimRemoveReason.USED);
-                }
+                WhimEvent event = new WhimEvent(kind, registry.level, tracked.whim(), player);
+
+                tracked.whim().anchor().on(event);
+
+                event.removal().ifPresent(reason -> registry.removeWhim(id, reason));
 
                 return;
             }
+        }
+    }
+
+    /** 客户端说它现在瞄着哪条，null 表示没瞄。瞄上、不瞄了各叫一声。 */
+    public static void setAimed(ServerPlayer player, UUID id)
+    {
+        UUID before = AIMED.get(player.getUUID());
+
+        if (id == null)
+        {
+            AIMED.remove(player.getUUID());
+        }
+        else
+        {
+            AIMED.put(player.getUUID(), id);
+        }
+
+        if (before != null && !before.equals(id))
+        {
+            fire(WhimEvent.Kind.UNHIGHLIGHT, before, player);
+        }
+
+        if (id != null && !id.equals(before))
+        {
+            fire(WhimEvent.Kind.HIGHLIGHT, id, player);
         }
     }
 

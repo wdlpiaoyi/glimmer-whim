@@ -8,9 +8,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * 灵感长在哪儿。
+ * 灵感长在哪儿，出了事又该跟谁说。
  * <p>
- * 锚是接口，具体锚以后补。这里只定死两件事：锚怎么进包，以及客户端怎么知道它在哪。
+ * 锚是接口，具体锚以后补。这里定死三件事：锚怎么进包、客户端怎么知道它在哪、有事了怎么叫它。
  * <p>
  * {@link #position} 永远不进包 —— 每帧现算，所以有的锚可以没有距离。
  */
@@ -30,13 +30,12 @@ public interface WhimAnchor
     Optional<Vec3> position(Level level, Vec3 eye, float partialTick, WhimData data, WhimParams params);
 
     /**
-     * 有人正瞄着它（高亮）的那一刻，它要不要自己走 —— 默认不走。
+     * 有事发生了。
      * <p>
-     * "高亮"是客户端算出来的，服务端只听得到 {@link WhimRegistry#setAimed}，所以让锚表个态，
-     * 由 {@code WhimRegistry} 落地。
+     * 引擎只在几个固定时机叫（{@link WhimEvent.Kind}），理不理由锚自己挑；想让它走就在事件上
+     * {@link WhimEvent#remove(WhimRemoveReason)}。条件写在这一个方法里，引擎不用认识它们。
      */
-    default boolean removeOnHighlight()
+    default void on(WhimEvent event)
     {
-        return false;
     }
 }

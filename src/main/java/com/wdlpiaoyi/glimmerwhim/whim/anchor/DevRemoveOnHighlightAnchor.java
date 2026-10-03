@@ -6,7 +6,9 @@ import java.util.Optional;
 
 import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchor;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimData;
+import com.wdlpiaoyi.glimmerwhim.whim.WhimEvent;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimParams;
+import com.wdlpiaoyi.glimmerwhim.whim.WhimRemoveReason;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.FriendlyByteBuf;
@@ -68,9 +70,13 @@ public final class DevRemoveOnHighlightAnchor implements WhimAnchor
         return Optional.of(Vec3.ZERO);
     }
 
+    /** 被高亮就是要它走 —— 条件就这一句，写在自己身上。 */
     @Override
-    public boolean removeOnHighlight()
+    public void on(WhimEvent event)
     {
-        return true;
+        if (event.kind() == WhimEvent.Kind.HIGHLIGHT)
+        {
+            event.remove(WhimRemoveReason.USED);
+        }
     }
 }
