@@ -32,41 +32,51 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
-/** 开发者占位。紫黑棋盘，能看见就算完。 */
 public final class WhimRenderer
 {
-    /** 画一条灵感。pose 已经挪到那条灵感的位置；params 是它那种锚认的参数（没写的取默认值要用）。 */
     @FunctionalInterface
     public interface Drawer
     {
         void draw(PoseStack pose, Vec3 dir, WhimData data, WhimParams params, boolean aimed);
     }
 
-    /** 这一帧要画的一条：位置和参数表都算好了。 */
+    @FunctionalInterface
+    public interface Hit
+    {
+        double test(Vec3 eye, Vec3 look, Vec3 at, WhimData data, WhimParams params);
+    }
+
     private record Drawable(ClientWhimCache.WhimView whim, WhimParams params, Vec3 at)
     {
     }
 
     private static final Map<ResourceLocation, Drawer> DRAWERS = new LinkedHashMap<>();
 
+    private static final Map<ResourceLocation, Hit> HITS = new LinkedHashMap<>();
+
     static
     {
-        register(Whim.DEV_ELEMENT, WhimRenderer::dev);
+        register(Whim.DEV_ELEMENT, WhimRenderer::dev, WhimRenderer::devHit);
     }
 
     private WhimRenderer()
     {
     }
 
-    public static void register(ResourceLocation element, Drawer drawer)
+    public static void register(ResourceLocation element, Drawer drawer, Hit hit)
     {
         DRAWERS.put(element, drawer);
+        HITS.put(element, hit);
     }
 
-    /** 没登记过的元素先按 dev 画。 */
     public static Drawer drawer(ResourceLocation element)
     {
         return DRAWERS.getOrDefault(element, WhimRenderer::dev);
+    }
+
+    public static Hit hit(ResourceLocation element)
+    {
+        return HITS.getOrDefault(element, WhimRenderer::devHit);
     }
 
     @SubscribeEvent
@@ -87,8 +97,6 @@ public final class WhimRenderer
 
         float partialTick = event.getPartialTick();
         Vec3 eye = minecraft.player.getEyePosition(partialTick);
-        // "瞄"问的是镜头看向哪儿：自由视角开着的时候高亮跟着镜头走（准星在屏幕正中间），
-        // 没开的时候和原版的 getViewVector 等价。挖、放、打那些动作不归这里管。
         Vec3 look = FreeLook.viewVector(minecraft.player, partialTick);
         Vec3 camera = event.getCamera().getPosition();
         PoseStack pose = event.getPoseStack();
@@ -101,7 +109,6 @@ public final class WhimRenderer
         RenderSystem.depthMask(false);
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
 
-        // 深度测试是关的，前后关系全靠画家算法：远的先画。不排的话后画的远面会盖住近面。
         List<Drawable> drawable = new ArrayList<>();
         double reach = WhimReach.blocks();
 
@@ -116,7 +123,6 @@ public final class WhimRenderer
                 continue;
             }
 
-            // 原版渲染距离以外的灵感不画：屏幕上本来也看不见。
             if (at.distanceToSqr(eye) > reach * reach)
             {
                 continue;
@@ -147,14 +153,10 @@ public final class WhimRenderer
         RenderSystem.disableBlend();
     }
 
-    /** dev：紫黑棋盘。{@code shape} 挑方片还是立方体，{@code size} 是边长 —— 1 就是一格。 */
     public static void dev(PoseStack pose, Vec3 dir, WhimData data, WhimParams params, boolean aimed)
     {
-        // 有的锚一个参数都不收（表是空的），那就按立方体、边长 1 画。
         boolean cube = "cube".equals(params.text(data, "shape", "cube"));
-        // 画的时候要的是半边长。
         double half = params.number(data, "size", 1.0D) / 2.0D;
-        // 棋盘几格、两色是什么，是这个元素自己的事，在 config 的 [render.dev] 里；高亮的宽窄和颜色是通用的，在 [render] 里。
         int cells = WhimConfig.renderDevCheckerCells();
         double outline = WhimConfig.renderOutlineWidth();
         float[] first = WhimConfig.renderDevColorElement();
@@ -183,7 +185,80 @@ public final class WhimRenderer
         }
     }
 
-    /** 正对玩家的一张方片。{@code half} 是半边长，{@code cells} 是一面切成几格。 */
+    public static double devHit(Vec3 eye, Vec3 look, Vec3 at, WhimData data, WhimParams params)
+    {
+        boolean cube = "cube".equals(params.text(data, "shape", "cube"));
+        double half = params.number(data, "size", 1.0D) / 2.0D;
+
+        return cube ? hitBox(eye, look, at, half) : hitQuad(eye, look, at, half);
+    }
+
+    private static double hitBox(Vec3 eye, Vec3 look, Vec3 at, double half)
+    {
+        double[] origin = { eye.x, eye.y, eye.z };
+        double[] direction = { look.x, look.y, look.z };
+        double[] centre = { at.x, at.y, at.z };
+        double near = 0.0D;
+        double far = Double.POSITIVE_INFINITY;
+
+        for (int axis = 0; axis < 3; axis++)
+        {
+            if (Math.abs(direction[axis]) < 1.0E-9D)
+            {
+                if (origin[axis] < centre[axis] - half || origin[axis] > centre[axis] + half)
+                {
+                    return -1.0D;
+                }
+
+                continue;
+            }
+
+            double first = (centre[axis] - half - origin[axis]) / direction[axis];
+            double second = (centre[axis] + half - origin[axis]) / direction[axis];
+
+            if (first > second)
+            {
+                double swap = first;
+                first = second;
+                second = swap;
+            }
+
+            near = Math.max(near, first);
+            far = Math.min(far, second);
+
+            if (near > far)
+            {
+                return -1.0D;
+            }
+        }
+
+        return far < 0.0D ? -1.0D : near;
+    }
+
+    private static double hitQuad(Vec3 eye, Vec3 look, Vec3 at, double half)
+    {
+        Vec3 normal = at.subtract(eye).normalize();
+        double facing = look.dot(normal);
+
+        if (facing < 1.0E-6D)
+        {
+            return -1.0D;
+        }
+
+        double distance = at.subtract(eye).dot(normal) / facing;
+
+        if (distance <= 0.0D)
+        {
+            return -1.0D;
+        }
+
+        Vec3 offset = eye.add(look.scale(distance)).subtract(at);
+        Vec3 right = right(normal);
+        Vec3 up = right.cross(normal).normalize();
+
+        return Math.abs(offset.dot(right)) <= half && Math.abs(offset.dot(up)) <= half ? distance : -1.0D;
+    }
+
     private static void quad(PoseStack pose, Vec3 dir, double half, float[] first, float[] second, int cells)
     {
         Matrix4f matrix = pose.last().pose();
@@ -197,12 +272,10 @@ public final class WhimRenderer
         BufferUploader.drawWithShader(builder.end());
     }
 
-    /** 六个面。{@code half} 是半边长，{@code cells} 是一面切成几格。 */
     private static void cube(PoseStack pose, double half, float[] first, float[] second, int cells)
     {
         Matrix4f matrix = pose.last().pose();
         BufferBuilder builder = Tesselator.getInstance().getBuilder();
-        // 相机就在 pose 的原点上（位置已经减过相机了），所以按面心离原点多远排：远的先画。
         List<Side> sides = new ArrayList<>(SIDES);
         sides.sort(Comparator.comparingDouble(side -> -side.centre().lengthSqr()));
 
@@ -217,7 +290,6 @@ public final class WhimRenderer
         BufferUploader.drawWithShader(builder.end());
     }
 
-    /** 单位立方体的一个面，画的时候乘 half。{@code facing} 只用来取明暗。 */
     private record Side(Vec3 origin, Vec3 u, Vec3 v, Direction facing)
     {
         Vec3 centre()
@@ -226,7 +298,6 @@ public final class WhimRenderer
         }
     }
 
-    /** 单位立方体的六个面。 */
     private static final List<Side> SIDES = List.of(
             new Side(new Vec3(-1.0D, -1.0D, -1.0D), new Vec3(0.0D, 0.0D, 2.0D), new Vec3(0.0D, 2.0D, 0.0D), Direction.WEST),
             new Side(new Vec3(1.0D, -1.0D, 1.0D), new Vec3(0.0D, 0.0D, -2.0D), new Vec3(0.0D, 2.0D, 0.0D), Direction.EAST),
@@ -235,12 +306,10 @@ public final class WhimRenderer
             new Side(new Vec3(1.0D, -1.0D, -1.0D), new Vec3(-2.0D, 0.0D, 0.0D), new Vec3(0.0D, 2.0D, 0.0D), Direction.NORTH),
             new Side(new Vec3(-1.0D, -1.0D, 1.0D), new Vec3(2.0D, 0.0D, 0.0D), new Vec3(0.0D, 2.0D, 0.0D), Direction.SOUTH));
 
-    /** 原版方块六面的明暗：上 1.0、南北 0.8、东西 0.6、下 0.5。少了这个看着就还是一张纸。 */
     private static double shade(Direction facing)
     {
         if (!WhimConfig.renderFaceShade())
         {
-            // 配置里关掉了就六面一样亮。
             return 1.0D;
         }
 
@@ -253,7 +322,6 @@ public final class WhimRenderer
         };
     }
 
-    /** 一面切成 {@code cells} 格棋盘 —— 就是原版贴图丢了那副样子。{@code shade} 是这一面该压多暗。 */
     private static void face(BufferBuilder builder, Matrix4f matrix, Vec3 origin, Vec3 u, Vec3 v, float[] first,
             float[] second, double shade, int cells)
     {
@@ -275,7 +343,6 @@ public final class WhimRenderer
         }
     }
 
-    /** 按明暗把颜色压一下；黑的地方压完还是黑的。 */
     private static float[] tint(float[] color, double shade)
     {
         return new float[] { (float) (color[0] * shade), (float) (color[1] * shade), (float) (color[2] * shade),

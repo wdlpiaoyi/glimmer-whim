@@ -47,10 +47,8 @@ import net.minecraft.world.level.Level;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
-/** 调试入口。这版没有自动刷新。 */
 public final class WhimCommand
 {
-    /** 那两个动作。写成 argument 而不是 literal —— literal 补完就没了，TAB 翻不到下一个。 */
     private static final List<String> ACTIONS = List.of("get", "kill");
 
     private static final SimpleCommandExceptionType ERROR_PLAYER =
@@ -138,7 +136,6 @@ public final class WhimCommand
         event.getDispatcher().register(root);
     }
 
-    /** 正瞄着的那条 —— 它可能已经走了，AIMED 里还留着旧 id，所以得真查一遍。没有就是 null。 */
     private static UUID aimed(CommandSourceStack source)
     {
         ServerPlayer player = source.getPlayer();
@@ -147,7 +144,6 @@ public final class WhimCommand
         return id != null && WhimRegistry.find(id).isPresent() ? id : null;
     }
 
-    /** 补全只给正瞄着的那条。别的一条都不列 —— list 里那些 uuid 点一下就能填进聊天框。 */
     private static List<String> aliveIds(CommandSourceStack source)
     {
         UUID id = aimed(source);
@@ -170,12 +166,6 @@ public final class WhimCommand
         }
     }
 
-    /**
-     * summon 不写锚类型时用哪个：拿配置里 {@code [whim] defaultAnchor} 那个名字去找锚类型，
-     * 找不到（写错了、或者那种锚没登记）就退回 {@code dev_ray}。
-     * <p>
-     * 配置得在用的时候读，别在类加载的时候读 —— 那会儿配置还没加载。
-     */
     private static ResourceLocation defaultAnchor()
     {
         return WhimAnchors.resolve(WhimConfig.defaultAnchor())
@@ -188,7 +178,6 @@ public final class WhimCommand
         return WhimAnchors.types().stream().map(ResourceLocation::getPath).collect(Collectors.joining(", "));
     }
 
-    /** 用法。不列每种锚 —— 锚会越加越多，锚数据格式挪到锚类型补全的悬浮提示上，参数按 TAB 看。 */
     private static List<String> helpLines()
     {
         return List.of(
@@ -199,12 +188,6 @@ public final class WhimCommand
                 "  锚数据格式、{参数} 按 TAB 看");
     }
 
-    /**
-     * 尾巴是"锚数据（可选）+ 一串 {参数}"。补全只看光标在不在花括号里：
-     * 在里头就补这一组参数，不在就只补锚数据 —— 不许在人家写锚数据的时候把 {shape:cube} 摆过来。
-     * <p>
-     * 锚数据只在还没动笔的时候给一遍：写过了就不再冒，不然 ~ ~ ~ 写完一按 TAB 还是它。
-     */
     private static CompletableFuture<Suggestions> suggestTail(ResourceLocation anchor, CommandSourceStack source,
             SuggestionsBuilder builder)
     {
@@ -220,26 +203,33 @@ public final class WhimCommand
                     builder.createOffset(builder.getStart() + open + 1 + cut));
         }
 
-        // 还没进花括号：锚数据只在还没动笔的时候给一遍，写了就不再冒。
         int first = remaining.indexOf('{');
         String anchorPart = first < 0 ? remaining : remaining.substring(0, first);
 
-        if (!anchorPart.isBlank())
-        {
-            return Suggestions.empty();
-        }
-
-        // 插在光标这儿（尾巴末尾），别拿整段尾巴去顶，不然会把已经写的吃掉。
-        return suggestText(WhimAnchors.suggestData(anchor, source),
-                builder.createOffset(builder.getStart() + remaining.length()));
+        return suggestData(WhimAnchors.suggestData(anchor, source), anchorPart, builder);
     }
 
-    /**
-     * 花括号里的那一段：还没写冒号就是在挑名字，写了就是在挑值。
-     * <p>
-     * 挑名字的时候直接给一整对（名:默认值）：只给 shape: 的话，补出来就停在冒号上，得再按一次 TAB
-     * 才看得见值 —— 而且那一次表里还是 shape: 和 size:，看着就像卡住了。
-     */
+    private static CompletableFuture<Suggestions> suggestData(Collection<String> candidates, String typed,
+            SuggestionsBuilder builder)
+    {
+        String[] tokens = typed.split(" ", -1);
+        int index = tokens.length - 1;
+        String partial = tokens[index];
+        SuggestionsBuilder target = builder.createOffset(builder.getStart() + typed.length() - partial.length());
+
+        for (String candidate : candidates)
+        {
+            String[] parts = candidate.split("\\s+");
+
+            if (index < parts.length && parts[index].startsWith(partial))
+            {
+                target.suggest(parts[index]);
+            }
+        }
+
+        return target.buildFuture();
+    }
+
     private static CompletableFuture<Suggestions> suggestParam(WhimParams params, String inside, String piece,
             SuggestionsBuilder builder)
     {
@@ -266,7 +256,6 @@ public final class WhimCommand
                 builder.createOffset(builder.getStart() + cut + 1));
     }
 
-    /** 这一组里已经写过这个名字没有。 */
     private static boolean written(String inside, String name)
     {
         for (String piece : inside.split("[,;]"))
@@ -283,9 +272,6 @@ public final class WhimCommand
         return false;
     }
 
-    /**
-     * 锚类型。锚数据怎么写挂在悬浮提示上 —— 用法提示里不列这些了，锚会越加越多。
-     */
     private static CompletableFuture<Suggestions> suggestAnchors(SuggestionsBuilder builder)
     {
         String typed = builder.getRemaining().toLowerCase(Locale.ROOT);
@@ -301,7 +287,6 @@ public final class WhimCommand
         return builder.buildFuture();
     }
 
-    /** 按已经打出来的字过一遍，跟原版一个脾气。 */
     private static CompletableFuture<Suggestions> suggestText(Collection<String> candidates, SuggestionsBuilder builder)
     {
         String typed = builder.getRemaining().toLowerCase(Locale.ROOT);
@@ -317,11 +302,6 @@ public final class WhimCommand
         return builder.buildFuture();
     }
 
-    /**
-     * 跟 {@link #suggestText} 一样，但已经打得一模一样的那个会留在表里。
-     * <p>
-     * 名字补全完就只剩一个候选，那一按 TAB 就把表关了 —— 想翻到另一个（get 换 kill）就没路了。
-     */
     private static CompletableFuture<Suggestions> suggestWords(Collection<String> candidates, SuggestionsBuilder builder)
     {
         String typed = builder.getRemaining().toLowerCase(Locale.ROOT);
@@ -374,12 +354,10 @@ public final class WhimCommand
             return 0;
         }
 
-        // 只报数，details 点 uuid 去看。
         source.sendSuccess(() -> summary(dimension.location().toString(), whimes), false);
         return whimes.size();
     }
 
-    /** 所有有表的维度，一起看。 */
     private static int listAll(CommandSourceStack source)
     {
         Map<ResourceKey<Level>, Collection<Whim>> dimensions = WhimRegistry.allDimensions();
@@ -401,7 +379,6 @@ public final class WhimCommand
         return total;
     }
 
-    /** 一行：维度 + 条数 + 一串可点的 uuid。 */
     private static MutableComponent summary(String name, Collection<Whim> whimes)
     {
         MutableComponent line = Component.literal(name + " 存活的灵感 " + whimes.size() + " 条：");
@@ -414,7 +391,6 @@ public final class WhimCommand
         return line;
     }
 
-    /** 一条 uuid 的可点文本：点一下把命令填进聊天框，不是直接跑 —— 想 kill 就把 get 改掉。 */
     private static MutableComponent link(UUID id)
     {
         String command = "/glimmerwhim whim get " + id;
@@ -431,7 +407,6 @@ public final class WhimCommand
         return whim.permanent() ? "永久" : whim.lifetime() + "t";
     }
 
-    /** 动作。没写 uuid 就对正瞄着的那条。 */
     private static int act(CommandSourceStack source, UUID id, String action) throws CommandSyntaxException
     {
         UUID target = id != null ? id : aimed(source);
@@ -473,11 +448,6 @@ public final class WhimCommand
         return 1;
     }
 
-    /**
-     * 这条灵感那种锚认的参数，连现在生效的值一起列出来 —— 光看写没写 {@code {参数}} 看不出默认是多少。
-     * <p>
-     * 没写过的标一个"（默认）"。
-     */
     private static String paramsLine(WhimParams params, WhimData data)
     {
         if (params.all().isEmpty())
@@ -519,7 +489,6 @@ public final class WhimCommand
             throw ERROR_ANCHOR.create(anchorType);
         }
 
-        // 尾巴里的 {名字:值} 是灵感参数，抠掉之后剩下的才是锚数据。
         WhimData.Split split;
         WhimData data;
 
@@ -541,11 +510,9 @@ public final class WhimCommand
         }
         catch (RuntimeException e)
         {
-            // 参数是玩家手打的，解析失败一律当用法错误报回去。
             throw ERROR_DATA.create(e.getMessage());
         }
 
-        // 直接就是 tick 数，-1 是永久。
         Whim whim = new Whim(UUID.randomUUID(), anchor, Whim.DEV_ELEMENT, data, ticks);
         WhimRegistry.of(player.serverLevel()).summon(whim);
 

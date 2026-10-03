@@ -9,6 +9,7 @@ import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 import com.wdlpiaoyi.glimmerwhim.net.WhimAimPacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimNetwork;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchors;
+import com.wdlpiaoyi.glimmerwhim.whim.WhimParams;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -17,7 +18,6 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
-/** 瞄准：锥里碰到的、离准星最近的那条。纯客户端算，算完了告诉服务端一声。 */
 public final class WhimAim
 {
     private static UUID aimed;
@@ -26,17 +26,23 @@ public final class WhimAim
     {
     }
 
-    /** 每帧算一次，返回被瞄上的那条。 */
+    public static UUID aimed()
+    {
+        return aimed;
+    }
+
     public static UUID update(ClientLevel level, Vec3 eye, Vec3 look, float partialTick)
     {
         ClientWhimCache.WhimView best = null;
-        double bestDot = -1.0D;
+        double bestDot = 0.0D;
+        double bestHit = Double.POSITIVE_INFINITY;
         double reach = WhimReach.blocks();
+        Vec3 direction = look.normalize();
 
         for (ClientWhimCache.WhimView whim : ClientWhimCache.all())
         {
-            Vec3 at = whim.anchor().position(level, eye, partialTick, whim.data(),
-                    WhimAnchors.params(whim.anchor().type())).orElse(null);
+            WhimParams params = WhimAnchors.params(whim.anchor().type());
+            Vec3 at = whim.anchor().position(level, eye, partialTick, whim.data(), params).orElse(null);
 
             if (at == null)
             {
@@ -51,30 +57,26 @@ public final class WhimAim
                 continue;
             }
 
-            // 原版渲染距离以外的东西屏幕上根本看不见，不用算瞄上没瞄上。
             if (distanceSqr > reach * reach)
             {
                 continue;
             }
 
-            // 配置里关掉"隔墙也算"的时候，中间挡着方块的就不算瞄上。
             if (!WhimConfig.aimThroughWalls() && occluded(level, eye, at))
             {
                 continue;
             }
 
-            double dot = toIt.normalize().dot(look);
+            double hit = WhimRenderer.hit(whim.element()).test(eye, direction, at, whim.data(), params);
 
-            if (dot < Math.cos(Math.toRadians(WhimConfig.aimConeDegrees(whim.element()))))
+            if (hit < 0.0D || hit >= bestHit)
             {
                 continue;
             }
 
-            if (dot > bestDot)
-            {
-                best = whim;
-                bestDot = dot;
-            }
+            best = whim;
+            bestHit = hit;
+            bestDot = toIt.normalize().dot(direction);
         }
 
         UUID id = best == null ? null : best.id();
@@ -94,7 +96,6 @@ public final class WhimAim
                         best.id(), best.element(), String.format(Locale.ROOT, "%.1f", angle));
             }
 
-            // 命令补全在服务端，得让它知道。只在本帧的答案变了的时候说。
             if (Minecraft.getInstance().getConnection() != null)
             {
                 WhimNetwork.CHANNEL.sendToServer(new WhimAimPacket(id));
@@ -104,7 +105,6 @@ public final class WhimAim
         return aimed;
     }
 
-    /** 眼睛到它中间有没有方块挡着。只有配置里把"隔墙也算"关掉的时候才会问一次。 */
     private static boolean occluded(ClientLevel level, Vec3 eye, Vec3 at)
     {
         BlockHitResult hit = level.clip(new ClipContext(eye, at, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
