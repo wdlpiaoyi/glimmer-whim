@@ -18,14 +18,10 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
-/**
- * 开发者占位。紫黑方块，能看见就算完。
- * <p>
- * 这里所有的数都是随手写的，所有的做法都是最土的。等真做表现的时候，这个类整个扔掉。
- */
+/** 开发者占位。紫黑方块，能看见就算完。 */
 public final class WhimRenderer
 {
-    /** 摆多远。dev 用，随手写的。够近才看得清，别去改大。 */
+    /** 摆多远。dev 用。 */
     private static final double DEV_DISTANCE = 8.0D;
 
     /** 半个边长。 */
