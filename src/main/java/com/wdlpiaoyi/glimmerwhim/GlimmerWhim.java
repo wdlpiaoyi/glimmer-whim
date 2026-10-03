@@ -1,6 +1,7 @@
 package com.wdlpiaoyi.glimmerwhim;
 
 import com.mojang.logging.LogUtils;
+import com.wdlpiaoyi.glimmerwhim.client.FreeLookHandler;
 import com.wdlpiaoyi.glimmerwhim.command.WhimCommand;
 import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 import com.wdlpiaoyi.glimmerwhim.net.WhimNetwork;
@@ -32,6 +33,8 @@ public final class GlimmerWhim
         if (FMLEnvironment.dist == Dist.CLIENT)
         {
             context.registerConfig(ModConfig.Type.CLIENT, WhimConfig.CLIENT_SPEC);
+            context.getModEventBus().addListener(FreeLookHandler::onRegisterKeys);
+            MinecraftForge.EVENT_BUS.register(FreeLookHandler.class);
         }
 
         LOGGER.info("Glimmer Whim loaded: 魔法流经你。");

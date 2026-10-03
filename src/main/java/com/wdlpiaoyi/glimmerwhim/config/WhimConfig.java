@@ -11,9 +11,20 @@ import net.minecraftforge.common.ForgeConfigSpec;
 /** 客户端配置：config/glimmerwhim-client.toml。 */
 public final class WhimConfig
 {
+    /** 自由视角的按法。 */
+    public enum FreeLookMode
+    {
+        /** 按住才看，松手就回来。 */
+        HOLD,
+        /** 按一下开着，再按一下关掉。 */
+        TOGGLE
+    }
+
     public static final ForgeConfigSpec CLIENT_SPEC;
 
     private static final ForgeConfigSpec.DoubleValue DEFAULT_CONE;
+
+    private static final ForgeConfigSpec.EnumValue<FreeLookMode> FREE_LOOK_MODE;
 
     private static final Map<ResourceLocation, ForgeConfigSpec.DoubleValue> CONES = new HashMap<>();
 
@@ -35,6 +46,12 @@ public final class WhimConfig
 
         builder.pop(2);
 
+        builder.comment("自由视角：镜头和人的朝向分家，人站哪儿镜头就在哪儿。键位在 选项 → 控制 里改。");
+        builder.push("freelook");
+        FREE_LOOK_MODE = builder.comment("按住还是切换。HOLD = 按住才看，TOGGLE = 按一下切换。")
+                .defineEnum("mode", FreeLookMode.HOLD);
+        builder.pop();
+
         CLIENT_SPEC = builder.build();
     }
 
@@ -48,5 +65,11 @@ public final class WhimConfig
         ForgeConfigSpec.DoubleValue cone = CONES.get(element);
 
         return cone == null ? DEFAULT_CONE.get() : cone.get();
+    }
+
+    /** 自由视角是按住还是切换，默认按住。 */
+    public static FreeLookMode freeLookMode()
+    {
+        return FREE_LOOK_MODE.get();
     }
 }

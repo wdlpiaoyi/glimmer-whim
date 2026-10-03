@@ -4,7 +4,9 @@
   "package": "com.wdlpiaoyi.glimmerwhim.mixin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "glimmerwhim.refmap.json",
-  "client": [],
+  "client": [
+    "client.EntityTurnMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   }
