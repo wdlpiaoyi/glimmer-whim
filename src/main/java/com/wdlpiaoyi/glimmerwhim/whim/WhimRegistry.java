@@ -27,7 +27,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 /**
  * 一个维度一张表：这个维度里现在还活着的灵感。
  * <p>
- * {@link #removeWhim} 是唯一的出口。调用它的只有四个地方：tick 到点、施法结算、松手、维度卸载。
+ * {@link #removeWhim} 是唯一的出口。
  */
 public final class WhimRegistry
 {
@@ -99,6 +99,9 @@ public final class WhimRegistry
 
         GlimmerWhim.LOGGER.info("[Whim] remove id={} dim={} reason={}", id, this.level.dimension().location(), reason);
 
+        // 谁还瞄着它，就把 AIMED 里的旧值清掉 —— 不然补全会给一个已经没了的 uuid。
+        AIMED.values().removeIf(id::equals);
+
         WhimRemovePacket packet = new WhimRemovePacket(this.level.dimension(), id, reason);
 
         for (ServerPlayer player : this.level.players())
@@ -166,7 +169,7 @@ public final class WhimRegistry
         return Optional.empty();
     }
 
-    /** 按 id 干掉，跨维度。 */
+    /** 按 id 移除，跨维度。 */
     public static boolean kill(UUID id)
     {
         for (WhimRegistry registry : REGISTRIES.values())

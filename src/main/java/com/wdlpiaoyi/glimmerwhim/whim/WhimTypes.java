@@ -1,6 +1,5 @@
 package com.wdlpiaoyi.glimmerwhim.whim;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -128,35 +127,5 @@ public final class WhimTypes
         });
 
         return WhimData.of(values);
-    }
-
-    /** 补全候选：一组一组的 {@code {名字:值}}。 */
-    public static List<String> suggestions(ResourceLocation element)
-    {
-        Map<String, WhimParam> params = TYPES.get(element);
-
-        if (params == null)
-        {
-            return List.of();
-        }
-
-        List<String> groups = new ArrayList<>();
-
-        for (WhimParam param : params.values())
-        {
-            if (param.choices().isEmpty())
-            {
-                groups.add("{" + param.name() + ":" + param.defaultValue() + "}");
-            }
-            else
-            {
-                for (String choice : param.choices())
-                {
-                    groups.add("{" + param.name() + ":" + choice + "}");
-                }
-            }
-        }
-
-        return groups;
     }
 }

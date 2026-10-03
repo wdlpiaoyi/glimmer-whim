@@ -3,6 +3,7 @@ package com.wdlpiaoyi.glimmerwhim.command;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -20,6 +21,7 @@ import com.wdlpiaoyi.glimmerwhim.whim.Whim;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchor;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchors;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimData;
+import com.wdlpiaoyi.glimmerwhim.whim.WhimParam;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimRegistry;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimTypes;
 import com.wdlpiaoyi.glimmerwhim.whim.anchor.RayAnchor;
@@ -134,7 +136,7 @@ public final class WhimCommand
         event.getDispatcher().register(root);
     }
 
-    /** 先给正瞄着的那条，再给这个维度里其它活着的。 */
+    /** 只给正瞄着的那条。别的一条都不列 —— list 里那些 uuid 点一下就能填进聊天框。 */
     private static List<String> aliveIds(CommandSourceStack source)
     {
         ServerPlayer player = source.getPlayer();
@@ -145,22 +147,14 @@ public final class WhimCommand
         }
 
         UUID aimed = WhimRegistry.aimed(player);
-        List<String> ids = new ArrayList<>();
 
-        if (aimed != null)
+        // 瞄着的那条可能已经走了，AIMED 里还留着旧 id，所以得真查一遍。
+        if (aimed == null || WhimRegistry.find(aimed).isEmpty())
         {
-            ids.add(aimed.toString());
+            return List.of();
         }
 
-        for (Whim whim : WhimRegistry.of(player.serverLevel()).all())
-        {
-            if (!whim.id().equals(aimed))
-            {
-                ids.add(whim.id().toString());
-            }
-        }
-
-        return ids;
+        return List.of(aimed.toString());
     }
 
     private static UUID uuid(CommandContext<CommandSourceStack> context, String name)
@@ -190,29 +184,89 @@ public final class WhimCommand
                 .collect(Collectors.joining("，"));
     }
 
-    /** 锚数据和灵感参数共用这一段尾巴，补全时两样都摆上。 */
+    /**
+     * 尾巴是"锚数据（可选）+ 一串 {参数}"。补全只看光标在不在花括号里：
+     * 在里头就补这一组参数，不在就只补锚数据 —— 不许在人家写锚数据的时候把 {shape:cube} 摆过来。
+     */
     private static CompletableFuture<Suggestions> suggestTail(ResourceLocation anchor, CommandSourceStack source,
             SuggestionsBuilder builder)
     {
         String remaining = builder.getRemaining();
-        int space = remaining.lastIndexOf(' ');
-        SuggestionsBuilder tail = builder.createOffset(builder.getStart() + (space < 0 ? 0 : space + 1));
+        int open = remaining.lastIndexOf('{');
 
-        for (String group : WhimTypes.suggestions(Whim.DEV_ELEMENT))
+        if (open > remaining.lastIndexOf('}'))
         {
-            tail.suggest(group);
+            String inside = remaining.substring(open + 1);
+            int cut = Math.max(inside.lastIndexOf(','), inside.lastIndexOf(';')) + 1;
+
+            return suggestParam(inside, inside.substring(cut),
+                    builder.createOffset(builder.getStart() + open + 1 + cut));
         }
 
-        // 尾巴还空着，顺手把锚数据也摆上
-        if (remaining.isBlank())
+        // 还没进花括号。光标停在第几段就补哪一段，别把前面写的吃掉。
+        int space = remaining.lastIndexOf(' ') + 1;
+
+        return suggestText(WhimAnchors.suggestData(anchor, source),
+                builder.createOffset(builder.getStart() + space));
+    }
+
+    /** 花括号里的那一段：还没写冒号就是在挑名字，写了就是在挑值。 */
+    private static CompletableFuture<Suggestions> suggestParam(String inside, String piece, SuggestionsBuilder builder)
+    {
+        int cut = Math.max(piece.indexOf(':'), piece.indexOf('='));
+
+        if (cut < 0)
         {
-            for (String data : WhimAnchors.suggestData(anchor, source))
+            List<String> names = new ArrayList<>();
+
+            for (WhimParam param : WhimTypes.params(Whim.DEV_ELEMENT))
             {
-                tail.suggest(data);
+                if (!written(inside, param.name()))
+                {
+                    names.add(param.name() + ":");
+                }
+            }
+
+            return suggestText(names, builder);
+        }
+
+        WhimParam param = WhimTypes.param(Whim.DEV_ELEMENT, piece.substring(0, cut));
+
+        return suggestText(param == null ? List.of() : param.choices(),
+                builder.createOffset(builder.getStart() + cut + 1));
+    }
+
+    /** 这一组里已经写过这个名字没有。 */
+    private static boolean written(String inside, String name)
+    {
+        for (String piece : inside.split("[,;]"))
+        {
+            int cut = Math.max(piece.indexOf(':'), piece.indexOf('='));
+            String written = (cut < 0 ? piece : piece.substring(0, cut)).trim();
+
+            if (written.equals(name))
+            {
+                return true;
             }
         }
 
-        return tail.buildFuture();
+        return false;
+    }
+
+    /** 按已经打出来的字过一遍，跟原版一个脾气。 */
+    private static CompletableFuture<Suggestions> suggestText(Collection<String> candidates, SuggestionsBuilder builder)
+    {
+        String typed = builder.getRemaining().toLowerCase(Locale.ROOT);
+
+        for (String candidate : candidates)
+        {
+            if (candidate.toLowerCase(Locale.ROOT).startsWith(typed))
+            {
+                builder.suggest(candidate);
+            }
+        }
+
+        return builder.buildFuture();
     }
 
     private static int usage(CommandSourceStack source)
@@ -254,15 +308,16 @@ public final class WhimCommand
         return whimes.size();
     }
 
-    /** 一条 uuid 的可点文本，点了就是看它的详情。 */
+    /** 一条 uuid 的可点文本：点一下把命令填进聊天框，不是直接跑 —— 想 kill 就把 get 改掉。 */
     private static MutableComponent link(UUID id)
     {
         String command = "/glimmerwhim whim " + id + " get";
 
         return Component.literal(id.toString()).withStyle(Style.EMPTY
                 .withColor(ChatFormatting.AQUA)
-                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command))
-                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(command))));
+                .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, command))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.literal(command + "\n点一下填进聊天框"))));
     }
 
     private static String remaining(Whim whim)
@@ -302,7 +357,7 @@ public final class WhimCommand
             throw ERROR_NOT_FOUND.create(id);
         }
 
-        source.sendSuccess(() -> Component.literal("已干掉灵感 " + id), true);
+        source.sendSuccess(() -> Component.literal("已移除灵感 " + id), true);
         return 1;
     }
 
