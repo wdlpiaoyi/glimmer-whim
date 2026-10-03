@@ -36,9 +36,6 @@ public final class WhimRenderer
         void draw(PoseStack pose, Vec3 dir, WhimData data, boolean aimed);
     }
 
-    /** 摆多远。dev 用。 */
-    private static final double DEV_DISTANCE = 8.0D;
-
     /** 高亮比本体宽出去多少。 */
     private static final double OUTLINE = 0.08D;
 
@@ -101,15 +98,22 @@ public final class WhimRenderer
         for (ClientWhimCache.WhimView whim : ClientWhimCache.all())
         {
             WhimAnchor anchor = whim.anchor();
-            Vec3 direction = anchor.direction(level, eye, partialTick).orElse(null);
+            Vec3 at = anchor.position(level, eye, partialTick).orElse(null);
 
-            if (direction == null)
+            if (at == null)
             {
                 continue;
             }
 
-            Vec3 dir = direction.normalize();
-            Vec3 position = eye.add(dir.scale(DEV_DISTANCE)).subtract(camera);
+            Vec3 toIt = at.subtract(eye);
+
+            if (toIt.lengthSqr() < 1.0E-8D)
+            {
+                continue;
+            }
+
+            Vec3 dir = toIt.normalize();
+            Vec3 position = at.subtract(camera);
 
             pose.pushPose();
             pose.translate(position.x, position.y, position.z);

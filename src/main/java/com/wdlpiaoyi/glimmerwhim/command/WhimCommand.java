@@ -59,8 +59,7 @@ public final class WhimCommand
     private static final List<String> USAGE = List.of(
             "  /glimmerwhim list [维度|all]",
             "  /glimmerwhim spawn [tick=" + DEFAULT_TICKS + "｜-1=永久] [锚类型=" + DEFAULT_ANCHOR + "] [锚数据] {参数}",
-            "    " + DEFAULT_ANCHOR + " 的锚数据 dx dy dz，任一个写 ~ 就取视线；"
-                    + Whim.DEV_ELEMENT.getPath() + " 参数 " + paramUsage(),
+            "    " + anchorUsage() + "；" + Whim.DEV_ELEMENT.getPath() + " 参数 " + paramUsage(),
             "  /glimmerwhim whim <uuid> " + String.join("｜", ACTIONS));
 
     private static final SimpleCommandExceptionType ERROR_PLAYER =
@@ -183,6 +182,14 @@ public final class WhimCommand
     private static String anchorNames()
     {
         return WhimAnchors.types().stream().map(ResourceLocation::getPath).collect(Collectors.joining(", "));
+    }
+
+    /** 每种锚的 {@code anchordata} 怎么写。加一种锚只用改注册表。 */
+    private static String anchorUsage()
+    {
+        return WhimAnchors.types().stream()
+                .map(type -> type.getPath() + ": " + WhimAnchors.hint(type))
+                .collect(Collectors.joining("；"));
     }
 
     private static String paramUsage()

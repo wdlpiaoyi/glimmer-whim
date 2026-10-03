@@ -15,13 +15,16 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * 一个世界方向，没有距离。
+ * 一个世界方向，没有距离 —— 摆多远由 {@link #DISTANCE} 说了算。
  * <p>
  * 调试用。
  */
 public final class RayAnchor implements WhimAnchor
 {
     public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "ray");
+
+    /** ray 没有距离，画的时候给它挑一个。 */
+    private static final double DISTANCE = 8.0D;
 
     private final Vec3 direction;
 
@@ -45,9 +48,9 @@ public final class RayAnchor implements WhimAnchor
     }
 
     @Override
-    public Optional<Vec3> direction(Level level, Vec3 eye, float partialTick)
+    public Optional<Vec3> position(Level level, Vec3 eye, float partialTick)
     {
-        return Optional.of(this.direction);
+        return Optional.of(eye.add(this.direction.scale(DISTANCE)));
     }
 
     public static RayAnchor read(FriendlyByteBuf buf)

@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.function.Function;
 
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
+import com.wdlpiaoyi.glimmerwhim.whim.anchor.PosAnchor;
 import com.wdlpiaoyi.glimmerwhim.whim.anchor.RayAnchor;
 
 import net.minecraft.commands.CommandSourceStack;
@@ -17,8 +18,8 @@ import net.minecraft.resources.ResourceLocation;
 /**
  * 锚类型注册表。
  * <p>
- * 一种锚在这里登记三件事：怎么把包读回成 {@link WhimAnchor}、怎么从命令参数造一条、
- * 以及 {@code anchordata} 该写成什么样子（命令补全用）。
+ * 一种锚在这里登记四件事：怎么把包读回成 {@link WhimAnchor}、怎么从命令参数造一条、
+ * {@code anchordata} 补全出什么，以及 {@code anchordata} 该怎么写（用法提示用）。
  */
 public final class WhimAnchors
 {
@@ -30,7 +31,7 @@ public final class WhimAnchors
     }
 
     private record AnchorType(Function<FriendlyByteBuf, WhimAnchor> reader, AnchorDataParser parser,
-            Function<CommandSourceStack, Collection<String>> suggestions)
+            Function<CommandSourceStack, Collection<String>> suggestions, String hint)
     {
     }
 
@@ -38,7 +39,8 @@ public final class WhimAnchors
 
     static
     {
-        register(RayAnchor.TYPE, RayAnchor::read, RayAnchor::parse, RayAnchor::suggestData);
+        register(RayAnchor.TYPE, RayAnchor::read, RayAnchor::parse, RayAnchor::suggestData, "dx dy dz，~ 取视线");
+        register(PosAnchor.TYPE, PosAnchor::read, PosAnchor::parse, PosAnchor::suggestData, "x y z，~ 取当前位置");
     }
 
     private WhimAnchors()
@@ -46,9 +48,9 @@ public final class WhimAnchors
     }
 
     public static void register(ResourceLocation type, Function<FriendlyByteBuf, WhimAnchor> reader,
-            AnchorDataParser parser, Function<CommandSourceStack, Collection<String>> suggestions)
+            AnchorDataParser parser, Function<CommandSourceStack, Collection<String>> suggestions, String hint)
     {
-        TYPES.put(type, new AnchorType(reader, parser, suggestions));
+        TYPES.put(type, new AnchorType(reader, parser, suggestions, hint));
     }
 
     /** 已登记的锚类型，顺序就是登记顺序。 */
@@ -78,6 +80,14 @@ public final class WhimAnchors
         AnchorType anchor = type == null ? null : TYPES.get(type);
 
         return anchor == null ? List.of() : anchor.suggestions().apply(source);
+    }
+
+    /** {@code anchordata} 该怎么写。用法提示用。 */
+    public static String hint(ResourceLocation type)
+    {
+        AnchorType anchor = type == null ? null : TYPES.get(type);
+
+        return anchor == null ? "" : anchor.hint();
     }
 
     /** 从命令参数造一条锚。 */

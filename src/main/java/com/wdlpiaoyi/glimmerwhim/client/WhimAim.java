@@ -30,14 +30,21 @@ public final class WhimAim
 
         for (ClientWhimCache.WhimView whim : ClientWhimCache.all())
         {
-            Vec3 direction = whim.anchor().direction(level, eye, partialTick).orElse(null);
+            Vec3 at = whim.anchor().position(level, eye, partialTick).orElse(null);
 
-            if (direction == null || direction.lengthSqr() < 1.0E-12D)
+            if (at == null)
             {
                 continue;
             }
 
-            double dot = direction.normalize().dot(look);
+            Vec3 toIt = at.subtract(eye);
+
+            if (toIt.lengthSqr() < 1.0E-12D)
+            {
+                continue;
+            }
+
+            double dot = toIt.normalize().dot(look);
 
             if (dot < Math.cos(Math.toRadians(WhimConfig.aimConeDegrees(whim.element()))))
             {
