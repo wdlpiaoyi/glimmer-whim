@@ -1,10 +1,6 @@
 package com.wdlpiaoyi.glimmerwhim.config;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
-import com.wdlpiaoyi.glimmerwhim.whim.Whim;
+import java.util.List;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.ForgeConfigSpec;
@@ -29,6 +25,8 @@ public final class WhimConfig
 
     private static final ForgeConfigSpec.BooleanValue AIM_THROUGH_WALLS;
 
+    private static final ForgeConfigSpec.ConfigValue<List<? extends String>> AIM_CONE_OVERRIDES;
+
     private static final ForgeConfigSpec.EnumValue<FreeLookMode> FREE_LOOK_MODE;
 
     private static final ForgeConfigSpec.IntValue FREE_LOOK_FADE;
@@ -52,8 +50,6 @@ public final class WhimConfig
     private static final ForgeConfigSpec.ConfigValue<String> RENDER_DEV_COLOR_ELEMENT;
 
     private static final ForgeConfigSpec.ConfigValue<String> RENDER_DEV_COLOR_ELEMENT_ALT;
-
-    private static final Map<ResourceLocation, ForgeConfigSpec.DoubleValue> CONES = new HashMap<>();
 
     /** 颜色写错的时候用的兜底。 */
     private static final float[] FALLBACK_DEV_ELEMENT = { 1.0F, 0.0F, 1.0F, 1.0F };
@@ -84,20 +80,16 @@ public final class WhimConfig
 
         builder.comment("瞄：瞄准锥（准星）碰到灵感，它就高亮。");
         builder.push("aim");
-        DEFAULT_CONE = builder.comment("瞄准锥半角（度）。改这一个就全改了 —— 下面 [aim.cone] 里没单独改过的元素都用这个。默认 10。")
+        DEFAULT_CONE = builder.comment("瞄准锥半角（度）。改这一个就全改了 —— 只有下面 cone 里点名过的元素例外。默认 10。")
                 .defineInRange("defaultConeDegrees", 10.0D, 0.0D, 180.0D);
         AIM_THROUGH_WALLS = builder.comment("隔着方块也算瞄上（在锥里就亮，中间挡着什么不管）。默认 true。")
                 .define("throughWalls", true);
-        builder.comment("只有想给某个元素单独一个角度时才动这里；-1 = 跟上面的 defaultConeDegrees 走（所以默认一个都不用改）。",
-                "元素都在这儿列着，新注册的元素自动多一行。");
-        builder.push("cone");
+        AIM_CONE_OVERRIDES = builder
+                .comment("想给某个元素单独一个角度，就在这里加一条，写成 \"元素id=角度\"（元素 id 写全，像 \"glimmerwhim:dev=30\"）。",
+                        "只写跟 defaultConeDegrees 不一样的；没点名的元素都跟默认走，所以这儿默认是空的。")
+                .defineListAllowEmpty(List.of("cone"), List.of(), entry -> entry instanceof String);
 
-        for (ResourceLocation element : Whim.ELEMENTS)
-        {
-            CONES.put(element, builder.defineInRange(coneKey(element), -1.0D, -1.0D, 180.0D));
-        }
-
-        builder.pop(2);
+        builder.pop();
 
         builder.comment("自由视角：镜头和人的朝向分家，人站哪儿镜头就在哪儿。键位在 选项 → 控制 里改。");
         builder.push("freelook");
@@ -186,25 +178,33 @@ public final class WhimConfig
     /**
      * 这条灵感用的瞄准锥半角（度）。
      * <p>
-     * {@code [aim.cone]} 里给这个元素单独写了角度就用那份，其余情况（没这一行、或者写的是 -1）
-     * 一律用 {@code [aim] defaultConeDegrees} —— 所以改默认值能一次改掉全部，不用一个个改。
+     * 在 {@code [aim] cone} 里点名过的元素用它自己那份，其余（绝大多数）一律用 {@code [aim] defaultConeDegrees}
+     * —— 所以改默认值能一次改掉全部，只有你专门写过的才例外。
      */
     public static double aimConeDegrees(ResourceLocation element)
     {
-        ForgeConfigSpec.DoubleValue cone = CONES.get(element);
-
-        if (cone == null || cone.get() < 0.0D)
+        for (String entry : AIM_CONE_OVERRIDES.get())
         {
-            return DEFAULT_CONE.get();
+            int equal = entry.indexOf('=');
+
+            if (equal < 0 || !element.equals(ResourceLocation.tryParse(entry.substring(0, equal).trim())))
+            {
+                continue;
+            }
+
+            try
+            {
+                double degrees = Double.parseDouble(entry.substring(equal + 1).trim());
+
+                return Math.min(180.0D, Math.max(0.0D, degrees));
+            }
+            catch (NumberFormatException ignored)
+            {
+                // 角度写坏了就当没写过这一条，退回默认。
+            }
         }
 
-        return cone.get();
-    }
-
-    /** {@code [aim.cone]} 里那一行的名字：本模组的元素写路径（dev），别的命名空间带上（别的mod:xxx）免得撞名。 */
-    private static String coneKey(ResourceLocation element)
-    {
-        return element.getNamespace().equals(GlimmerWhim.MODID) ? element.getPath() : element.toString();
+        return DEFAULT_CONE.get();
     }
 
     /** 隔着方块算不算瞄上。 */
