@@ -1,5 +1,6 @@
 package com.wdlpiaoyi.glimmerwhim.whim;
 
+import java.util.List;
 import java.util.UUID;
 
 import net.minecraft.resources.ResourceLocation;
@@ -14,6 +15,9 @@ public final class Whim
 {
     /** 这一版所有灵感都用这个 element。 */
     public static final ResourceLocation DEV_ELEMENT = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev");
+
+    /** 已知的元素。加一个就在这里加一行（客户端那边还要登记画法）。 */
+    public static final List<ResourceLocation> ELEMENTS = List.of(DEV_ELEMENT);
 
     private final UUID id;
     private final WhimAnchor anchor;

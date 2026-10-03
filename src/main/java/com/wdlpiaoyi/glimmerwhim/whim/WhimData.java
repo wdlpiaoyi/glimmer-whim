@@ -12,7 +12,7 @@ import net.minecraft.network.FriendlyByteBuf;
 /**
  * 一条灵感自己带的数据，就是命令里写的那些 {@code {名字:值}}。
  * <p>
- * 有哪些名字、值合不合法，由它所属的元素类型说了算（{@link WhimTypes}）；这里只管装。
+ * 有哪些名字、值合不合法，由它那种锚说了算；这里只管装。
  */
 public final class WhimData
 {

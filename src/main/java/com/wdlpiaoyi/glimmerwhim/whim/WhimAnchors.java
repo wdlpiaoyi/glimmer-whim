@@ -8,8 +8,8 @@ import java.util.Optional;
 import java.util.function.Function;
 
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
-import com.wdlpiaoyi.glimmerwhim.whim.anchor.PosAnchor;
-import com.wdlpiaoyi.glimmerwhim.whim.anchor.RayAnchor;
+import com.wdlpiaoyi.glimmerwhim.whim.anchor.DevPosAnchor;
+import com.wdlpiaoyi.glimmerwhim.whim.anchor.DevRayAnchor;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.FriendlyByteBuf;
@@ -18,8 +18,9 @@ import net.minecraft.resources.ResourceLocation;
 /**
  * 锚类型注册表。
  * <p>
- * 一种锚在这里登记四件事：怎么把包读回成 {@link WhimAnchor}、怎么从命令参数造一条、
- * {@code anchordata} 补全出什么，以及 {@code anchordata} 该怎么写（用法提示用）。
+ * 一种锚在这里登记它自己的事：怎么把包读回成 {@link WhimAnchor}、怎么从命令参数造一条、
+ * {@code anchordata} 补全出什么、{@code anchordata} 该怎么写（用法提示用），
+ * 以及认哪些 {@code {名字:值}} 参数。
  */
 public final class WhimAnchors
 {
@@ -31,7 +32,7 @@ public final class WhimAnchors
     }
 
     private record AnchorType(Function<FriendlyByteBuf, WhimAnchor> reader, AnchorDataParser parser,
-            Function<CommandSourceStack, Collection<String>> suggestions, String hint)
+            Function<CommandSourceStack, Collection<String>> suggestions, String hint, WhimParams params)
     {
     }
 
@@ -39,8 +40,13 @@ public final class WhimAnchors
 
     static
     {
-        register(RayAnchor.TYPE, RayAnchor::read, RayAnchor::parse, RayAnchor::suggestData, "dx dy dz，~ 取视线");
-        register(PosAnchor.TYPE, PosAnchor::read, PosAnchor::parse, PosAnchor::suggestData, "x y z，~ 取当前位置");
+        register(DevRayAnchor.TYPE, DevRayAnchor::read, DevRayAnchor::parse, DevRayAnchor::suggestData, "dx dy dz，~ 取视线",
+                WhimParam.choice("shape", "quad", "quad", "cube"),
+                WhimParam.positiveNumber("size", "0.25"));
+
+        register(DevPosAnchor.TYPE, DevPosAnchor::read, DevPosAnchor::parse, DevPosAnchor::suggestData, "x y z，~ 取当前位置",
+                WhimParam.choice("shape", "quad", "quad", "cube"),
+                WhimParam.positiveNumber("size", "0.25"));
     }
 
     private WhimAnchors()
@@ -48,9 +54,10 @@ public final class WhimAnchors
     }
 
     public static void register(ResourceLocation type, Function<FriendlyByteBuf, WhimAnchor> reader,
-            AnchorDataParser parser, Function<CommandSourceStack, Collection<String>> suggestions, String hint)
+            AnchorDataParser parser, Function<CommandSourceStack, Collection<String>> suggestions, String hint,
+            WhimParam... params)
     {
-        TYPES.put(type, new AnchorType(reader, parser, suggestions, hint));
+        TYPES.put(type, new AnchorType(reader, parser, suggestions, hint, WhimParams.of(params)));
     }
 
     /** 已登记的锚类型，顺序就是登记顺序。 */
@@ -88,6 +95,14 @@ public final class WhimAnchors
         AnchorType anchor = type == null ? null : TYPES.get(type);
 
         return anchor == null ? "" : anchor.hint();
+    }
+
+    /** 这种锚认的 {@code {名字:值}}。没登记过的锚一个都不认。 */
+    public static WhimParams params(ResourceLocation type)
+    {
+        AnchorType anchor = type == null ? null : TYPES.get(type);
+
+        return anchor == null ? WhimParams.NONE : anchor.params();
     }
 
     /** 从命令参数造一条锚。 */

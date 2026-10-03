@@ -23,15 +23,15 @@ import net.minecraft.world.phys.Vec3;
  * <p>
  * 调试用。
  */
-public final class PosAnchor implements WhimAnchor
+public final class DevPosAnchor implements WhimAnchor
 {
-    public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "pos");
+    public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev_pos");
 
     private static final String WRONG = "锚数据需要三个坐标: x y z，任一个写 ~ 就是执行者的位置";
 
     private final Vec3 position;
 
-    public PosAnchor(Vec3 position)
+    public DevPosAnchor(Vec3 position)
     {
         this.position = position;
     }
@@ -56,9 +56,9 @@ public final class PosAnchor implements WhimAnchor
         return Optional.of(this.position);
     }
 
-    public static PosAnchor read(FriendlyByteBuf buf)
+    public static DevPosAnchor read(FriendlyByteBuf buf)
     {
-        return new PosAnchor(new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()));
+        return new DevPosAnchor(new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()));
     }
 
     /** {@code anchordata} 的格式就是这三个坐标。补全给执行者站的地方，和他正看着的那个点。 */
@@ -79,28 +79,29 @@ public final class PosAnchor implements WhimAnchor
     /**
      * 从命令参数造一个。
      *
-     * @param data 三个坐标 {@code x y z}，照原版那套：{@code ~} 是执行者的位置，{@code ~5} 是执行者 +5；
+     * @param data 三个坐标 {@code x y z}，用的就是 {@code /summon} 那套：{@code ~} 是执行者的位置，
+     *             {@code ~5} 是执行者 +5，三个都是整数的绝对坐标取方块中心；
      *             不给就是执行者站的地方
      */
-    public static PosAnchor parse(CommandSourceStack source, String data)
+    public static DevPosAnchor parse(CommandSourceStack source, String data)
     {
         if (data == null || data.isBlank())
         {
-            return new PosAnchor(source.getPosition());
+            return new DevPosAnchor(source.getPosition());
         }
 
         StringReader reader = new StringReader(data);
 
         try
         {
-            Coordinates coordinates = Vec3Argument.vec3(false).parse(reader);
+            Coordinates coordinates = Vec3Argument.vec3().parse(reader);
 
             if (reader.canRead())
             {
                 throw new IllegalArgumentException(WRONG);
             }
 
-            return new PosAnchor(coordinates.getPosition(source));
+            return new DevPosAnchor(coordinates.getPosition(source));
         }
         catch (CommandSyntaxException e)
         {

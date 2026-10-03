@@ -3,7 +3,7 @@ package com.wdlpiaoyi.glimmerwhim.config;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.wdlpiaoyi.glimmerwhim.whim.WhimTypes;
+import com.wdlpiaoyi.glimmerwhim.whim.Whim;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.ForgeConfigSpec;
@@ -28,7 +28,7 @@ public final class WhimConfig
         builder.comment("按元素覆盖。");
         builder.push("cone");
 
-        for (ResourceLocation element : WhimTypes.elements())
+        for (ResourceLocation element : Whim.ELEMENTS)
         {
             CONES.put(element, builder.defineInRange(element.toString(), 3.0D, 0.0D, 180.0D));
         }

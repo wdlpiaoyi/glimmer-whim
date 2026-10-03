@@ -15,20 +15,20 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * 一个世界方向，没有距离 —— 摆多远由 {@link #DISTANCE} 说了算。
+ * 一个世界方向，没有距离 —— 画的时候摆在 {@link #DISTANCE} 格以外。
  * <p>
  * 调试用。
  */
-public final class RayAnchor implements WhimAnchor
+public final class DevRayAnchor implements WhimAnchor
 {
-    public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "ray");
+    public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev_ray");
 
     /** ray 没有距离，画的时候给它挑一个。 */
     private static final double DISTANCE = 8.0D;
 
     private final Vec3 direction;
 
-    public RayAnchor(Vec3 direction)
+    public DevRayAnchor(Vec3 direction)
     {
         this.direction = direction.normalize();
     }
@@ -53,9 +53,9 @@ public final class RayAnchor implements WhimAnchor
         return Optional.of(eye.add(this.direction.scale(DISTANCE)));
     }
 
-    public static RayAnchor read(FriendlyByteBuf buf)
+    public static DevRayAnchor read(FriendlyByteBuf buf)
     {
-        return new RayAnchor(new Vec3(buf.readFloat(), buf.readFloat(), buf.readFloat()));
+        return new DevRayAnchor(new Vec3(buf.readFloat(), buf.readFloat(), buf.readFloat()));
     }
 
     /** {@code anchordata} 的格式就是这三个数。补全给 {@code ~ ~ ~}（即视线）和当前视线的三个数。 */
@@ -73,11 +73,11 @@ public final class RayAnchor implements WhimAnchor
      * @param data 三个数 {@code dx dy dz}，其中任一个写成 {@code ~} 就取执行者视线的对应分量；
      *             不给就是执行者正前方
      */
-    public static RayAnchor parse(CommandSourceStack source, String data)
+    public static DevRayAnchor parse(CommandSourceStack source, String data)
     {
         if (data == null || data.isBlank())
         {
-            return new RayAnchor(look(source));
+            return new DevRayAnchor(look(source));
         }
 
         String[] parts = data.trim().split("\\s+");
@@ -126,7 +126,7 @@ public final class RayAnchor implements WhimAnchor
             throw new IllegalArgumentException("方向不能是零向量");
         }
 
-        return new RayAnchor(direction);
+        return new DevRayAnchor(direction);
     }
 
     private static Vec3 look(CommandSourceStack source)

@@ -23,9 +23,9 @@ import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchor;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchors;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimData;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimParam;
+import com.wdlpiaoyi.glimmerwhim.whim.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimRegistry;
-import com.wdlpiaoyi.glimmerwhim.whim.WhimTypes;
-import com.wdlpiaoyi.glimmerwhim.whim.anchor.RayAnchor;
+import com.wdlpiaoyi.glimmerwhim.whim.anchor.DevRayAnchor;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -49,18 +49,14 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 /** 调试入口。这版没有自动刷新。 */
 public final class WhimCommand
 {
-    private static final String DEFAULT_ANCHOR = RayAnchor.TYPE.getPath();
+    private static final String DEFAULT_ANCHOR = DevRayAnchor.TYPE.getPath();
 
     private static final int DEFAULT_TICKS = 1200;
 
     /** uuid 后面那两个动作。写成 argument 而不是 literal —— literal 补完就没了，TAB 翻不到下一个。 */
     private static final List<String> ACTIONS = List.of("get", "kill");
 
-    private static final List<String> USAGE = List.of(
-            "  /glimmerwhim list [维度|all]",
-            "  /glimmerwhim spawn [tick=" + DEFAULT_TICKS + "｜-1=永久] [锚类型=" + DEFAULT_ANCHOR + "] [锚数据] {参数}",
-            "    " + anchorUsage() + "；" + Whim.DEV_ELEMENT.getPath() + " 参数 " + paramUsage(),
-            "  /glimmerwhim whim <uuid> " + String.join("｜", ACTIONS));
+    private static final List<String> USAGE = usageLines();
 
     private static final SimpleCommandExceptionType ERROR_PLAYER =
             new SimpleCommandExceptionType(Component.literal("只能由玩家执行"));
@@ -184,17 +180,34 @@ public final class WhimCommand
         return WhimAnchors.types().stream().map(ResourceLocation::getPath).collect(Collectors.joining(", "));
     }
 
-    /** 每种锚的 {@code anchordata} 怎么写。加一种锚只用改注册表。 */
-    private static String anchorUsage()
+    /** 用法。每种锚一行：锚数据怎么写、认哪些参数。加一种锚只用改注册表。 */
+    private static List<String> usageLines()
     {
-        return WhimAnchors.types().stream()
-                .map(type -> type.getPath() + ": " + WhimAnchors.hint(type))
-                .collect(Collectors.joining("；"));
+        List<String> lines = new ArrayList<>();
+
+        lines.add("  /glimmerwhim list [维度|all]");
+        lines.add("  /glimmerwhim spawn [tick=" + DEFAULT_TICKS + "｜-1=永久] [锚类型=" + DEFAULT_ANCHOR
+                + "] [锚数据] {参数}");
+
+        for (ResourceLocation type : WhimAnchors.types())
+        {
+            lines.add("    " + type.getPath() + ": " + WhimAnchors.hint(type) + paramsUsage(WhimAnchors.params(type)));
+        }
+
+        lines.add("  /glimmerwhim whim <uuid> " + String.join("｜", ACTIONS));
+
+        return List.copyOf(lines);
     }
 
-    private static String paramUsage()
+    /** 这份参数表怎么写。一个参数都不认就什么都不加。 */
+    private static String paramsUsage(WhimParams params)
     {
-        return WhimTypes.params(Whim.DEV_ELEMENT).stream()
+        if (params.all().isEmpty())
+        {
+            return "";
+        }
+
+        return "；参数 " + params.all().stream()
                 .map(param -> param.name() + "=" + param.hint() + "（默认 " + param.defaultValue() + "）")
                 .collect(Collectors.joining("，"));
     }
@@ -216,7 +229,7 @@ public final class WhimCommand
             String inside = remaining.substring(open + 1);
             int cut = Math.max(inside.lastIndexOf(','), inside.lastIndexOf(';')) + 1;
 
-            return suggestParam(inside, inside.substring(cut),
+            return suggestParam(WhimAnchors.params(anchor), inside, inside.substring(cut),
                     builder.createOffset(builder.getStart() + open + 1 + cut));
         }
 
@@ -240,7 +253,8 @@ public final class WhimCommand
      * 挑名字的时候直接给一整对（名:默认值）：只给 shape: 的话，补出来就停在冒号上，得再按一次 TAB
      * 才看得见值 —— 而且那一次表里还是 shape: 和 size:，看着就像卡住了。
      */
-    private static CompletableFuture<Suggestions> suggestParam(String inside, String piece, SuggestionsBuilder builder)
+    private static CompletableFuture<Suggestions> suggestParam(WhimParams params, String inside, String piece,
+            SuggestionsBuilder builder)
     {
         int cut = Math.max(piece.indexOf(':'), piece.indexOf('='));
 
@@ -248,7 +262,7 @@ public final class WhimCommand
         {
             List<String> names = new ArrayList<>();
 
-            for (WhimParam param : WhimTypes.params(Whim.DEV_ELEMENT))
+            for (WhimParam param : params.all())
             {
                 if (!written(inside, param.name()))
                 {
@@ -259,7 +273,7 @@ public final class WhimCommand
             return suggestText(names, builder);
         }
 
-        WhimParam param = WhimTypes.param(Whim.DEV_ELEMENT, piece.substring(0, cut));
+        WhimParam param = params.get(piece.substring(0, cut));
 
         return suggestText(param == null ? List.of() : param.choices(),
                 builder.createOffset(builder.getStart() + cut + 1));
@@ -483,7 +497,7 @@ public final class WhimCommand
         try
         {
             split = WhimData.split(tail);
-            data = WhimTypes.parse(Whim.DEV_ELEMENT, split.data());
+            data = WhimAnchors.params(type).parse(split.data());
         }
         catch (IllegalArgumentException e)
         {

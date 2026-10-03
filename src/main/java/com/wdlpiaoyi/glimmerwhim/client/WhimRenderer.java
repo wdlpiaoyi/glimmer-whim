@@ -15,8 +15,9 @@ import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.wdlpiaoyi.glimmerwhim.whim.Whim;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchor;
+import com.wdlpiaoyi.glimmerwhim.whim.WhimAnchors;
 import com.wdlpiaoyi.glimmerwhim.whim.WhimData;
-import com.wdlpiaoyi.glimmerwhim.whim.WhimTypes;
+import com.wdlpiaoyi.glimmerwhim.whim.WhimParams;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
@@ -29,11 +30,11 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 /** 开发者占位。紫黑棋盘，能看见就算完。 */
 public final class WhimRenderer
 {
-    /** 画一条灵感。pose 已经挪到那条灵感的位置。 */
+    /** 画一条灵感。pose 已经挪到那条灵感的位置；params 是它那种锚认的参数（没写的取默认值要用）。 */
     @FunctionalInterface
     public interface Drawer
     {
-        void draw(PoseStack pose, Vec3 dir, WhimData data, boolean aimed);
+        void draw(PoseStack pose, Vec3 dir, WhimData data, WhimParams params, boolean aimed);
     }
 
     /** 高亮比本体宽出去多少。 */
@@ -114,11 +115,12 @@ public final class WhimRenderer
 
             Vec3 dir = toIt.normalize();
             Vec3 position = at.subtract(camera);
+            WhimParams params = WhimAnchors.params(whim.anchor().type());
 
             pose.pushPose();
             pose.translate(position.x, position.y, position.z);
 
-            drawer(whim.element()).draw(pose, dir, whim.data(), whim.id().equals(aimed));
+            drawer(whim.element()).draw(pose, dir, whim.data(), params, whim.id().equals(aimed));
 
             pose.popPose();
         }
@@ -129,36 +131,37 @@ public final class WhimRenderer
         RenderSystem.disableBlend();
     }
 
-    /** dev：紫黑棋盘。{@code shape} 挑方片还是立方体，{@code size} 是半边长。 */
-    public static void dev(PoseStack pose, Vec3 dir, WhimData data, boolean aimed)
+    /** dev：紫黑棋盘。{@code shape} 挑方片还是立方体，{@code size} 是边长 —— 1 就是一格。 */
+    public static void dev(PoseStack pose, Vec3 dir, WhimData data, WhimParams params, boolean aimed)
     {
-        boolean cube = "cube".equals(WhimTypes.text(Whim.DEV_ELEMENT, data, "shape"));
-        double size = WhimTypes.number(Whim.DEV_ELEMENT, data, "size");
+        boolean cube = "cube".equals(params.text(data, "shape"));
+        // 画的时候要的是半边长。
+        double half = params.number(data, "size") / 2.0D;
 
         if (aimed)
         {
             if (cube)
             {
-                cube(pose, size + OUTLINE, WHITE, WHITE);
+                cube(pose, half + OUTLINE, WHITE, WHITE);
             }
             else
             {
-                quad(pose, dir, size + OUTLINE, WHITE, WHITE);
+                quad(pose, dir, half + OUTLINE, WHITE, WHITE);
             }
         }
 
         if (cube)
         {
-            cube(pose, size, PURPLE, BLACK);
+            cube(pose, half, PURPLE, BLACK);
         }
         else
         {
-            quad(pose, dir, size, PURPLE, BLACK);
+            quad(pose, dir, half, PURPLE, BLACK);
         }
     }
 
-    /** 正对玩家的一张方片。 */
-    private static void quad(PoseStack pose, Vec3 dir, double size, float[] first, float[] second)
+    /** 正对玩家的一张方片。{@code half} 是半边长。 */
+    private static void quad(PoseStack pose, Vec3 dir, double half, float[] first, float[] second)
     {
         Matrix4f matrix = pose.last().pose();
         BufferBuilder builder = Tesselator.getInstance().getBuilder();
@@ -166,24 +169,24 @@ public final class WhimRenderer
         Vec3 up = right.cross(dir).normalize();
 
         builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        face(builder, matrix, right.scale(-size).add(up.scale(-size)), right.scale(2.0D * size), up.scale(2.0D * size), first, second);
+        face(builder, matrix, right.scale(-half).add(up.scale(-half)), right.scale(2.0D * half), up.scale(2.0D * half), first, second);
         BufferUploader.drawWithShader(builder.end());
     }
 
-    /** 六个面。 */
-    private static void cube(PoseStack pose, double s, float[] first, float[] second)
+    /** 六个面。{@code half} 是半边长。 */
+    private static void cube(PoseStack pose, double half, float[] first, float[] second)
     {
         Matrix4f matrix = pose.last().pose();
         BufferBuilder builder = Tesselator.getInstance().getBuilder();
 
         builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
 
-        face(builder, matrix, new Vec3(-s, -s, -s), new Vec3(0.0D, 0.0D, 2.0D * s), new Vec3(0.0D, 2.0D * s, 0.0D), first, second);
-        face(builder, matrix, new Vec3(s, -s, s), new Vec3(0.0D, 0.0D, -2.0D * s), new Vec3(0.0D, 2.0D * s, 0.0D), first, second);
-        face(builder, matrix, new Vec3(-s, -s, s), new Vec3(2.0D * s, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, -2.0D * s), first, second);
-        face(builder, matrix, new Vec3(-s, s, -s), new Vec3(2.0D * s, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, 2.0D * s), first, second);
-        face(builder, matrix, new Vec3(s, -s, -s), new Vec3(-2.0D * s, 0.0D, 0.0D), new Vec3(0.0D, 2.0D * s, 0.0D), first, second);
-        face(builder, matrix, new Vec3(-s, -s, s), new Vec3(2.0D * s, 0.0D, 0.0D), new Vec3(0.0D, 2.0D * s, 0.0D), first, second);
+        face(builder, matrix, new Vec3(-half, -half, -half), new Vec3(0.0D, 0.0D, 2.0D * half), new Vec3(0.0D, 2.0D * half, 0.0D), first, second);
+        face(builder, matrix, new Vec3(half, -half, half), new Vec3(0.0D, 0.0D, -2.0D * half), new Vec3(0.0D, 2.0D * half, 0.0D), first, second);
+        face(builder, matrix, new Vec3(-half, -half, half), new Vec3(2.0D * half, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, -2.0D * half), first, second);
+        face(builder, matrix, new Vec3(-half, half, -half), new Vec3(2.0D * half, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, 2.0D * half), first, second);
+        face(builder, matrix, new Vec3(half, -half, -half), new Vec3(-2.0D * half, 0.0D, 0.0D), new Vec3(0.0D, 2.0D * half, 0.0D), first, second);
+        face(builder, matrix, new Vec3(-half, -half, half), new Vec3(2.0D * half, 0.0D, 0.0D), new Vec3(0.0D, 2.0D * half, 0.0D), first, second);
 
         BufferUploader.drawWithShader(builder.end());
     }
