@@ -11,6 +11,7 @@ import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.whim.anchor.DevPosAnchor;
 import com.wdlpiaoyi.glimmerwhim.whim.anchor.DevRayAnchor;
 import com.wdlpiaoyi.glimmerwhim.whim.anchor.DevRemoveOnHighlightAnchor;
+import com.wdlpiaoyi.glimmerwhim.whim.anchor.DevVoidTestAnchor;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.FriendlyByteBuf;
@@ -53,6 +54,10 @@ public final class WhimAnchors
         // 什么都不收：没锚数据、没参数，就在原点，被瞄上就没。
         register(DevRemoveOnHighlightAnchor.TYPE, DevRemoveOnHighlightAnchor::read, DevRemoveOnHighlightAnchor::parse,
                 DevRemoveOnHighlightAnchor::suggestData, "不收锚数据，就在 0 0 0");
+
+        // 同上，但条件是"瞄上、松开、再瞄上并盯住 40 tick"，到了发一条 test 再给 10 点虚空伤害。
+        register(DevVoidTestAnchor.TYPE, DevVoidTestAnchor::read, DevVoidTestAnchor::parse,
+                DevVoidTestAnchor::suggestData, "不收锚数据，就在 0 0 0");
     }
 
     private WhimAnchors()
