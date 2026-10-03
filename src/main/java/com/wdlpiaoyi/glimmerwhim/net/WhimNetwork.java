@@ -8,7 +8,7 @@ import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
-/** 灵感怎么过线。只有两个包：出生、消失。 */
+/** 灵感怎么过线：出生、消失往下发，瞄着哪条往上说。 */
 public final class WhimNetwork
 {
     private static final String VERSION = "1";
@@ -29,6 +29,7 @@ public final class WhimNetwork
 
         CHANNEL.registerMessage(id++, WhimSpawnPacket.class, WhimSpawnPacket::encode, WhimSpawnPacket::decode, WhimSpawnPacket::handle);
         CHANNEL.registerMessage(id++, WhimRemovePacket.class, WhimRemovePacket::encode, WhimRemovePacket::decode, WhimRemovePacket::handle);
+        CHANNEL.registerMessage(id++, WhimAimPacket.class, WhimAimPacket::encode, WhimAimPacket::decode, WhimAimPacket::handle);
     }
 
     public static <MSG> void sendTo(ServerPlayer player, MSG packet)

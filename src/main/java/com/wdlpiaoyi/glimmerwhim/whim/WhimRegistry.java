@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
@@ -32,7 +33,15 @@ public final class WhimRegistry
 {
     private static final Map<ResourceKey<Level>, WhimRegistry> REGISTRIES = new HashMap<>();
 
+    /** 玩家 UUID -> 他现在瞄着的那条。客户端说了才算，只给命令补全用。 */
+    private static final Map<UUID, UUID> AIMED = new HashMap<>();
+
     private record Tracked(Whim whim, WhimVisibility visibility)
+    {
+    }
+
+    /** 找到的一条灵感落在哪个维度。 */
+    public record Found(ResourceKey<Level> dimension, Whim whim)
     {
     }
 
@@ -98,14 +107,14 @@ public final class WhimRegistry
         }
     }
 
-    /** 过一 tick：谁的 lifetime 见底了，谁走。 */
+    /** 过一 tick：谁的 lifetime 见底了，谁走。永久的一直是负数，不会撞上 0。 */
     public void tick()
     {
         List<UUID> expired = new ArrayList<>();
 
         for (Tracked entry : this.tracked.values())
         {
-            if (entry.whim().tick() <= 0)
+            if (entry.whim().tick() == 0)
             {
                 expired.add(entry.whim().id());
             }
@@ -139,6 +148,55 @@ public final class WhimRegistry
         }
 
         return Collections.unmodifiableList(whimes);
+    }
+
+    /** 按 id 找，跨维度。 */
+    public static Optional<Found> find(UUID id)
+    {
+        for (Map.Entry<ResourceKey<Level>, WhimRegistry> entry : REGISTRIES.entrySet())
+        {
+            Tracked tracked = entry.getValue().tracked.get(id);
+
+            if (tracked != null)
+            {
+                return Optional.of(new Found(entry.getKey(), tracked.whim()));
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    /** 按 id 干掉，跨维度。 */
+    public static boolean kill(UUID id)
+    {
+        for (WhimRegistry registry : REGISTRIES.values())
+        {
+            if (registry.tracked.containsKey(id))
+            {
+                registry.removeWhim(id, WhimRemoveReason.OTHERS);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** 客户端说它现在瞄着哪条，null 表示没瞄。 */
+    public static void setAimed(ServerPlayer player, UUID id)
+    {
+        if (id == null)
+        {
+            AIMED.remove(player.getUUID());
+        }
+        else
+        {
+            AIMED.put(player.getUUID(), id);
+        }
+    }
+
+    public static UUID aimed(ServerPlayer player)
+    {
+        return AIMED.get(player.getUUID());
     }
 
     private void unload()
@@ -177,7 +235,18 @@ public final class WhimRegistry
     {
         if (event.getEntity() instanceof ServerPlayer player)
         {
+            // 刚瞄的那条留在上一个维度了。
+            AIMED.remove(player.getUUID());
             of(player.serverLevel()).sendSnapshot(player);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event)
+    {
+        if (event.getEntity() instanceof ServerPlayer player)
+        {
+            AIMED.remove(player.getUUID());
         }
     }
 

@@ -51,18 +51,31 @@ public final class Whim
         return this.data;
     }
 
-    /** 消散前还能存在多久，单位 tick。 */
+    /** 消散前还能存在多久，单位 tick；负数表示永久。 */
     public int lifetime()
     {
         return this.lifetime;
     }
 
+    /** 不会因为时间走掉。 */
+    public boolean permanent()
+    {
+        return this.lifetime < 0;
+    }
+
     /** 过一 tick。
      *
-     * @return 减完之后的剩余 tick，&lt;= 0 表示该走了
+     * @return 减完之后的剩余 tick，{@code 0} 表示该走了；永久的一直是负数
      */
     public int tick()
     {
-        return --this.lifetime;
+        if (this.permanent())
+        {
+            return this.lifetime;
+        }
+
+        // 停在 0，别减成负数 —— 负数在这个类里是"永久"的意思。
+        this.lifetime = Math.max(0, this.lifetime - 1);
+        return this.lifetime;
     }
 }

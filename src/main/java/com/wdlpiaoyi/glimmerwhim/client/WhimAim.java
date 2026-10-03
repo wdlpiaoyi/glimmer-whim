@@ -6,11 +6,14 @@ import java.util.UUID;
 
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
+import com.wdlpiaoyi.glimmerwhim.net.WhimAimPacket;
+import com.wdlpiaoyi.glimmerwhim.net.WhimNetwork;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.phys.Vec3;
 
-/** 瞄准：锥里碰到的、离准星最近的那条。纯客户端，不发包。 */
+/** 瞄准：锥里碰到的、离准星最近的那条。纯客户端算，算完了告诉服务端一声。 */
 public final class WhimAim
 {
     private static UUID aimed;
@@ -63,6 +66,12 @@ public final class WhimAim
                 double angle = Math.toDegrees(Math.acos(Math.min(1.0D, bestDot)));
                 GlimmerWhim.LOGGER.info("[Whim] aim id={} element={} angle={}",
                         best.id(), best.element(), String.format(Locale.ROOT, "%.1f", angle));
+            }
+
+            // 命令补全在服务端，得让它知道。只在本帧的答案变了的时候说。
+            if (Minecraft.getInstance().getConnection() != null)
+            {
+                WhimNetwork.CHANNEL.sendToServer(new WhimAimPacket(id));
             }
         }
 
