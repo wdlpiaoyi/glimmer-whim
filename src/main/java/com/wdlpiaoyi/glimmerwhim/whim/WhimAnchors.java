@@ -34,20 +34,20 @@ public final class WhimAnchors
 
     static
     {
-        register(DevRayAnchor.TYPE, DevRayAnchor::read, DevRayAnchor::parse, DevRayAnchor::suggestData, "dx dy dz，~ 取视线",
+        register(DevRayAnchor.TYPE, DevRayAnchor::read, DevRayAnchor::parse, DevRayAnchor::suggestData, "dx dy dz；~ 表示视线方向",
                 WhimParam.choice("shape", "quad", "quad", "cube"),
                 WhimParam.positiveNumber("size", "1"),
                 WhimParam.positiveNumber("distance", "8"));
 
-        register(DevPosAnchor.TYPE, DevPosAnchor::read, DevPosAnchor::parse, DevPosAnchor::suggestData, "x y z，~ 取当前位置",
+        register(DevPosAnchor.TYPE, DevPosAnchor::read, DevPosAnchor::parse, DevPosAnchor::suggestData, "x y z；~ 表示当前位置",
                 WhimParam.choice("shape", "cube", "quad", "cube"),
                 WhimParam.positiveNumber("size", "1"));
 
         register(DevRemoveOnUseAnchor.TYPE, DevRemoveOnUseAnchor::read, DevRemoveOnUseAnchor::parse,
-                DevRemoveOnUseAnchor::suggestData, "不收锚数据，就在 0 0 0");
+                DevRemoveOnUseAnchor::suggestData, "不接受锚数据，固定于 0 0 0");
 
         register(DevVoidTestAnchor.TYPE, DevVoidTestAnchor::read, DevVoidTestAnchor::parse,
-                DevVoidTestAnchor::suggestData, "不收锚数据，就在 0 0 0");
+                DevVoidTestAnchor::suggestData, "不接受锚数据，固定于 0 0 0");
     }
 
     private WhimAnchors()

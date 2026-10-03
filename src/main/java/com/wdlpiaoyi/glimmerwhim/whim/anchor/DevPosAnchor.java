@@ -25,7 +25,7 @@ public final class DevPosAnchor implements WhimAnchor
 {
     public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev_pos");
 
-    private static final String WRONG = "锚数据需要三个坐标: x y z，任一个写 ~ 就是执行者的位置";
+    private static final String WRONG = "锚数据需要三个坐标: x y z；任一分量写 ~ 表示执行者的位置";
 
     private final Vec3 position;
 

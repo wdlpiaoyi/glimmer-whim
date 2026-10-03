@@ -39,7 +39,7 @@ public final class GlimmerWhim
             MinecraftForge.EVENT_BUS.register(WhimInteractHandler.class);
         }
 
-        LOGGER.info("Glimmer Whim loaded: 魔法流经你。");
+        LOGGER.info("Glimmer Whim loaded");
     }
 
     public static void log(String format, Object... args)

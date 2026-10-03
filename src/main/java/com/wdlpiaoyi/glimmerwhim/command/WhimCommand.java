@@ -52,13 +52,13 @@ public final class WhimCommand
     private static final List<String> ACTIONS = List.of("get", "kill");
 
     private static final SimpleCommandExceptionType ERROR_PLAYER =
-            new SimpleCommandExceptionType(Component.literal("只能由玩家执行"));
+            new SimpleCommandExceptionType(Component.literal("该命令只能由玩家执行"));
 
     private static final DynamicCommandExceptionType ERROR_UUID =
-            new DynamicCommandExceptionType(id -> Component.literal("不像是 uuid: " + id));
+            new DynamicCommandExceptionType(id -> Component.literal("无效的 uuid: " + id));
 
     private static final DynamicCommandExceptionType ERROR_NOT_FOUND =
-            new DynamicCommandExceptionType(id -> Component.literal("没有这条灵感: " + id));
+            new DynamicCommandExceptionType(id -> Component.literal("未找到该灵感: " + id));
 
     private static final DynamicCommandExceptionType ERROR_DIMENSION =
             new DynamicCommandExceptionType(dimension -> Component.literal("未知维度: " + dimension));
@@ -70,11 +70,11 @@ public final class WhimCommand
             new DynamicCommandExceptionType(message -> Component.literal(String.valueOf(message)));
 
     private static final DynamicCommandExceptionType ERROR_ACTION =
-            new DynamicCommandExceptionType(action -> Component.literal("不像是动作: " + action
+            new DynamicCommandExceptionType(action -> Component.literal("无效的动作: " + action
                     + "（可用: " + String.join(", ", ACTIONS) + "）"));
 
     private static final SimpleCommandExceptionType ERROR_NO_AIM =
-            new SimpleCommandExceptionType(Component.literal("没瞄着哪条灵感，把 uuid 写上"));
+            new SimpleCommandExceptionType(Component.literal("未瞄准任何灵感，请提供 uuid"));
 
     private WhimCommand()
     {
@@ -184,8 +184,8 @@ public final class WhimCommand
                 "  /glimmerwhim list [维度|all]",
                 "  /glimmerwhim summon [tick=" + WhimConfig.defaultLifetimeTicks() + "｜-1=永久] [锚类型="
                         + defaultAnchor().getPath() + "] [锚数据] {参数}",
-                "  /glimmerwhim whim " + String.join("｜", ACTIONS) + " [uuid]（不给 uuid 就对正瞄着的那条）",
-                "  锚数据格式、{参数} 按 TAB 看");
+                "  /glimmerwhim whim " + String.join("｜", ACTIONS) + " [uuid]（省略 uuid 时作用于当前瞄准的灵感）",
+                "  锚数据格式与 {参数} 可通过 TAB 查看");
     }
 
     private static CompletableFuture<Suggestions> suggestTail(ResourceLocation anchor, CommandSourceStack source,
@@ -350,7 +350,7 @@ public final class WhimCommand
 
         if (whimes.isEmpty())
         {
-            source.sendSuccess(() -> Component.literal(dimension.location() + " 没有存活的灵感"), false);
+            source.sendSuccess(() -> Component.literal(dimension.location() + " 无存活的灵感"), false);
             return 0;
         }
 
@@ -365,11 +365,11 @@ public final class WhimCommand
 
         if (total == 0)
         {
-            source.sendSuccess(() -> Component.literal("哪个维度都没有存活的灵感"), false);
+            source.sendSuccess(() -> Component.literal("所有维度均无存活的灵感"), false);
             return 0;
         }
 
-        source.sendSuccess(() -> Component.literal("所有维度存活的灵感 " + total + " 条："), false);
+        source.sendSuccess(() -> Component.literal("所有维度存活的灵感共 " + total + " 条："), false);
 
         for (Map.Entry<ResourceKey<Level>, Collection<Whim>> entry : dimensions.entrySet())
         {
@@ -399,7 +399,7 @@ public final class WhimCommand
                 .withColor(ChatFormatting.AQUA)
                 .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, command))
                 .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                        Component.literal(command + "\n点一下填进聊天框"))));
+                        Component.literal(command + "\n点击填入聊天框"))));
     }
 
     private static String remaining(Whim whim)
@@ -452,7 +452,7 @@ public final class WhimCommand
     {
         if (params.all().isEmpty())
         {
-            return "  参数=（这种锚不收参数）";
+            return "  参数=（该锚不接受参数）";
         }
 
         return "  参数=" + params.all().stream()
@@ -468,7 +468,7 @@ public final class WhimCommand
             throw ERROR_NOT_FOUND.create(id);
         }
 
-        source.sendSuccess(() -> Component.literal("已移除灵感 " + id), true);
+        source.sendSuccess(() -> Component.literal("已移除灵感: " + id), true);
         return 1;
     }
 

@@ -69,7 +69,7 @@ public final class WhimData
 
         if (anchorData.indexOf('{') >= 0 || anchorData.indexOf('}') >= 0)
         {
-            throw new IllegalArgumentException("参数得写成 {名字:值}，这里多了半个括号: " + text);
+            throw new IllegalArgumentException("参数格式应为 {名称:值}，此处括号不匹配: " + text);
         }
 
         return new Split(of(values), anchorData);
@@ -90,14 +90,14 @@ public final class WhimData
 
             if (cut < 0)
             {
-                throw new IllegalArgumentException("参数得写成 名字:值，这里没写分隔: " + pair);
+                throw new IllegalArgumentException("参数格式应为 名称:值，缺少分隔符: " + pair);
             }
 
             String name = pair.substring(0, cut).trim();
 
             if (name.isEmpty())
             {
-                throw new IllegalArgumentException("参数没写名字: " + pair);
+                throw new IllegalArgumentException("参数缺少名称: " + pair);
             }
 
             values.put(name, pair.substring(cut + 1).trim());

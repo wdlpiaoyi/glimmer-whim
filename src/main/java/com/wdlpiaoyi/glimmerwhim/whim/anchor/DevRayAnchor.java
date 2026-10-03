@@ -71,7 +71,7 @@ public final class DevRayAnchor implements WhimAnchor
 
         if (parts.length != 3)
         {
-            throw new IllegalArgumentException("锚数据需要三个数: dx dy dz，或者 ~ ~ ~");
+            throw new IllegalArgumentException("锚数据需要三个分量: dx dy dz 或 ~ ~ ~");
         }
 
         Vec3 look = null;
@@ -102,7 +102,7 @@ public final class DevRayAnchor implements WhimAnchor
             }
             catch (NumberFormatException e)
             {
-                throw new IllegalArgumentException("锚数据需要三个数: dx dy dz，或者 ~ ~ ~");
+                throw new IllegalArgumentException("锚数据需要三个分量: dx dy dz 或 ~ ~ ~");
             }
         }
 
@@ -110,7 +110,7 @@ public final class DevRayAnchor implements WhimAnchor
 
         if (direction.lengthSqr() < 1.0E-8D)
         {
-            throw new IllegalArgumentException("方向不能是零向量");
+            throw new IllegalArgumentException("方向向量不能为零");
         }
 
         return new DevRayAnchor(direction);
@@ -122,7 +122,7 @@ public final class DevRayAnchor implements WhimAnchor
 
         if (player == null)
         {
-            throw new IllegalArgumentException("取视线需要一个玩家来执行");
+            throw new IllegalArgumentException("获取视线方向需要玩家上下文");
         }
 
         return player.getLookAngle();

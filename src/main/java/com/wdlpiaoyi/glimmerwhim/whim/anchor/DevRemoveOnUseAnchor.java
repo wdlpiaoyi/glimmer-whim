@@ -21,7 +21,7 @@ public final class DevRemoveOnUseAnchor implements WhimAnchor
     public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("glimmerwhim",
             "dev_removeonuse");
 
-    private static final String WRONG = "这种锚不收锚数据，它就在 0 0 0";
+    private static final String WRONG = "该锚不接受锚数据，固定于 0 0 0";
 
     public static DevRemoveOnUseAnchor parse(CommandSourceStack source, String data)
     {

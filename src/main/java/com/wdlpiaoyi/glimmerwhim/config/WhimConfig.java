@@ -62,47 +62,47 @@ public final class WhimConfig
     {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
 
-        builder.comment("瞄：准星落在灵感画出来的体积上，它就高亮。");
+        builder.comment("瞄准：准星落在灵感绘制的体积内时，灵感高亮。");
         builder.push("aim");
-        AIM_THROUGH_WALLS = builder.comment("隔着方块也算瞄上（落在体积里就亮，中间挡着什么不管）。默认 true。")
+        AIM_THROUGH_WALLS = builder.comment("忽略方块遮挡：命中体积即视为瞄准，不检查中间遮挡。默认 true。")
                 .define("throughWalls", true);
 
         builder.pop();
 
-        builder.comment("自由视角：镜头和人的朝向分家，人站哪儿镜头就在哪儿。键位在 选项 → 控制 里改。");
+        builder.comment("自由视角：镜头朝向与玩家朝向独立，镜头位置仍跟随玩家。键位在“选项 → 控制”中修改。");
         builder.push("freelook");
-        FREE_LOOK_MODE = builder.comment("按住还是切换。HOLD = 按住才看，TOGGLE = 按一下切换。默认 HOLD。")
+        FREE_LOOK_MODE = builder.comment("按键模式。HOLD = 按住时启用，TOGGLE = 按键切换。默认 HOLD。")
                 .defineEnum("mode", FreeLookMode.HOLD);
-        FREE_LOOK_FADE = builder.comment("松手以后镜头退回人的朝向用多久（毫秒）。0 = 立刻弹回去。默认 180。")
+        FREE_LOOK_FADE = builder.comment("松开后镜头回正到玩家朝向的时长（毫秒）。0 = 立即回正。默认 180。")
                 .defineInRange("fadeMillis", 180, 0, 5000);
-        FREE_LOOK_SENSITIVITY = builder.comment("转镜头的快慢倍率。1.0 = 和原版一样，调小变慢、调大变快。默认 1.0。")
+        FREE_LOOK_SENSITIVITY = builder.comment("镜头转向速度倍率。1.0 = 与原版一致。默认 1.0。")
                 .defineInRange("sensitivity", 1.0D, 0.05D, 5.0D);
-        FREE_LOOK_PITCH_LIMIT = builder.comment("上下最多能看多少度。原版是 90（正上正下），调小就是不许抬那么高。默认 90。")
+        FREE_LOOK_PITCH_LIMIT = builder.comment("俯仰角上限（度）。原版为 90（正上/正下）。默认 90。")
                 .defineInRange("pitchLimitDegrees", 90.0D, 1.0D, 90.0D);
         FREE_LOOK_YAW_LIMIT = builder
-                .comment("左右最多能离开人的朝向多少度。人是冻着的，所以就是从正前方往两边算。",
-                        "180 = 不限，跟原版一样；调小就转不到旁边去。默认 180。")
+                .comment("偏航角相对玩家朝向的最大偏移（度）。",
+                        "180 = 不限制，与原版一致。默认 180。")
                 .defineInRange("yawLimitDegrees", 180.0D, 1.0D, 180.0D);
         builder.pop();
 
-        builder.comment("画：灵感画出来长什么样。",
-                "所有元素通用的放这一层；某个元素自己长什么样，放到 [render.<元素>] 里（现在只有 [render.dev]）。");
+        builder.comment("渲染：灵感的绘制外观。",
+                "通用设置在顶层；单个元素的外观放在 [render.<元素>] 下（当前仅有 [render.dev]）。");
         builder.push("render");
-        RENDER_OUTLINE = builder.comment("被瞄上的时候，那层高亮比本体宽出去多少（格）。0 = 不画高亮。默认 0.08。")
+        RENDER_OUTLINE = builder.comment("瞄准时高亮轮廓相对本体的外扩宽度（方块）。0 = 不绘制高亮。默认 0.08。")
                 .defineInRange("outlineWidth", 0.08D, 0.0D, 0.5D);
-        RENDER_FACE_SHADE = builder.comment("六面要不要按原版那样分明暗（上亮下暗）。关掉就是六面一样亮。默认 true。")
+        RENDER_FACE_SHADE = builder.comment("是否按原版对面片施加明暗（上亮下暗）。关闭后六面亮度一致。默认 true。")
                 .define("faceShade", true);
-        RENDER_COLOR_AIMED = builder.comment("被瞄上时那层的颜色。默认 FFFFFF 白。")
+        RENDER_COLOR_AIMED = builder.comment("瞄准时高亮轮廓颜色。默认 FFFFFF（白）。")
                 .define("colorAimed", "FFFFFF");
 
-        builder.comment("dev 元素长什么样：一副紫黑棋盘格。",
-                "正式的元素各写各的，不吃这一套 —— 棋盘格只是拿来看位置的。");
+        builder.comment("dev 元素外观：紫黑棋盘格。",
+                "该配置仅用于 dev 元素，正式元素各自实现。");
         builder.push("dev");
-        RENDER_DEV_CHECKER_CELLS = builder.comment("一面切成几格棋盘。2 = 原版贴图丢了的那副样子。默认 2。")
+        RENDER_DEV_CHECKER_CELLS = builder.comment("每个面划分的棋盘格数。默认 2。")
                 .defineInRange("checkerCells", 2, 1, 8);
-        RENDER_DEV_COLOR_ELEMENT = builder.comment("棋盘的第一色，RRGGBB 或 AARRGGBB（可带 #）。默认 FF00FF 紫。")
+        RENDER_DEV_COLOR_ELEMENT = builder.comment("棋盘主色，RRGGBB 或 AARRGGBB（可含 #）。默认 FF00FF（紫）。")
                 .define("colorElement", "FF00FF");
-        RENDER_DEV_COLOR_ELEMENT_ALT = builder.comment("棋盘的第二色。默认 000000 黑。")
+        RENDER_DEV_COLOR_ELEMENT_ALT = builder.comment("棋盘副色。默认 000000（黑）。")
                 .define("colorElementAlt", "000000");
         builder.pop(2);
 
@@ -113,36 +113,36 @@ public final class WhimConfig
     {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
 
-        builder.comment("灵感：/glimmerwhim summon 出来的默认怎么算。");
+        builder.comment("灵感：/glimmerwhim summon 的默认行为。");
         builder.push("whim");
         DEFAULT_LIFETIME_TICKS = builder
-                .comment("summon 不写 tick 时灵感活多久（1200 tick = 60 秒）；-1 = 永久。默认 1200。")
+                .comment("summon 省略 tick 时的存活时长（1200 tick = 60 秒）；-1 = 永久。默认 1200。")
                 .defineInRange("defaultLifetimeTicks", 1200, -1, 72000);
         DEFAULT_ANCHOR = builder
-                .comment("summon 不写锚类型时默认用哪个锚；写锚的路径名（如 dev_ray、dev_pos），写错了退回 dev_ray。默认 dev_ray。")
+                .comment("summon 省略锚类型时使用的默认锚（填写锚的路径名，如 dev_ray、dev_pos）；无效值回退到 dev_ray。默认 dev_ray。")
                 .define("defaultAnchor", "dev_ray");
         builder.pop();
 
-        builder.comment("命令：/glimmerwhim 的权限和补全。");
+        builder.comment("命令：/glimmerwhim 的权限与补全。");
         builder.push("command");
-        COMMAND_PERMISSION_LEVEL = builder.comment("谁能用 /glimmerwhim：0 = 所有人，2 = OP（原版默认）。默认 2。")
+        COMMAND_PERMISSION_LEVEL = builder.comment("/glimmerwhim 所需权限等级：0 = 所有人，2 = OP（原版默认）。默认 2。")
                 .defineInRange("permissionLevel", 2, 0, 4);
-        COMMAND_SUGGEST_REACH = builder.comment("TAB 补全里“你正看着的那个点”时，射线打多远（格）。默认 32。")
+        COMMAND_SUGGEST_REACH = builder.comment("TAB 补全中射线拾取瞄准点的最大距离（方块）。默认 32。")
                 .defineInRange("suggestReach", 32.0D, 1.0D, 256.0D);
         builder.pop();
 
-        builder.comment("锚：某一种锚自己的参数。");
+        builder.comment("锚：各锚类型自身的参数。");
         builder.push("anchor");
         builder.push("dev_voidtest");
-        VOID_TEST_HOLD_TICKS = builder.comment("dev_voidtest 被瞄上以后要连盯多少 tick 才触发（20 tick = 1 秒）。默认 40。")
+        VOID_TEST_HOLD_TICKS = builder.comment("dev_voidtest 被瞄准后需持续瞄准的 tick 数（20 tick = 1 秒）。默认 40。")
                 .defineInRange("holdTicks", 40, 1, 600);
-        VOID_TEST_DAMAGE = builder.comment("dev_voidtest 触发时给多少点虚空伤害（10 点 = 5 颗心）。默认 10。")
+        VOID_TEST_DAMAGE = builder.comment("dev_voidtest 触发时造成的虚空伤害（10 点 = 5 颗心）。默认 10。")
                 .defineInRange("damage", 10.0D, 0.0D, 1000.0D);
         builder.pop(2);
 
-        builder.comment("调试：日志刷不刷屏。");
+        builder.comment("调试：日志输出。");
         builder.push("debug");
-        DEBUG_VERBOSE_LOG = builder.comment("把调试信息打成 info 日志；关掉以后这些只进 debug，不刷屏。默认 true。")
+        DEBUG_VERBOSE_LOG = builder.comment("是否将调试信息输出为 info 级别；关闭后仅输出 debug 级别。默认 true。")
                 .define("verboseLog", true);
         builder.pop();
 

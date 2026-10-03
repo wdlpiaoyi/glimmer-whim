@@ -92,13 +92,13 @@ public final class WhimParams
             if (param == null)
             {
                 throw new IllegalArgumentException(this.params.isEmpty()
-                        ? "这种锚不收参数: " + name
-                        : "没有这个参数: " + name + "（可用: " + String.join(", ", this.params.keySet()) + "）");
+                        ? "该锚不接受参数: " + name
+                        : "未知参数: " + name + "（可用: " + String.join(", ", this.params.keySet()) + "）");
             }
 
             if (!param.valid(value))
             {
-                throw new IllegalArgumentException("参数 " + name + " 的值不对: " + value + "（只能是" + param.hint() + "）");
+                throw new IllegalArgumentException("参数 " + name + " 的值无效: " + value + "（只能为 " + param.hint() + "）");
             }
 
             values.put(name, value);
