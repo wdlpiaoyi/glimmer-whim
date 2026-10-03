@@ -5,7 +5,8 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "glimmerwhim.refmap.json",
   "client": [
-    "client.EntityTurnMixin"
+    "client.EntityTurnMixin",
+    "client.LocalPlayerLookMixin"
   ],
   "injectors": {
     "defaultRequire": 1

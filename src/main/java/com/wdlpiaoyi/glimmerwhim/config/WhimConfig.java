@@ -26,6 +26,8 @@ public final class WhimConfig
 
     private static final ForgeConfigSpec.EnumValue<FreeLookMode> FREE_LOOK_MODE;
 
+    private static final ForgeConfigSpec.IntValue FREE_LOOK_FADE;
+
     private static final Map<ResourceLocation, ForgeConfigSpec.DoubleValue> CONES = new HashMap<>();
 
     static
@@ -50,6 +52,8 @@ public final class WhimConfig
         builder.push("freelook");
         FREE_LOOK_MODE = builder.comment("按住还是切换。HOLD = 按住才看，TOGGLE = 按一下切换。")
                 .defineEnum("mode", FreeLookMode.HOLD);
+        FREE_LOOK_FADE = builder.comment("松手以后镜头退回人的朝向用多久（毫秒）。0 = 立刻弹回去。")
+                .defineInRange("fadeMillis", 180, 0, 5000);
         builder.pop();
 
         CLIENT_SPEC = builder.build();
@@ -71,5 +75,11 @@ public final class WhimConfig
     public static FreeLookMode freeLookMode()
     {
         return FREE_LOOK_MODE.get();
+    }
+
+    /** 自由视角松手以后镜头退回人的朝向用多久（毫秒）。 */
+    public static int freeLookFadeMillis()
+    {
+        return FREE_LOOK_FADE.get();
     }
 }
