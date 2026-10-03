@@ -10,6 +10,7 @@ import java.util.function.Function;
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.whim.anchor.DevPosAnchor;
 import com.wdlpiaoyi.glimmerwhim.whim.anchor.DevRayAnchor;
+import com.wdlpiaoyi.glimmerwhim.whim.anchor.DevRemoveOnHighlightAnchor;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.FriendlyByteBuf;
@@ -48,6 +49,10 @@ public final class WhimAnchors
         register(DevPosAnchor.TYPE, DevPosAnchor::read, DevPosAnchor::parse, DevPosAnchor::suggestData, "x y z，~ 取当前位置",
                 WhimParam.choice("shape", "cube", "quad", "cube"),
                 WhimParam.positiveNumber("size", "1"));
+
+        // 什么都不收：没锚数据、没参数，就在原点，被瞄上就没。
+        register(DevRemoveOnHighlightAnchor.TYPE, DevRemoveOnHighlightAnchor::read, DevRemoveOnHighlightAnchor::parse,
+                DevRemoveOnHighlightAnchor::suggestData, "不收锚数据，就在 0 0 0");
     }
 
     private WhimAnchors()

@@ -54,6 +54,12 @@ public final class WhimParams
         return data.get(name).orElse(param == null ? "" : param.defaultValue());
     }
 
+    /** 同上，但这张表压根没收这个参数时用 {@code fallback}。 */
+    public String text(WhimData data, String name, String fallback)
+    {
+        return get(name) == null ? fallback : text(data, name);
+    }
+
     /** 读一个数参数；读不成数就退回默认值。 */
     public double number(WhimData data, String name)
     {
@@ -74,6 +80,12 @@ public final class WhimParams
         WhimParam param = get(name);
 
         return param == null ? 0.0D : Double.parseDouble(param.defaultValue());
+    }
+
+    /** 同上，但这张表压根没收这个参数时用 {@code fallback}。 */
+    public double number(WhimData data, String name, double fallback)
+    {
+        return get(name) == null ? fallback : number(data, name);
     }
 
     /**

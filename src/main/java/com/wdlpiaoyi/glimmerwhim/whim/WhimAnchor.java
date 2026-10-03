@@ -28,4 +28,15 @@ public interface WhimAnchor
      * 可以没有距离 —— 只知道自己朝哪的锚，从 {@code params} 里挑一个距离补上就行。返回空表示这一帧算不出来。
      */
     Optional<Vec3> position(Level level, Vec3 eye, float partialTick, WhimData data, WhimParams params);
+
+    /**
+     * 有人正瞄着它（高亮）的那一刻，它要不要自己走 —— 默认不走。
+     * <p>
+     * "高亮"是客户端算出来的，服务端只听得到 {@link WhimRegistry#setAimed}，所以让锚表个态，
+     * 由 {@code WhimRegistry} 落地。
+     */
+    default boolean removeOnHighlight()
+    {
+        return false;
+    }
 }

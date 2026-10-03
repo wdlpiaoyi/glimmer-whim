@@ -147,9 +147,10 @@ public final class WhimRenderer
     /** dev：紫黑棋盘。{@code shape} 挑方片还是立方体，{@code size} 是边长 —— 1 就是一格。 */
     public static void dev(PoseStack pose, Vec3 dir, WhimData data, WhimParams params, boolean aimed)
     {
-        boolean cube = "cube".equals(params.text(data, "shape"));
+        // 有的锚一个参数都不收（表是空的），那就按立方体、边长 1 画。
+        boolean cube = "cube".equals(params.text(data, "shape", "cube"));
         // 画的时候要的是半边长。
-        double half = params.number(data, "size") / 2.0D;
+        double half = params.number(data, "size", 1.0D) / 2.0D;
 
         if (aimed)
         {

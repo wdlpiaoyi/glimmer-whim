@@ -208,10 +208,25 @@ public final class WhimRegistry
         if (id == null)
         {
             AIMED.remove(player.getUUID());
+            return;
         }
-        else
+
+        AIMED.put(player.getUUID(), id);
+
+        // 有的锚一被高亮就自己走（锚自己说了算）。高亮只有客户端算得出来，所以这件事只能在这儿落地。
+        for (WhimRegistry registry : REGISTRIES.values())
         {
-            AIMED.put(player.getUUID(), id);
+            Tracked tracked = registry.tracked.get(id);
+
+            if (tracked != null)
+            {
+                if (tracked.whim().anchor().removeOnHighlight())
+                {
+                    registry.removeWhim(id, WhimRemoveReason.USED);
+                }
+
+                return;
+            }
         }
     }
 
