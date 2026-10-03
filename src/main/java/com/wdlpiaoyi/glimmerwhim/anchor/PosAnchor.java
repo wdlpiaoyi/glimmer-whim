@@ -1,8 +1,5 @@
 package com.wdlpiaoyi.glimmerwhim.anchor;
 
-import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
-import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
@@ -11,9 +8,6 @@ import java.util.Optional;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
-import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
-import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
-import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.coordinates.Coordinates;
@@ -24,15 +18,15 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
-public final class DevPosAnchor implements WhimAnchor
+public final class PosAnchor implements WhimAnchor
 {
-    public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev_pos");
+    public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "pos");
 
     private static final String WRONG = "锚数据需要三个坐标: x y z；任一分量写 ~ 表示执行者的位置";
 
     private final Vec3 position;
 
-    public DevPosAnchor(Vec3 position)
+    public PosAnchor(Vec3 position)
     {
         this.position = position;
     }
@@ -52,14 +46,14 @@ public final class DevPosAnchor implements WhimAnchor
     }
 
     @Override
-    public Optional<Vec3> position(Level level, Vec3 eye, float partialTick, WhimData data, WhimParams params)
+    public Optional<Vec3> position(Level level, Vec3 eye, float partialTick)
     {
         return Optional.of(this.position);
     }
 
-    public static DevPosAnchor read(FriendlyByteBuf buf)
+    public static PosAnchor read(FriendlyByteBuf buf)
     {
-        return new DevPosAnchor(new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()));
+        return new PosAnchor(new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()));
     }
 
     public static Collection<String> suggestData(CommandSourceStack source)
@@ -77,11 +71,11 @@ public final class DevPosAnchor implements WhimAnchor
                 String.format(Locale.ROOT, "%.3f %.3f %.3f", hit.x, hit.y, hit.z));
     }
 
-    public static DevPosAnchor parse(CommandSourceStack source, String data)
+    public static PosAnchor parse(CommandSourceStack source, String data)
     {
         if (data == null || data.isBlank())
         {
-            return new DevPosAnchor(source.getPosition());
+            return new PosAnchor(source.getPosition());
         }
 
         StringReader reader = new StringReader(data);
@@ -95,7 +89,7 @@ public final class DevPosAnchor implements WhimAnchor
                 throw new IllegalArgumentException(WRONG);
             }
 
-            return new DevPosAnchor(coordinates.getPosition(source));
+            return new PosAnchor(coordinates.getPosition(source));
         }
         catch (CommandSyntaxException e)
         {

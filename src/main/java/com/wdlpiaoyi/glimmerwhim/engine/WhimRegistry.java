@@ -1,7 +1,6 @@
 package com.wdlpiaoyi.glimmerwhim.engine;
 
 import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
-import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchors;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -193,8 +192,7 @@ public final class WhimRegistry
 
     private static Vec3 position(Whim whim, Level level, Vec3 eye)
     {
-        return whim.anchor().position(level, eye, 1.0F, whim.data(), WhimAnchors.params(whim.anchor().type()))
-                .orElse(null);
+        return whim.anchor().position(level, eye, 1.0F).orElse(null);
     }
 
     private static double loadDistance(ServerPlayer player)
@@ -336,6 +334,29 @@ public final class WhimRegistry
             registry.removeWhim(id, WhimRemoveReason.DROPPED);
         }
 
+        return true;
+    }
+
+    public static boolean hold(ServerPlayer player, UUID id)
+    {
+        WhimRegistry registry = of(player.serverLevel());
+        Tracked tracked = registry.tracked.get(id);
+
+        if (tracked == null)
+        {
+            return false;
+        }
+
+        if (!tracked.visibility().canUse(player, tracked.whim())
+                || !registry.sent.getOrDefault(player.getUUID(), Set.of()).contains(id))
+        {
+            GlimmerWhim.log("[Whim] hold rejected player={} id={}", player.getUUID(), id);
+            return false;
+        }
+
+        GlimmerWhim.log("[Whim] hold player={} id={}", player.getUUID(), id);
+
+        fire(WhimEvent.Kind.HOLD, id, player);
         return true;
     }
 

@@ -1,8 +1,5 @@
 package com.wdlpiaoyi.glimmerwhim.anchor;
 
-import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
-import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
-
 import java.util.Optional;
 
 import net.minecraft.network.FriendlyByteBuf;
@@ -16,5 +13,5 @@ public interface WhimAnchor
 
     void write(FriendlyByteBuf buf);
 
-    Optional<Vec3> position(Level level, Vec3 eye, float partialTick, WhimData data, WhimParams params);
+    Optional<Vec3> position(Level level, Vec3 eye, float partialTick);
 }

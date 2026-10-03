@@ -30,6 +30,7 @@ public final class WhimNetwork
         CHANNEL.registerMessage(id++, WhimRemovePacket.class, WhimRemovePacket::encode, WhimRemovePacket::decode, WhimRemovePacket::handle);
         CHANNEL.registerMessage(id++, WhimAimPacket.class, WhimAimPacket::encode, WhimAimPacket::decode, WhimAimPacket::handle);
         CHANNEL.registerMessage(id++, WhimUsePacket.class, WhimUsePacket::encode, WhimUsePacket::decode, WhimUsePacket::handle);
+        CHANNEL.registerMessage(id++, WhimHoldPacket.class, WhimHoldPacket::encode, WhimHoldPacket::decode, WhimHoldPacket::handle);
     }
 
     public static <MSG> void sendTo(ServerPlayer player, MSG packet)

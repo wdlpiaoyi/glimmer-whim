@@ -12,7 +12,8 @@ public final class WhimEvent
         HIGHLIGHT,
         UNHIGHLIGHT,
         TICK,
-        USE
+        USE,
+        HOLD
     }
 
     private final Kind kind;

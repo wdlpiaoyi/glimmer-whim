@@ -2,9 +2,11 @@ package com.wdlpiaoyi.glimmerwhim.command;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -26,7 +28,7 @@ import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParam;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimRegistry;
-import com.wdlpiaoyi.glimmerwhim.anchor.DevRayAnchor;
+import com.wdlpiaoyi.glimmerwhim.anchor.RayAnchor;
 import com.wdlpiaoyi.glimmerwhim.whims.DevWhim;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 import com.wdlpiaoyi.glimmerwhim.whims.Whims;
@@ -68,6 +70,9 @@ public final class WhimCommand
 
     private static final DynamicCommandExceptionType ERROR_ANCHOR =
             new DynamicCommandExceptionType(type -> Component.literal("未知的锚类型: " + type + "（可用: " + anchorNames() + "）"));
+
+    private static final DynamicCommandExceptionType ERROR_WHIM =
+            new DynamicCommandExceptionType(type -> Component.literal("未知的灵感类型: " + type + "（可用: " + whimNames() + "）"));
 
     private static final DynamicCommandExceptionType ERROR_DATA =
             new DynamicCommandExceptionType(message -> Component.literal(String.valueOf(message)));
@@ -132,16 +137,7 @@ public final class WhimCommand
                                                         IntegerArgumentType.getInteger(context, "ticks"),
                                                         StringArgumentType.getString(context, "whim"),
                                                         StringArgumentType.getString(context, "anchor"),
-                                                        StringArgumentType.getString(context, "data")))))
-                                .then(Commands.argument("data", StringArgumentType.greedyString())
-                                        .suggests((context, builder) -> suggestTail(
-                                                suggestionAnchor(StringArgumentType.getString(context, "whim"), null),
-                                                summonParams(StringArgumentType.getString(context, "whim"), null),
-                                                context.getSource(), builder))
-                                        .executes(context -> summon(context.getSource(),
-                                                IntegerArgumentType.getInteger(context, "ticks"),
-                                                StringArgumentType.getString(context, "whim"), null,
-                                                StringArgumentType.getString(context, "data")))))));
+                                                        StringArgumentType.getString(context, "data"))))))));
 
         root.then(Commands.literal("whim")
                 .then(Commands.argument("action", StringArgumentType.word())
@@ -190,12 +186,17 @@ public final class WhimCommand
     {
         return WhimAnchors.resolve(WhimConfig.defaultAnchor())
                 .filter(WhimAnchors.types()::contains)
-                .orElse(DevRayAnchor.TYPE);
+                .orElse(RayAnchor.TYPE);
     }
 
     private static String anchorNames()
     {
         return WhimAnchors.types().stream().map(ResourceLocation::getPath).collect(Collectors.joining(", "));
+    }
+
+    private static String whimNames()
+    {
+        return Whims.ids().stream().map(ResourceLocation::getPath).collect(Collectors.joining(", "));
     }
 
     private static List<String> helpLines()
@@ -258,14 +259,9 @@ public final class WhimCommand
 
     private static ResourceLocation suggestionAnchor(String first, String second)
     {
-        if (first != null && isWhim(first) && second != null && isAnchor(second))
+        if (second != null && isAnchor(second))
         {
             return resolveAnchor(second);
-        }
-
-        if (first != null && !isWhim(first) && isAnchor(first))
-        {
-            return resolveAnchor(first);
         }
 
         return defaultAnchor();
@@ -275,7 +271,7 @@ public final class WhimCommand
     {
         WhimType whim = first != null && isWhim(first) ? resolveWhim(first) : DevWhim.INSTANCE;
 
-        return WhimAnchors.params(suggestionAnchor(first, second)).plus(whim.params());
+        return whim.params();
     }
 
     private static CompletableFuture<Suggestions> suggestTypes(SuggestionsBuilder builder)
@@ -290,14 +286,6 @@ public final class WhimCommand
             }
         }
 
-        for (ResourceLocation type : WhimAnchors.types())
-        {
-            if (type.getPath().toLowerCase(Locale.ROOT).startsWith(typed))
-            {
-                builder.suggest(type.getPath(), Component.literal("锚：" + WhimAnchors.hint(type)));
-            }
-        }
-
         return builder.buildFuture();
     }
 
@@ -308,6 +296,7 @@ public final class WhimCommand
         int index = tokens.length - 1;
         String partial = tokens[index];
         SuggestionsBuilder target = builder.createOffset(builder.getStart() + typed.length() - partial.length());
+        Set<String> matched = new LinkedHashSet<>();
 
         for (String candidate : candidates)
         {
@@ -315,8 +304,13 @@ public final class WhimCommand
 
             if (index < parts.length && parts[index].startsWith(partial))
             {
-                target.suggest(parts[index]);
+                matched.add(parts[index]);
             }
+        }
+
+        for (String part : matched)
+        {
+            target.suggest(part);
         }
 
         return target.buildFuture();
@@ -533,7 +527,7 @@ public final class WhimCommand
         source.sendSuccess(() -> Component.literal("  元素=" + whim.type().id()), false);
         source.sendSuccess(() -> Component.literal("  剩余=" + remaining(whim)), false);
 
-        WhimParams params = WhimAnchors.params(whim.anchor().type()).plus(whim.type().params());
+        WhimParams params = whim.type().params();
 
         source.sendSuccess(() -> Component.literal(paramsLine(params, whim.data())), false);
 
@@ -576,31 +570,28 @@ public final class WhimCommand
 
         WhimType whim = DevWhim.INSTANCE;
         ResourceLocation type = defaultAnchor();
-        boolean consumed = false;
 
         if (first != null)
         {
-            if (isWhim(first))
+            if (!isWhim(first))
             {
-                whim = resolveWhim(first);
+                throw ERROR_WHIM.create(first);
+            }
 
-                if (second != null && isAnchor(second))
+            whim = resolveWhim(first);
+
+            if (second != null)
+            {
+                if (!isAnchor(second))
                 {
-                    type = resolveAnchor(second);
-                    consumed = true;
+                    throw ERROR_ANCHOR.create(second);
                 }
-            }
-            else if (isAnchor(first))
-            {
-                type = resolveAnchor(first);
-            }
-            else
-            {
-                throw ERROR_ANCHOR.create(first);
+
+                type = resolveAnchor(second);
             }
         }
 
-        String rest = consumed ? (tail == null ? "" : tail) : join(second, tail);
+        String rest = tail == null ? "" : tail;
 
         WhimData.Split split;
         WhimData data;
@@ -608,7 +599,7 @@ public final class WhimCommand
         try
         {
             split = WhimData.split(rest);
-            data = WhimAnchors.params(type).plus(whim.params()).parse(split.data());
+            data = whim.params().parse(split.data());
         }
         catch (IllegalArgumentException e)
         {
@@ -633,15 +624,5 @@ public final class WhimCommand
                 + (summoned.permanent() ? "永久" : "存活 " + summoned.lifetime() + " tick")
                 + (data.isEmpty() ? "" : "，参数 " + data)), true);
         return 1;
-    }
-
-    private static String join(String second, String tail)
-    {
-        if (second == null)
-        {
-            return tail == null ? "" : tail;
-        }
-
-        return tail == null || tail.isEmpty() ? second : second + " " + tail;
     }
 }

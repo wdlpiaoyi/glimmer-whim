@@ -10,7 +10,6 @@ import java.util.UUID;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
-import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchors;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.whims.DevWhim;
@@ -108,8 +107,7 @@ public final class WhimRenderer
         for (ClientWhimCache.WhimView whim : ClientWhimCache.all())
         {
             WhimAnchor anchor = whim.anchor();
-            WhimParams anchorParams = WhimAnchors.params(anchor.type());
-            Vec3 at = anchor.position(level, eye, partialTick, whim.data(), anchorParams).orElse(null);
+            Vec3 at = anchor.position(level, eye, partialTick).orElse(null);
 
             if (at == null || at.subtract(eye).lengthSqr() < 1.0E-8D)
             {

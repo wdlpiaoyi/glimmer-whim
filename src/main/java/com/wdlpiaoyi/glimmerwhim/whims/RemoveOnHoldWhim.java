@@ -6,13 +6,13 @@ import com.wdlpiaoyi.glimmerwhim.engine.WhimRemoveReason;
 
 import net.minecraft.resources.ResourceLocation;
 
-public final class RemoveOnUseWhim implements WhimType
+public final class RemoveOnHoldWhim implements WhimType
 {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev_removeonuse");
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev_removeonhold");
 
-    public static final RemoveOnUseWhim INSTANCE = new RemoveOnUseWhim();
+    public static final RemoveOnHoldWhim INSTANCE = new RemoveOnHoldWhim();
 
-    private RemoveOnUseWhim()
+    private RemoveOnHoldWhim()
     {
     }
 
@@ -31,7 +31,7 @@ public final class RemoveOnUseWhim implements WhimType
     @Override
     public void on(WhimEvent event)
     {
-        if (event.kind() == WhimEvent.Kind.USE)
+        if (event.kind() == WhimEvent.Kind.HOLD)
         {
             event.remove(WhimRemoveReason.USED);
         }

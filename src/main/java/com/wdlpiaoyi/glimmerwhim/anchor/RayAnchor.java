@@ -1,16 +1,9 @@
 package com.wdlpiaoyi.glimmerwhim.anchor;
 
-import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
-import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-
-import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
-import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
-import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.FriendlyByteBuf;
@@ -19,15 +12,20 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
-public final class DevRayAnchor implements WhimAnchor
+public final class RayAnchor implements WhimAnchor
 {
-    public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev_ray");
+    public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "ray");
+
+    private static final double DEFAULT_DISTANCE = 8.0D;
 
     private final Vec3 direction;
 
-    public DevRayAnchor(Vec3 direction)
+    private final double distance;
+
+    public RayAnchor(Vec3 direction, double distance)
     {
         this.direction = direction.normalize();
+        this.distance = distance;
     }
 
     @Override
@@ -42,17 +40,18 @@ public final class DevRayAnchor implements WhimAnchor
         buf.writeFloat((float) this.direction.x);
         buf.writeFloat((float) this.direction.y);
         buf.writeFloat((float) this.direction.z);
+        buf.writeDouble(this.distance);
     }
 
     @Override
-    public Optional<Vec3> position(Level level, Vec3 eye, float partialTick, WhimData data, WhimParams params)
+    public Optional<Vec3> position(Level level, Vec3 eye, float partialTick)
     {
-        return Optional.of(eye.add(this.direction.scale(params.number(data, "distance"))));
+        return Optional.of(eye.add(this.direction.scale(this.distance)));
     }
 
-    public static DevRayAnchor read(FriendlyByteBuf buf)
+    public static RayAnchor read(FriendlyByteBuf buf)
     {
-        return new DevRayAnchor(new Vec3(buf.readFloat(), buf.readFloat(), buf.readFloat()));
+        return new RayAnchor(new Vec3(buf.readFloat(), buf.readFloat(), buf.readFloat()), buf.readDouble());
     }
 
     public static Collection<String> suggestData(CommandSourceStack source)
@@ -60,21 +59,23 @@ public final class DevRayAnchor implements WhimAnchor
         ServerPlayer player = source.getPlayer();
         Vec3 look = player == null ? new Vec3(0.0D, 0.0D, 1.0D) : player.getLookAngle();
 
-        return List.of("~ ~ ~", String.format(Locale.ROOT, "%.3f %.3f %.3f", look.x, look.y, look.z));
+        return List.of("~ ~ ~",
+                String.format(Locale.ROOT, "%.3f %.3f %.3f", look.x, look.y, look.z),
+                "~ ~ ~ " + (int) DEFAULT_DISTANCE);
     }
 
-    public static DevRayAnchor parse(CommandSourceStack source, String data)
+    public static RayAnchor parse(CommandSourceStack source, String data)
     {
         if (data == null || data.isBlank())
         {
-            return new DevRayAnchor(look(source));
+            return new RayAnchor(look(source), DEFAULT_DISTANCE);
         }
 
         String[] parts = data.trim().split("\\s+");
 
-        if (parts.length != 3)
+        if (parts.length != 3 && parts.length != 4)
         {
-            throw new IllegalArgumentException("锚数据需要三个分量: dx dy dz 或 ~ ~ ~");
+            throw new IllegalArgumentException("锚数据需要三个分量与可选距离: dx dy dz [distance] 或 ~ ~ ~");
         }
 
         Vec3 look = null;
@@ -105,10 +106,11 @@ public final class DevRayAnchor implements WhimAnchor
             }
             catch (NumberFormatException e)
             {
-                throw new IllegalArgumentException("锚数据需要三个分量: dx dy dz 或 ~ ~ ~");
+                throw new IllegalArgumentException("锚数据需要三个分量与可选距离: dx dy dz [distance] 或 ~ ~ ~");
             }
         }
 
+        double distance = parts.length == 4 ? distance(parts[3]) : DEFAULT_DISTANCE;
         Vec3 direction = new Vec3(values[0], values[1], values[2]);
 
         if (direction.lengthSqr() < 1.0E-8D)
@@ -116,7 +118,28 @@ public final class DevRayAnchor implements WhimAnchor
             throw new IllegalArgumentException("方向向量不能为零");
         }
 
-        return new DevRayAnchor(direction);
+        return new RayAnchor(direction, distance);
+    }
+
+    private static double distance(String text)
+    {
+        double value;
+
+        try
+        {
+            value = Double.parseDouble(text);
+        }
+        catch (NumberFormatException e)
+        {
+            throw new IllegalArgumentException("距离需要是正数: " + text);
+        }
+
+        if (value <= 0.0D)
+        {
+            throw new IllegalArgumentException("距离需要是正数: " + text);
+        }
+
+        return value;
     }
 
     private static Vec3 look(CommandSourceStack source)

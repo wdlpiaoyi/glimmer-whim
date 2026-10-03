@@ -119,8 +119,8 @@ public final class WhimConfig
                 .comment("summon 省略 tick 时的存活时长（1200 tick = 60 秒）；-1 = 永久。默认 1200。")
                 .defineInRange("defaultLifetimeTicks", 1200, -1, 72000);
         DEFAULT_ANCHOR = builder
-                .comment("summon 省略锚类型时使用的默认锚（填写锚的路径名，如 dev_ray、dev_pos）；无效值回退到 dev_ray。默认 dev_ray。")
-                .define("defaultAnchor", "dev_ray");
+                .comment("summon 省略锚类型时使用的默认锚（填写锚的路径名，如 ray、pos）；无效值回退到 ray。默认 ray。")
+                .define("defaultAnchor", "ray");
         builder.pop();
 
         builder.comment("命令：/glimmerwhim 的权限与补全。");

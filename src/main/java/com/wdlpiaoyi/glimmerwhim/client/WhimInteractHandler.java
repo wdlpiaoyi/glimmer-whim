@@ -4,6 +4,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.wdlpiaoyi.glimmerwhim.net.WhimHoldPacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimNetwork;
 import com.wdlpiaoyi.glimmerwhim.net.WhimUsePacket;
 
@@ -58,6 +59,11 @@ public final class WhimInteractHandler
             if (!wasDown)
             {
                 held = WhimAim.aimed();
+
+                if (held != null && ClientWhimCache.contains(held))
+                {
+                    WhimNetwork.CHANNEL.sendToServer(new WhimHoldPacket(held));
+                }
             }
 
             if (held != null && !ClientWhimCache.contains(held))

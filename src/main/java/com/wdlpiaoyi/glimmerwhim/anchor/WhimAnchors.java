@@ -1,9 +1,5 @@
 package com.wdlpiaoyi.glimmerwhim.anchor;
 
-import com.wdlpiaoyi.glimmerwhim.engine.WhimParam;
-import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
-import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
-
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -12,9 +8,6 @@ import java.util.Optional;
 import java.util.function.Function;
 
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
-import com.wdlpiaoyi.glimmerwhim.anchor.DevPosAnchor;
-import com.wdlpiaoyi.glimmerwhim.anchor.DevRayAnchor;
-import com.wdlpiaoyi.glimmerwhim.anchor.FixedAnchor;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.FriendlyByteBuf;
@@ -29,7 +22,7 @@ public final class WhimAnchors
     }
 
     private record AnchorType(Function<FriendlyByteBuf, WhimAnchor> reader, AnchorDataParser parser,
-            Function<CommandSourceStack, Collection<String>> suggestions, String hint, WhimParams params)
+            Function<CommandSourceStack, Collection<String>> suggestions, String hint)
     {
     }
 
@@ -37,12 +30,11 @@ public final class WhimAnchors
 
     static
     {
-        register(DevRayAnchor.TYPE, DevRayAnchor::read, DevRayAnchor::parse, DevRayAnchor::suggestData, "dx dy dz；~ 表示视线方向",
-                WhimParam.positiveNumber("distance", "8"));
+        register(RayAnchor.TYPE, RayAnchor::read, RayAnchor::parse, RayAnchor::suggestData,
+                "dx dy dz [distance]；~ 表示视线方向");
 
-        register(DevPosAnchor.TYPE, DevPosAnchor::read, DevPosAnchor::parse, DevPosAnchor::suggestData, "x y z；~ 表示当前位置");
-
-        register(FixedAnchor.TYPE, FixedAnchor::read, FixedAnchor::parse, FixedAnchor::suggestData, "不接受锚数据，固定于 0 0 0");
+        register(PosAnchor.TYPE, PosAnchor::read, PosAnchor::parse, PosAnchor::suggestData,
+                "x y z；~ 表示当前位置");
     }
 
     private WhimAnchors()
@@ -50,10 +42,9 @@ public final class WhimAnchors
     }
 
     public static void register(ResourceLocation type, Function<FriendlyByteBuf, WhimAnchor> reader,
-            AnchorDataParser parser, Function<CommandSourceStack, Collection<String>> suggestions, String hint,
-            WhimParam... params)
+            AnchorDataParser parser, Function<CommandSourceStack, Collection<String>> suggestions, String hint)
     {
-        TYPES.put(type, new AnchorType(reader, parser, suggestions, hint, WhimParams.of(params)));
+        TYPES.put(type, new AnchorType(reader, parser, suggestions, hint));
     }
 
     public static Collection<ResourceLocation> types()
@@ -87,13 +78,6 @@ public final class WhimAnchors
         AnchorType anchor = type == null ? null : TYPES.get(type);
 
         return anchor == null ? "" : anchor.hint();
-    }
-
-    public static WhimParams params(ResourceLocation type)
-    {
-        AnchorType anchor = type == null ? null : TYPES.get(type);
-
-        return anchor == null ? WhimParams.NONE : anchor.params();
     }
 
     public static WhimAnchor create(ResourceLocation type, CommandSourceStack source, String data)
