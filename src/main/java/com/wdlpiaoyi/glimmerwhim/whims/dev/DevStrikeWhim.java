@@ -1,9 +1,6 @@
 package com.wdlpiaoyi.glimmerwhim.whims.dev;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,6 +15,7 @@ import com.wdlpiaoyi.glimmerwhim.engine.WhimParam;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimRegistry;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimRemoveReason;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimScheduler;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimSight;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimSpawn;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimSpawnContext;
@@ -39,8 +37,6 @@ import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
@@ -67,9 +63,6 @@ public final class DevStrikeWhim implements WhimType
 
     // 玩家→(被攻击实体→失效游戏刻)，把落雷锁定到刚被该玩家打过的怪
     private static final Map<UUID, Map<UUID, Long>> ATTACKED = new HashMap<>();
-
-    // 已召唤蓄力体、等待到点落雷的记录
-    private static final List<Pending> PENDING = new ArrayList<>();
 
     private DevStrikeWhim()
     {
@@ -105,13 +98,6 @@ public final class DevStrikeWhim implements WhimType
     public boolean pausesWhileHeld()
     {
         return true;
-    }
-
-    @Override
-    public void bind()
-    {
-        // 注册本类上的 @SubscribeEvent（受击、服务端 tick）
-        MinecraftForge.EVENT_BUS.register(getClass());
     }
 
     @Override
@@ -154,7 +140,9 @@ public final class DevStrikeWhim implements WhimType
         float range = level.getServer().getPlayerList().getViewDistance();
         level.playSound(null, living.getX(), living.getY(), living.getZ(), SoundEvents.WARDEN_SONIC_CHARGE,
                 SoundSource.HOSTILE, range, 1.0F);
-        PENDING.add(new Pending(level, charge.id(), living.getUUID(), living.position(), CHARGE_TICKS));
+        // 蓄力结束在目标处落雷；任务随蓄力体移除而取消
+        WhimScheduler.schedule(level, charge.id(), CHARGE_TICKS,
+                () -> strike(level, charge.id(), living.getUUID(), living.position()));
         event.remove(WhimRemoveReason.USED);
     }
 
@@ -201,47 +189,19 @@ public final class DevStrikeWhim implements WhimType
         WhimLifecycle.summon(level, player, INSTANCE, spawn, WhimData.EMPTY);
     }
 
-    @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent event)
-    {
-        // 只在服务端 tick 末尾推进
-        if (event.phase != TickEvent.Phase.END || PENDING.isEmpty())
-        {
-            return;
-        }
-
-        Iterator<Pending> iterator = PENDING.iterator();
-
-        while (iterator.hasNext())
-        {
-            Pending pending = iterator.next();
-            Entity found = pending.level.getEntities().get(pending.entity);
-
-            // 落点跟随目标当前位置
-            if (found != null)
-            {
-                pending.point = found.position();
-            }
-
-            if (--pending.remaining > 0)
-            {
-                continue;
-            }
-
-            iterator.remove();
-            strike(pending);
-        }
-    }
-
-    private static void strike(Pending pending)
+    private static void strike(ServerLevel level, UUID charge, UUID entity, Vec3 point)
     {
         // 先移除蓄力体，再在落点周围随机撒 BOLTS 道闪电
-        WhimRegistry.of(pending.level).removeWhim(pending.charge, WhimRemoveReason.USED);
-        RandomSource random = pending.level.getRandom();
+        WhimRegistry.of(level).removeWhim(charge, WhimRemoveReason.USED);
+
+        // 目标仍在则打其当前位置，否则打在目标消失处
+        Entity found = level.getEntities().get(entity);
+        Vec3 at = found != null ? found.position() : point;
+        RandomSource random = level.getRandom();
 
         for (int i = 0; i < BOLTS; i++)
         {
-            LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(pending.level);
+            LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(level);
 
             if (bolt == null)
             {
@@ -250,11 +210,9 @@ public final class DevStrikeWhim implements WhimType
 
             double dx = (random.nextDouble() * 2.0D - 1.0D) * BOLT_SPREAD;
             double dz = (random.nextDouble() * 2.0D - 1.0D) * BOLT_SPREAD;
-            bolt.moveTo(pending.point.add(dx, 0.0D, dz));
-            pending.level.addFreshEntity(bolt);
+            bolt.moveTo(at.add(dx, 0.0D, dz));
+            level.addFreshEntity(bolt);
         }
-
-        Entity found = pending.level.getEntities().get(pending.entity);
 
         if (found instanceof LivingEntity living)
         {
@@ -300,24 +258,5 @@ public final class DevStrikeWhim implements WhimType
         }
 
         return seen.containsKey(entity.getUUID());
-    }
-
-    // 一次待落雷：蓄力体 id、目标实体 id、跟踪落点、剩余 tick
-    private static final class Pending
-    {
-        private final ServerLevel level;
-        private final UUID charge;
-        private final UUID entity;
-        private Vec3 point;
-        private int remaining;
-
-        private Pending(ServerLevel level, UUID charge, UUID entity, Vec3 point, int remaining)
-        {
-            this.level = level;
-            this.charge = charge;
-            this.entity = entity;
-            this.point = point;
-            this.remaining = remaining;
-        }
     }
 }

@@ -104,6 +104,12 @@ public interface WhimType
         return false;
     }
 
+    // 真则每 tick 收到 TICK 事件
+    default boolean ticks()
+    {
+        return false;
+    }
+
     // 事件回调；可调用 event.remove() 请求移除
     default void on(WhimEvent event)
     {

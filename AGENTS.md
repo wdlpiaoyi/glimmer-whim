@@ -16,17 +16,18 @@ Currently a framework/testbed: engine, interaction, chaining and rendering exist
 Server-authoritative core lives in `engine/`:
 - `engine/WhimRegistry.java` — per-dimension registries; visibility sync (`sent` set, `SYNC_INTERVAL=20`), aim/hold/use, removal.
 - `engine/WhimLifecycle.java` — the **single** spawn entry (`summon(...)`); all `new Whim(...)` goes through it.
-- `engine/Whim.java` / `WhimData.java` / `WhimParams.java` / `WhimEvent.java` — data model, `{name:value}` parsing, typed params, event kinds (`HIGHLIGHT`/`UNHIGHLIGHT`/`HOLD`/`USE`/`TICK`).
+- `engine/Whim.java` / `WhimData.java` / `WhimParams.java` / `WhimEvent.java` — data model, `{name:value}` parsing, typed params, event kinds (`SUMMON`/`HIGHLIGHT`/`UNHIGHLIGHT`/`TICK`/`HOLD`/`USE`/`EXPIRE`/`REMOVE`; `TICK` only when `WhimType.ticks()`).
+- `engine/WhimScheduler.java` / `WhimTask.java` — per-dimension delayed/repeating tasks; a task is cancelled when its owning whim is removed.
 - `engine/WhimSight.java` — occlusion (center ray; blocks via `canOcclude`; entities via bounding box, hit-box or render-culling box).
 
 Other packages:
 - `anchor/` — placement only; `anchor/WhimAnchors.ANCHORS` is the anchor registry (type + `read`/`parse`/`suggestData` + hint).
-- `whims/` — `WhimType` implementations; `whims/WhimContent.register(...)` also calls `WhimType.bind()` for Forge-event hooks; `whims/client/` holds draw code; `whims/dev/` holds dev/test content.
+- `whims/` — `WhimType` implementations; `whims/WhimContent.register(...)` registers each type and hooks it onto the Forge bus (instance + static `@SubscribeEvent`); `whims/client/` holds draw code; `whims/dev/` holds dev/test content.
 - `client/` render/aim/interact/freelook, `net/` packets, `command/` the `/glimmerwhim` tree, `config/` config, `mixin/` client mixins.
 
 ## Registration & test content
 
-- Registration is centralized by design: a new whim = implement `whims/WhimType`, `WhimContent.register(...)`, override `bind()` if it needs the Forge event bus, and register client rendering in a **client-side** class. A new anchor = one row in `anchor/WhimAnchors.ANCHORS`.
+- Registration is centralized by design: a new whim = implement `whims/WhimType`, `WhimContent.register(...)` (the engine hooks `@SubscribeEvent` handlers automatically), and register client rendering in a **client-side** class. `bind()` is an escape hatch for third-party buses. A new anchor = one row in `anchor/WhimAnchors.ANCHORS`.
 - Dev content activates by presence: `whims/dev/` self-registers via `@Mod.EventBusSubscriber`; there is no runtime toggle. Moving files out of `whims/dev/` disables them.
 - `parked/` mirrors the source package but is **not compiled**. Restoring a parked file requires moving it back into `whims/dev/` and re-registering it in `DevWhims`/`DevRenders`.
 

@@ -55,6 +55,8 @@ public final class WhimRegistry
     private final Map<UUID, Whim> tracked = new LinkedHashMap<>();
     // 玩家 UUID -> 已下发召唤包的灵感集，用于增删同步
     private final Map<UUID, Set<UUID>> sent = new HashMap<>();
+    // 本维度通用调度任务
+    private final WhimScheduler scheduler = new WhimScheduler();
 
     private WhimRegistry(ServerLevel level)
     {
@@ -72,6 +74,11 @@ public final class WhimRegistry
         return this.level;
     }
 
+    WhimScheduler scheduler()
+    {
+        return this.scheduler;
+    }
+
     // 入表后立即向在场玩家同步，不等周期
     public void summon(Whim whim)
     {
@@ -81,6 +88,15 @@ public final class WhimRegistry
                 whim.id(), this.level.dimension().location(), whim.anchor().type(), whim.type().id(), whim.lifetime(),
                 whim.visibility().describe());
 
+        WhimEvent summoned = new WhimEvent(WhimEvent.Kind.SUMMON, this.level, whim, null, null);
+        whim.type().on(summoned);
+
+        if (summoned.removal().isPresent())
+        {
+            this.removeWhim(whim.id(), summoned.removal().get());
+            return;
+        }
+
         for (ServerPlayer player : this.level.players())
         {
             this.sync(player);
@@ -89,12 +105,24 @@ public final class WhimRegistry
 
     public void removeWhim(UUID id, WhimRemoveReason reason)
     {
-        if (this.tracked.remove(id) == null)
+        Whim whim = this.tracked.remove(id);
+
+        if (whim == null)
         {
             return;
         }
 
-        this.announceRemoval(id, reason);
+        this.finishRemoval(whim, reason);
+    }
+
+    // 已从表中移除后的收尾：取消任务、派发 REMOVE、通知客户端
+    private void finishRemoval(Whim whim, WhimRemoveReason reason)
+    {
+        this.scheduler.cancelAll(whim.id());
+
+        WhimEvent event = new WhimEvent(WhimEvent.Kind.REMOVE, this.level, whim, null, null, reason);
+        whim.type().on(event);
+        this.announceRemoval(whim.id(), reason);
     }
 
     // 清理瞄准/按住记录，只给曾收到过该灵感的玩家发移除包
@@ -134,21 +162,26 @@ public final class WhimRegistry
             Whim whim = entry.getValue();
             boolean held = HELD.containsValue(entry.getKey()) && whim.type().pausesWhileHeld();
 
-            // 寿命归零按 EXPIRED 移除
+            // 寿命归零：EXPIRE 可覆盖移除原因，缺省 EXPIRED
             if (!held && whim.tick() == 0)
             {
+                WhimEvent expired = new WhimEvent(WhimEvent.Kind.EXPIRE, this.level, whim, null, null);
+                whim.type().on(expired);
                 iterator.remove();
-                this.announceRemoval(entry.getKey(), WhimRemoveReason.EXPIRED);
+                this.finishRemoval(whim, expired.removal().orElse(WhimRemoveReason.EXPIRED));
                 continue;
             }
 
-            WhimEvent event = new WhimEvent(WhimEvent.Kind.TICK, this.level, whim, null, null);
-            whim.type().on(event);
-
-            if (event.removal().isPresent())
+            if (whim.type().ticks())
             {
-                iterator.remove();
-                this.announceRemoval(entry.getKey(), event.removal().get());
+                WhimEvent event = new WhimEvent(WhimEvent.Kind.TICK, this.level, whim, null, null);
+                whim.type().on(event);
+
+                if (event.removal().isPresent())
+                {
+                    iterator.remove();
+                    this.finishRemoval(whim, event.removal().get());
+                }
             }
         }
 
@@ -160,6 +193,9 @@ public final class WhimRegistry
                 this.sync(player);
             }
         }
+
+        // 执行本维度到期任务
+        this.scheduler.tick(this.level);
     }
 
     // 计算玩家应可见的灵感：归属可见 + 锚点可解析 + 在 reach 内
@@ -621,6 +657,7 @@ public final class WhimRegistry
 
         this.tracked.clear();
         this.sent.clear();
+        this.scheduler.clear();
     }
 
     @SubscribeEvent

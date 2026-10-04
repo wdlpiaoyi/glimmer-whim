@@ -128,10 +128,11 @@
 
 ## 为开发者
 
-- **新增灵感**：实现 `whims/WhimType`，通过 `whims/WhimContent.register(...)` 注册。它声明 id、`{参数}`、角色（`roles()`）、修饰（`modifier()`）、目标限制（`acceptsTarget()`）、事件处理（`on()`）、生成规则（`spawn()`），以及需要挂 Forge 事件时覆写 `bind()`。
+- **新增灵感**：实现 `whims/WhimType`，通过 `whims/WhimContent.register(...)` 注册（引擎会自动把类型上的 `@SubscribeEvent` 挂上 Forge 总线，`bind()` 仅用于第三方总线）。它声明 id、`{参数}`、角色（`roles()`）、修饰（`modifier()`）、目标限制（`acceptsTarget()`）、事件处理（`on()`）、生成规则（`spawn()`）。
 - **新增锚**：实现 `anchor/WhimAnchor`，在 `anchor/WhimAnchors` 的 `ANCHORS` 列表里加一项（类型、`read`、`parse`、`suggestData`、提示）。
 - **维度**：`engine/WhimDimensions`（`power` / `range`）。
-- **事件**：`engine/WhimEvent`（`HIGHLIGHT`、`UNHIGHLIGHT`、`HOLD`、`USE`、`TICK`）。
+- **事件**：`engine/WhimEvent`（`SUMMON`、`HIGHLIGHT`、`UNHIGHLIGHT`、`TICK`、`HOLD`、`USE`、`EXPIRE`、`REMOVE`）；`TICK` 需 `ticks()` 开启。
+- **调度**：`engine/WhimScheduler`（`schedule` / `scheduleRepeating`），任务以灵感为 owner，灵感移除即取消。
 - **渲染**：客户端 `client/WhimRenderer` 按类型注册绘制 / 命中 / 高亮 / 牵引；该注册必须在客户端侧声明（渲染类不能在服务端加载）。
 
 ## 许可
