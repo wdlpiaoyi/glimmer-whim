@@ -23,14 +23,14 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 import com.wdlpiaoyi.glimmerwhim.engine.Whim;
-import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
 import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchors;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimLifecycle;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParam;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimRegistry;
-import com.wdlpiaoyi.glimmerwhim.engine.WhimVisibility;
-import com.wdlpiaoyi.glimmerwhim.anchor.RayAnchor;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimSpawn;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimSpawnContext;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 import com.wdlpiaoyi.glimmerwhim.whims.Whims;
 
@@ -47,7 +47,6 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
@@ -78,6 +77,9 @@ public final class WhimCommand
 
     private static final DynamicCommandExceptionType ERROR_DATA =
             new DynamicCommandExceptionType(message -> Component.literal(String.valueOf(message)));
+
+    private static final DynamicCommandExceptionType ERROR_PLACEMENT =
+            new DynamicCommandExceptionType(type -> Component.literal("灵感 " + type + " 未声明生成位置，请指定锚类型"));
 
     private static final DynamicCommandExceptionType ERROR_ACTION =
             new DynamicCommandExceptionType(action -> Component.literal("无效的动作: " + action
@@ -124,8 +126,7 @@ public final class WhimCommand
                                         StringArgumentType.getString(context, "anchor"), null))
                                 .then(Commands.argument("data", StringArgumentType.greedyString())
                                         .suggests((context, builder) -> suggestTail(
-                                                suggestionAnchor(StringArgumentType.getString(context, "whim"),
-                                                        StringArgumentType.getString(context, "anchor")),
+                                                suggestionAnchor(StringArgumentType.getString(context, "anchor")),
                                                 summonParams(StringArgumentType.getString(context, "whim")),
                                                 context.getSource(), builder))
                                         .executes(context -> summon(context.getSource(),
@@ -176,13 +177,6 @@ public final class WhimCommand
         }
     }
 
-    private static ResourceLocation defaultAnchor()
-    {
-        return resolve(WhimConfig.defaultAnchor())
-                .filter(WhimAnchors.types()::contains)
-                .orElse(RayAnchor.TYPE);
-    }
-
     private static Optional<ResourceLocation> resolve(String text)
     {
         try
@@ -211,8 +205,8 @@ public final class WhimCommand
     {
         return List.of(
                 "  /glimmerwhim list [维度|all]",
-                "  /glimmerwhim summon <灵感类型> [锚类型=" + defaultAnchor().getPath()
-                        + "] [锚数据] {参数}（lifetime 默认取灵感类型自身，-1 = 永久；visibility 默认 all）",
+                "  /glimmerwhim summon <灵感类型> [锚类型] [锚数据] {参数}"
+                        + "（省略锚类型时使用该灵感类型自身的生成规则；lifetime 默认取灵感类型自身，-1 = 永久；visibility 默认 all）",
                 "  /glimmerwhim whim " + String.join("｜", ACTIONS) + " [uuid]（省略 uuid 时作用于当前瞄准的灵感）",
                 "  锚数据格式与 {参数} 可通过 TAB 查看");
     }
@@ -257,57 +251,16 @@ public final class WhimCommand
         return Whims.get(resolve(token).orElse(null));
     }
 
-    private static ResourceLocation resolveAnchor(String token)
+    private static ResourceLocation suggestionAnchor(String second)
     {
-        return resolve(token).filter(WhimAnchors.types()::contains).orElse(defaultAnchor());
-    }
-
-    private static WhimVisibility resolveVisibility(MinecraftServer server, ServerPlayer player, String raw)
-            throws CommandSyntaxException
-    {
-        if (raw.equals("all"))
-        {
-            return WhimVisibility.ALL;
-        }
-
-        if (raw.equals("me"))
-        {
-            return new WhimVisibility(player.getUUID());
-        }
-
-        ServerPlayer target = server.getPlayerList().getPlayerByName(raw);
-
-        if (target != null)
-        {
-            return new WhimVisibility(target.getUUID());
-        }
-
-        try
-        {
-            return new WhimVisibility(UUID.fromString(raw));
-        }
-        catch (IllegalArgumentException e)
-        {
-            throw ERROR_DATA.create("找不到玩家: " + raw);
-        }
-    }
-
-    private static ResourceLocation suggestionAnchor(String first, String second)
-    {
-        if (second != null && isAnchor(second))
-        {
-            return resolveAnchor(second);
-        }
-
-        return defaultAnchor();
+        return second == null ? null : resolve(second).filter(WhimAnchors.types()::contains).orElse(null);
     }
 
     private static WhimParams summonParams(String first)
     {
         WhimType whim = first != null && isWhim(first) ? resolveWhim(first) : null;
 
-        return whim == null ? WhimParams.NONE
-                : whim.params().plus(WhimParams.lifetime(whim.defaultLifetime())).plus(WhimParams.visibility());
+        return whim == null ? WhimParams.NONE : whim.effectiveParams();
     }
 
     private static CompletableFuture<Suggestions> suggestTypes(SuggestionsBuilder builder)
@@ -563,7 +516,7 @@ public final class WhimCommand
         source.sendSuccess(() -> Component.literal("  元素=" + whim.type().id()), false);
         source.sendSuccess(() -> Component.literal("  剩余=" + remaining(whim)), false);
 
-        String visibility = whim.data().get(Whim.VISIBILITY).orElse("all");
+        String visibility = whim.visibility().describe();
 
         source.sendSuccess(() -> Component.literal("  可见性=" + visibility), false);
 
@@ -609,7 +562,6 @@ public final class WhimCommand
         }
 
         WhimType whim = null;
-        ResourceLocation type = defaultAnchor();
 
         if (first != null)
         {
@@ -619,16 +571,6 @@ public final class WhimCommand
             }
 
             whim = resolveWhim(first);
-
-            if (second != null)
-            {
-                if (!isAnchor(second))
-                {
-                    throw ERROR_ANCHOR.create(second);
-                }
-
-                type = resolveAnchor(second);
-            }
         }
 
         if (whim == null)
@@ -640,7 +582,7 @@ public final class WhimCommand
 
         WhimData.Split split;
         WhimData userData;
-        WhimParams params = whim.params().plus(WhimParams.lifetime(whim.defaultLifetime())).plus(WhimParams.visibility());
+        WhimParams params = whim.effectiveParams();
 
         try
         {
@@ -652,23 +594,48 @@ public final class WhimCommand
             throw ERROR_DATA.create(e.getMessage());
         }
 
-        WhimAnchor anchor;
+        WhimSpawn placement;
+
+        if (second == null)
+        {
+            placement = whim.spawn(new WhimSpawnContext(player.serverLevel(), player, player.getRandom()))
+                    .orElse(null);
+
+            if (placement == null)
+            {
+                throw ERROR_PLACEMENT.create(whim.id().toString());
+            }
+        }
+        else
+        {
+            if (!isAnchor(second))
+            {
+                throw ERROR_ANCHOR.create(second);
+            }
+
+            try
+            {
+                placement = new WhimSpawn(
+                        WhimAnchors.create(resolve(second).orElse(null), source,
+                                split.anchorData().isEmpty() ? null : split.anchorData()),
+                        WhimData.EMPTY);
+            }
+            catch (RuntimeException e)
+            {
+                throw ERROR_DATA.create(e.getMessage());
+            }
+        }
+
+        Whim summoned;
 
         try
         {
-            anchor = WhimAnchors.create(type, source, split.anchorData().isEmpty() ? null : split.anchorData());
+            summoned = WhimLifecycle.summon(player.serverLevel(), player, whim, placement, userData);
         }
-        catch (RuntimeException e)
+        catch (IllegalArgumentException e)
         {
             throw ERROR_DATA.create(e.getMessage());
         }
-
-        int lifetime = Integer.parseInt(userData.get(Whim.LIFETIME).orElse(Integer.toString(whim.defaultLifetime())));
-        WhimData data = lifetime < 0 ? userData : userData.with(Whim.LIFETIME, Integer.toString(lifetime));
-        WhimVisibility visibility = resolveVisibility(source.getServer(), player,
-                userData.get(Whim.VISIBILITY).orElse("all"));
-        Whim summoned = new Whim(UUID.randomUUID(), anchor, whim, data);
-        WhimRegistry.of(player.serverLevel()).summon(summoned, visibility);
 
         source.sendSuccess(() -> Component.literal("已生成灵感 " + summoned.id() + "，"
                 + (summoned.permanent() ? "永久" : "存活 " + summoned.lifetime() + " tick")

@@ -46,9 +46,10 @@ public record WhimUsePacket(List<UUID> chain, WhimTarget target)
     public static WhimUsePacket decode(FriendlyByteBuf buf)
     {
         int size = buf.readVarInt();
-        List<UUID> chain = new ArrayList<>(Math.min(Math.max(size, 0), MAX_CHAIN));
+        int count = Math.min(Math.max(size, 0), MAX_CHAIN);
+        List<UUID> chain = new ArrayList<>(count);
 
-        for (int i = 0; i < size; i++)
+        for (int i = 0; i < count; i++)
         {
             chain.add(buf.readUUID());
         }

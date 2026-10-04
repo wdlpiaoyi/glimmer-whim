@@ -10,6 +10,7 @@ public final class WhimReach
 
     public static double blocks()
     {
-        return Minecraft.getInstance().options.getEffectiveRenderDistance() * 16.0D;
+        return com.wdlpiaoyi.glimmerwhim.engine.WhimReach.blocks(
+                Minecraft.getInstance().options.getEffectiveRenderDistance());
     }
 }

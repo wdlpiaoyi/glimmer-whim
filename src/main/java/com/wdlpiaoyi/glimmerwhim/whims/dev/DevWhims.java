@@ -1,29 +1,25 @@
 package com.wdlpiaoyi.glimmerwhim.whims.dev;
 
+import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.whims.Whims;
 
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+
+@Mod.EventBusSubscriber(modid = GlimmerWhim.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class DevWhims
 {
     private DevWhims()
     {
     }
 
-    public static void register()
+    @SubscribeEvent
+    public static void onCommonSetup(FMLCommonSetupEvent event)
     {
-        Whims.register(DevWhim.INSTANCE);
-        Whims.register(SpawnTestWhim.INSTANCE);
-        Whims.register(DevMarkWhim.INSTANCE);
-        Whims.register(DevEntityWhim.INSTANCE);
-        Whims.register(DevCoordWhim.INSTANCE);
-        Whims.register(DevRootWhim.INSTANCE);
-        Whims.register(DevBoostWhim.INSTANCE);
-        Whims.register(DevPowerWhim.INSTANCE);
-        Whims.register(DevRangeWhim.INSTANCE);
-        Whims.register(HighlightTestWhim.INSTANCE);
-        Whims.register(TraceTestWhim.INSTANCE);
-        Whims.register(ExpiresWhim.INSTANCE);
-        Whims.register(RemoveOnHoldWhim.INSTANCE);
-        Whims.register(RemoveOnReleaseWhim.INSTANCE);
-        Whims.register(VoidTestWhim.INSTANCE);
+        Whims.register(DevStrikeWhim.INSTANCE);
+        Whims.register(DevStrikeChargeWhim.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(DevStrikeWhim.class);
     }
 }

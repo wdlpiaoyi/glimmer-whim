@@ -1,36 +1,19 @@
 # 开发测试内容
 
-本模组的正式灵感内容尚未加入。目前仓库里的所有灵感都是供开发与试验用的测试内容，集中放在 `src/main/java/com/wdlpiaoyi/glimmerwhim/whims/dev/`，默认**不注册**。
+本模组的正式灵感内容尚未加入。源码树里目前只保留开发中的 `dev_strike` 与它的蓄力视觉体 `dev_strike_charge`，位于 `src/main/java/com/wdlpiaoyi/glimmerwhim/whims/dev/`。
+
+其余测试灵感已移到仓库根的 `parked/` 下（镜像原包的目录结构，不在源码树里、不参与构建）。需要时把对应文件移回 `whims/dev/`，并在 `DevWhims` / `DevRenders` 里重新登记即可。
 
 ## 启用
 
-在 `config/glimmerwhim-common.toml` 中打开开关：
-
-```toml
-[dev]
-enabled = true
-```
-
-开启后，以下类型在 `glimmerwhim:` 命名空间下注册。客户端渲染注册在 `whims/dev/client/DevRenders`。
+没有运行时开关，是否构建进模组取决于文件是否在 `whims/dev/` 里。服务端注册在 `whims/dev/DevWhims`、客户端渲染在 `whims/dev/client/DevRenders`，两者都通过 `@Mod.EventBusSubscriber` 自动注册。
 
 ## 类型
 
 | id | 说明 |
 | --- | --- |
-| `dev` | 基础方块/面片；可生成、可被串联，多数测试的默认对象。 |
-| `dev_mark` | 接受任意目标，回显目标后消耗。 |
-| `dev_entity` | 只接受实体目标。 |
-| `dev_coord` | 只接受坐标目标。 |
-| `dev_root` | 只有元素角色；回显链的 `power` / `range` / `factor`。 |
-| `dev_boost` | 同时可作元素与修饰；提供 `power` 修饰。 |
-| `dev_power` / `dev_range` | 纯修饰，分别提供 `power` / `range`。 |
-| `highlight_test` | 自声明高亮（色相循环）。 |
-| `trace_test` | 自声明牵引折线；`playtime` 控制播放时长。 |
-| `expires` | 默认寿命 300 tick 的示例。 |
-| `dev_removeonhold` | 被按住时自身消耗。 |
-| `dev_removeonrelease` | 被使用时自身消耗。 |
-| `spawn_test` | 周期性自动生成（约每 5 秒，附近有数量上限）。 |
-| `dev_voidtest` | 持续瞄准后造成伤害、并掉入虚空的测试锚。 |
+| `dev_strike` | 近战命中时按概率在水平前方、抬到高空的天空处生成面片（被方块挡住则不生成），默认大小 ×4，只有该玩家可见，生成音效也只发给本人（该位置与寿命由它的 `spawn()` 声明，命令未指定锚时也复用）。拖到可攻击的实体上（优先该玩家最近攻击过的实体，若无任何记录则接受任意实体）：目标发光、warden 蓄力音效（视距内可见可闻），原地留一个自转、不可再交互的蓄力面片，动画结束后在目标（若已消失则在其消失原地）召唤闪电并造成大量伤害；选错目标播放火把熄灭音效。 |
+| `dev_strike_charge` | `dev_strike` 的蓄力视觉体：自转、不可交互、不可被瞄准或串联。 |
 
 ## 稳定性
 

@@ -15,14 +15,16 @@ public final class Whim
     private final WhimAnchor anchor;
     private final WhimType type;
     private final WhimData data;
+    private final WhimVisibility visibility;
     private int remaining;
 
-    public Whim(UUID id, WhimAnchor anchor, WhimType type, WhimData data)
+    public Whim(UUID id, WhimAnchor anchor, WhimType type, WhimData data, WhimVisibility visibility)
     {
         this.id = id;
         this.anchor = anchor;
         this.type = type;
         this.data = data;
+        this.visibility = visibility;
         this.remaining = lifetime(data);
     }
 
@@ -56,6 +58,11 @@ public final class Whim
     public WhimData data()
     {
         return this.remaining < 0 ? this.data : this.data.with(LIFETIME, Integer.toString(this.remaining));
+    }
+
+    public WhimVisibility visibility()
+    {
+        return this.visibility;
     }
 
     public int lifetime()

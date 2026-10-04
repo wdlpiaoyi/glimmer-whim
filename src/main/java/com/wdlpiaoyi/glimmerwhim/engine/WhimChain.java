@@ -1,12 +1,6 @@
 package com.wdlpiaoyi.glimmerwhim.engine;
 
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-
-import com.wdlpiaoyi.glimmerwhim.whims.WhimModifier;
-
-import net.minecraft.resources.ResourceLocation;
 
 public final class WhimChain
 {
@@ -37,44 +31,5 @@ public final class WhimChain
     public WhimTarget target()
     {
         return this.target;
-    }
-
-    public double value(ResourceLocation dimension)
-    {
-        double total = 0.0D;
-
-        for (Whim whim : this.modifiers())
-        {
-            total += modifier(whim, dimension);
-        }
-
-        return total;
-    }
-
-    public double factor()
-    {
-        Map<ResourceLocation, Double> totals = new LinkedHashMap<>();
-
-        for (Whim whim : this.modifiers())
-        {
-            whim.type().modifier(whim.data()).ifPresent(m -> totals.merge(m.dimension(), m.value(), Double::sum));
-        }
-
-        double factor = 1.0D;
-
-        for (double value : totals.values())
-        {
-            factor *= value;
-        }
-
-        return factor;
-    }
-
-    private static double modifier(Whim whim, ResourceLocation dimension)
-    {
-        return whim.type().modifier(whim.data())
-                .filter(m -> m.dimension().equals(dimension))
-                .map(WhimModifier::value)
-                .orElse(0.0D);
     }
 }

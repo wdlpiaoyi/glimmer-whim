@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-版本 `0.1.0`，处于早期开发阶段。引擎、交互、串联与渲染框架已经成型，但**正式的灵感内容尚未加入**：目前所有可召唤、可生成的灵感都是开发测试内容（`glimmerwhim:dev` 等），需要手动开启 `dev.enabled` 才会注册。当前更适合作为框架与试验场，而不是可直接游玩的模组。
+版本 `0.1.0`，处于早期开发阶段。引擎、交互、串联与渲染框架已经成型，但**正式的灵感内容尚未加入**：源码树里目前只有一个开发中的 `dev_strike`（及其蓄力视觉体 `dev_strike_charge`），其余测试灵感已移到仓库根的 `parked/`（不在源码树里、不参与构建，需要时移回）。当前更适合作为框架与试验场，而不是可直接游玩的模组。
 
 ## 环境要求
 
@@ -51,16 +51,16 @@
 /glimmerwhim whim <get|kill> [uuid]
 ```
 
-- `summon` 至少需要灵感类型；省略锚类型时使用 `whim.defaultAnchor`（默认 `ray`）。
+- `summon` 至少需要灵感类型；省略锚类型时使用该灵感类型自身的生成规则（`spawn()`），未声明则报错。
 - `whim get|kill` 省略 uuid 时作用于当前瞄准的灵感。
 - 锚数据与 `{参数}` 均可用 TAB 补全。
 
 示例：
 
 ```
-/glimmerwhim summon dev
-/glimmerwhim summon dev ray ~ ~ ~ 8 {lifetime:600}
-/glimmerwhim summon expires pos ~ ~ ~ {visibility:me}
+/glimmerwhim summon dev_strike
+/glimmerwhim summon dev_strike ray ~ ~ ~ 8 {lifetime:600}
+/glimmerwhim summon dev_strike pos ~ ~ ~ {visibility:me}
 ```
 
 ## 锚（anchor）
@@ -94,7 +94,7 @@
 
 ## 生成
 
-每个灵感类型自行声明生成规则，服务端周期性询问各类型是否生成。灵感超出所有玩家的加载距离时会被移除（原因「超出范围」）。总开关为 `spawn.enabled`。
+每个灵感类型用 `spawn()` 自行声明生成规则（生成位置与初始数据）。生成由触发器调用：命令未指定锚时、以及类型自身的事件处理里会调用它；引擎不再周期性自动生成。灵感超出所有玩家的加载距离时会被移除（原因「超出范围」）。
 
 ## 配置
 
@@ -105,11 +105,8 @@
 | `aim` | 瞄准是否忽略方块遮挡。 |
 | `freelook` | 自由视角模式（按住/切换）、回正时长、灵敏度、角度限制。 |
 | `render` | 高亮轮廓、面明暗、瞄准颜色、牵引折线；`render.dev` 为 dev 元素外观。 |
-| `whim` | 默认锚、串联上限。 |
-| `spawn` | 是否启用灵感生成。 |
+| `whim` | 串联上限。 |
 | `command` | 命令权限等级、TAB 补全的拾取距离。 |
-| `anchor.dev_voidtest` | dev 测试锚的参数。 |
-| `dev` | 是否注册 dev/test 内容（默认 `false`）。 |
 | `debug` | 日志详细程度。 |
 
 ## 文档

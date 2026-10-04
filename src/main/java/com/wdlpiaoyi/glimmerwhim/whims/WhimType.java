@@ -12,12 +12,19 @@ import com.wdlpiaoyi.glimmerwhim.engine.WhimSpawnContext;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimTarget;
 
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 
 public interface WhimType
 {
     ResourceLocation id();
 
     WhimParams params();
+
+    default WhimParams effectiveParams()
+    {
+        return params().plus(WhimParams.lifetime(defaultLifetime())).plus(WhimParams.visibility());
+    }
 
     default int defaultLifetime()
     {
@@ -39,13 +46,43 @@ public interface WhimType
         return true;
     }
 
-    default void on(WhimEvent event)
+    default Optional<Entity> resolveTarget(ServerPlayer player, WhimTarget target)
     {
+        if (target == null || target.entity() == null)
+        {
+            return Optional.empty();
+        }
+
+        return Optional.ofNullable(player.serverLevel().getEntities().get(target.entity()));
     }
 
-    default int spawnInterval()
+    default boolean requiresLineOfSight()
     {
-        return 100;
+        return false;
+    }
+
+    default boolean interactable()
+    {
+        return true;
+    }
+
+    default boolean canRoot()
+    {
+        return roles().contains(WhimRole.ELEMENT);
+    }
+
+    default boolean canChain()
+    {
+        return interactable();
+    }
+
+    default boolean pausesWhileHeld()
+    {
+        return false;
+    }
+
+    default void on(WhimEvent event)
+    {
     }
 
     default Optional<WhimSpawn> spawn(WhimSpawnContext context)

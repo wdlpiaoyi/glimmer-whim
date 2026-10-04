@@ -20,7 +20,6 @@ import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 import com.wdlpiaoyi.glimmerwhim.net.WhimNetwork;
 import com.wdlpiaoyi.glimmerwhim.net.WhimRemovePacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimSummonPacket;
-import com.wdlpiaoyi.glimmerwhim.whims.WhimRole;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 
 import net.minecraft.resources.ResourceKey;
@@ -39,18 +38,16 @@ public final class WhimRegistry
 
     private static final Map<UUID, UUID> AIMED = new HashMap<>();
 
-    private static final int SYNC_INTERVAL = 20;
+    private static final Map<UUID, UUID> HELD = new HashMap<>();
 
-    private record Tracked(Whim whim, WhimVisibility visibility)
-    {
-    }
+    private static final int SYNC_INTERVAL = 20;
 
     public record Found(ResourceKey<Level> dimension, Whim whim)
     {
     }
 
     private final ServerLevel level;
-    private final Map<UUID, Tracked> tracked = new LinkedHashMap<>();
+    private final Map<UUID, Whim> tracked = new LinkedHashMap<>();
     private final Map<UUID, Set<UUID>> sent = new HashMap<>();
 
     private WhimRegistry(ServerLevel level)
@@ -70,16 +67,11 @@ public final class WhimRegistry
 
     public void summon(Whim whim)
     {
-        this.summon(whim, WhimVisibility.ALL);
-    }
-
-    public void summon(Whim whim, WhimVisibility visibility)
-    {
-        this.tracked.put(whim.id(), new Tracked(whim, visibility));
+        this.tracked.put(whim.id(), whim);
 
         GlimmerWhim.log("[Whim] summon id={} dim={} anchor={} element={} lifetime={} visibility={}",
                 whim.id(), this.level.dimension().location(), whim.anchor().type(), whim.type().id(), whim.lifetime(),
-                whim.data().get(Whim.VISIBILITY).orElse("all"));
+                whim.visibility().describe());
 
         for (ServerPlayer player : this.level.players())
         {
@@ -102,6 +94,7 @@ public final class WhimRegistry
         GlimmerWhim.log("[Whim] remove id={} dim={} reason={}", id, this.level.dimension().location(), reason);
 
         AIMED.values().removeIf(id::equals);
+        HELD.values().removeIf(id::equals);
 
         WhimRemovePacket packet = new WhimRemovePacket(this.level.dimension(), id, reason);
 
@@ -123,14 +116,15 @@ public final class WhimRegistry
 
     public void tick()
     {
-        Iterator<Map.Entry<UUID, Tracked>> iterator = this.tracked.entrySet().iterator();
+        Iterator<Map.Entry<UUID, Whim>> iterator = this.tracked.entrySet().iterator();
 
         while (iterator.hasNext())
         {
-            Map.Entry<UUID, Tracked> entry = iterator.next();
-            Whim whim = entry.getValue().whim();
+            Map.Entry<UUID, Whim> entry = iterator.next();
+            Whim whim = entry.getValue();
+            boolean held = HELD.containsValue(entry.getKey()) && whim.type().pausesWhileHeld();
 
-            if (whim.tick() == 0)
+            if (!held && whim.tick() == 0)
             {
                 iterator.remove();
                 this.announceRemoval(entry.getKey(), WhimRemoveReason.EXPIRED);
@@ -154,8 +148,6 @@ public final class WhimRegistry
                 this.sync(player);
             }
         }
-
-        WhimSpawner.tick(this.level);
     }
 
     private void sync(ServerPlayer player)
@@ -169,11 +161,11 @@ public final class WhimRegistry
         Set<UUID> want = new HashSet<>();
         List<UUID> tooFar = new ArrayList<>();
         Vec3 eye = player.getEyePosition();
-        double reach = loadDistance(player);
+        double reach = WhimReach.blocks(player);
 
-        for (Tracked entry : this.tracked.values())
+        for (Whim entry : this.tracked.values())
         {
-            Whim whim = entry.whim();
+            Whim whim = entry;
 
             if (!entry.visibility().canUse(player))
             {
@@ -200,7 +192,7 @@ public final class WhimRegistry
         {
             if (known.add(id))
             {
-                WhimNetwork.sendTo(player, WhimSummonPacket.of(this.level.dimension(), this.tracked.get(id).whim()));
+                WhimNetwork.sendTo(player, WhimSummonPacket.of(this.level.dimension(), this.tracked.get(id)));
             }
         }
 
@@ -238,14 +230,14 @@ public final class WhimRegistry
         double square = radius * radius;
         int count = 0;
 
-        for (Tracked entry : this.tracked.values())
+        for (Whim entry : this.tracked.values())
         {
-            if (type != null && entry.whim().type() != type)
+            if (type != null && entry.type() != type)
             {
                 continue;
             }
 
-            Vec3 at = position(entry.whim(), this.level, eye);
+            Vec3 at = position(entry, this.level, eye);
 
             if (at != null && at.distanceToSqr(eye) <= square)
             {
@@ -263,7 +255,7 @@ public final class WhimRegistry
 
     private boolean anyPlayerInRange(UUID id)
     {
-        Tracked entry = this.tracked.get(id);
+        Whim entry = this.tracked.get(id);
 
         if (entry == null)
         {
@@ -278,8 +270,8 @@ public final class WhimRegistry
             }
 
             Vec3 eye = player.getEyePosition();
-            Vec3 at = position(entry.whim(), this.level, eye);
-            double reach = loadDistance(player);
+            Vec3 at = position(entry, this.level, eye);
+            double reach = WhimReach.blocks(player);
 
             if (at != null && eye.distanceToSqr(at) <= reach * reach)
             {
@@ -290,18 +282,13 @@ public final class WhimRegistry
         return false;
     }
 
-    private static double loadDistance(ServerPlayer player)
-    {
-        return player.serverLevel().getServer().getPlayerList().getViewDistance() * 16.0D;
-    }
-
     public Collection<Whim> all()
     {
         List<Whim> whimes = new ArrayList<>(this.tracked.size());
 
-        for (Tracked entry : this.tracked.values())
+        for (Whim entry : this.tracked.values())
         {
-            whimes.add(entry.whim());
+            whimes.add(entry);
         }
 
         return Collections.unmodifiableList(whimes);
@@ -328,11 +315,11 @@ public final class WhimRegistry
     {
         for (Map.Entry<ResourceKey<Level>, WhimRegistry> entry : REGISTRIES.entrySet())
         {
-            Tracked tracked = entry.getValue().tracked.get(id);
+            Whim tracked = entry.getValue().tracked.get(id);
 
             if (tracked != null)
             {
-                return Optional.of(new Found(entry.getKey(), tracked.whim()));
+                return Optional.of(new Found(entry.getKey(), tracked));
             }
         }
 
@@ -357,13 +344,13 @@ public final class WhimRegistry
     {
         for (WhimRegistry registry : REGISTRIES.values())
         {
-            Tracked tracked = registry.tracked.get(id);
+            Whim tracked = registry.tracked.get(id);
 
             if (tracked != null)
             {
-                WhimEvent event = new WhimEvent(kind, registry.level, tracked.whim(), player, null);
+                WhimEvent event = new WhimEvent(kind, registry.level, tracked, player, null);
 
-                tracked.whim().type().on(event);
+                tracked.type().on(event);
 
                 event.removal().ifPresent(reason -> registry.removeWhim(id, reason));
 
@@ -388,7 +375,7 @@ public final class WhimRegistry
 
     public static void setAimed(ServerPlayer player, UUID id)
     {
-        if (id != null && !visible(player, id))
+        if (id != null && (!visible(player, id) || !withinSight(player, of(player.serverLevel()).tracked.get(id))))
         {
             id = null;
         }
@@ -423,11 +410,31 @@ public final class WhimRegistry
     private static boolean visible(ServerPlayer player, UUID id)
     {
         WhimRegistry registry = of(player.serverLevel());
-        Tracked tracked = registry.tracked.get(id);
+        Whim tracked = registry.tracked.get(id);
 
         return tracked != null
                 && tracked.visibility().canUse(player)
                 && registry.sent.getOrDefault(player.getUUID(), Set.of()).contains(id);
+    }
+
+    private static boolean withinSight(ServerPlayer player, Whim whim)
+    {
+        Vec3 eye = player.getEyePosition();
+        Vec3 at = whim.anchor().position(player.serverLevel(), eye, 1.0F).orElse(null);
+
+        if (at == null)
+        {
+            return false;
+        }
+
+        double reach = WhimReach.blocks(player);
+
+        if (eye.distanceToSqr(at) > reach * reach)
+        {
+            return false;
+        }
+
+        return !whim.type().requiresLineOfSight() || !WhimSight.occluded(player.serverLevel(), eye, at, player);
     }
 
     public static boolean use(ServerPlayer player, List<UUID> chain, WhimTarget target)
@@ -444,9 +451,10 @@ public final class WhimRegistry
 
         for (UUID id : chain)
         {
-            Tracked tracked = registry.tracked.get(id);
+            Whim tracked = registry.tracked.get(id);
 
-            if (tracked == null || !tracked.visibility().canUse(player) || !sent.contains(id))
+            if (tracked == null || !tracked.visibility().canUse(player) || !sent.contains(id)
+                    || !tracked.type().canChain())
             {
                 if (resolved.isEmpty())
                 {
@@ -457,10 +465,10 @@ public final class WhimRegistry
                 continue;
             }
 
-            if (resolved.isEmpty() && !tracked.whim().type().roles().contains(WhimRole.ELEMENT))
+            if (resolved.isEmpty() && !tracked.type().canRoot())
             {
                 GlimmerWhim.log("[Whim] chain rejected player={} id={} roles={}", player.getUUID(), id,
-                        tracked.whim().type().roles());
+                        tracked.type().roles());
                 return false;
             }
 
@@ -469,7 +477,7 @@ public final class WhimRegistry
                 break;
             }
 
-            resolved.add(tracked.whim());
+            resolved.add(tracked);
         }
 
         if (resolved.isEmpty())
@@ -509,9 +517,10 @@ public final class WhimRegistry
 
         for (UUID id : chain)
         {
-            Tracked tracked = registry.tracked.get(id);
+            Whim tracked = registry.tracked.get(id);
 
-            if (tracked == null || !tracked.visibility().canUse(player) || !sent.contains(id))
+            if (tracked == null || !tracked.visibility().canUse(player) || !sent.contains(id)
+                    || !tracked.type().canChain())
             {
                 continue;
             }
@@ -530,7 +539,7 @@ public final class WhimRegistry
             return false;
         }
 
-        double reach = loadDistance(player);
+        double reach = WhimReach.blocks(player);
 
         if (player.getEyePosition().distanceToSqr(target.point()) > reach * reach)
         {
@@ -548,7 +557,7 @@ public final class WhimRegistry
     public static boolean hold(ServerPlayer player, UUID id)
     {
         WhimRegistry registry = of(player.serverLevel());
-        Tracked tracked = registry.tracked.get(id);
+        Whim tracked = registry.tracked.get(id);
 
         if (tracked == null)
         {
@@ -556,7 +565,8 @@ public final class WhimRegistry
         }
 
         if (!tracked.visibility().canUse(player)
-                || !registry.sent.getOrDefault(player.getUUID(), Set.of()).contains(id))
+                || !registry.sent.getOrDefault(player.getUUID(), Set.of()).contains(id)
+                || !withinSight(player, tracked))
         {
             GlimmerWhim.log("[Whim] hold rejected player={} id={}", player.getUUID(), id);
             return false;
@@ -564,6 +574,7 @@ public final class WhimRegistry
 
         GlimmerWhim.log("[Whim] hold player={} id={}", player.getUUID(), id);
 
+        HELD.put(player.getUUID(), id);
         fire(WhimEvent.Kind.HOLD, id, player);
         return true;
     }
@@ -621,6 +632,8 @@ public final class WhimRegistry
 
     private static void forget(ServerPlayer player)
     {
+        HELD.remove(player.getUUID());
+
         for (WhimRegistry registry : REGISTRIES.values())
         {
             registry.sent.remove(player.getUUID());

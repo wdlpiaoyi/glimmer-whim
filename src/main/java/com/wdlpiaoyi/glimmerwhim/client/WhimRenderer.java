@@ -12,6 +12,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimSight;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 import com.wdlpiaoyi.glimmerwhim.whims.client.DefaultRender;
 import com.wdlpiaoyi.glimmerwhim.whims.client.Traces;
@@ -161,6 +162,12 @@ public final class WhimRenderer
             }
 
             if (at.distanceToSqr(eye) > reach * reach)
+            {
+                continue;
+            }
+
+            if (whim.type().requiresLineOfSight()
+                    && WhimSight.occluded(level, eye, at, Minecraft.getInstance().player))
             {
                 continue;
             }

@@ -48,21 +48,11 @@ public final class WhimConfig
 
     private static final float[] FALLBACK_AIMED = { 1.0F, 1.0F, 1.0F, 1.0F };
 
-    private static final ForgeConfigSpec.ConfigValue<String> DEFAULT_ANCHOR;
-
     private static final ForgeConfigSpec.IntValue MAX_CHAIN_LENGTH;
-
-    private static final ForgeConfigSpec.BooleanValue SPAWN_ENABLED;
-
-    private static final ForgeConfigSpec.BooleanValue DEV_ENABLED;
 
     private static final ForgeConfigSpec.IntValue COMMAND_PERMISSION_LEVEL;
 
     private static final ForgeConfigSpec.DoubleValue COMMAND_SUGGEST_REACH;
-
-    private static final ForgeConfigSpec.IntValue VOID_TEST_HOLD_TICKS;
-
-    private static final ForgeConfigSpec.DoubleValue VOID_TEST_DAMAGE;
 
     private static final ForgeConfigSpec.BooleanValue DEBUG_VERBOSE_LOG;
 
@@ -127,18 +117,9 @@ public final class WhimConfig
 
         builder.comment("灵感：/glimmerwhim summon 的默认行为。");
         builder.push("whim");
-        DEFAULT_ANCHOR = builder
-                .comment("summon 省略锚类型时使用的默认锚（填写锚的路径名，如 ray、pos）；无效值回退到 ray。默认 ray。")
-                .define("defaultAnchor", "ray");
         MAX_CHAIN_LENGTH = builder
                 .comment("一次施法最多串联的灵感条数（含根）；0 = 禁止串联（只能用根）。默认 8。")
                 .defineInRange("maxChainLength", 8, 0, 64);
-        builder.pop();
-
-        builder.comment("生成：灵感按各自的生成规则周期性出现（每个 WhimType 自己声明）。");
-        builder.push("spawn");
-        SPAWN_ENABLED = builder.comment("是否启用灵感生成。默认 true。")
-                .define("enabled", true);
         builder.pop();
 
         builder.comment("命令：/glimmerwhim 的权限与补全。");
@@ -147,21 +128,6 @@ public final class WhimConfig
                 .defineInRange("permissionLevel", 2, 0, 4);
         COMMAND_SUGGEST_REACH = builder.comment("TAB 补全中射线拾取瞄准点的最大距离（方块）。默认 32。")
                 .defineInRange("suggestReach", 32.0D, 1.0D, 256.0D);
-        builder.pop();
-
-        builder.comment("锚：各锚类型自身的参数。");
-        builder.push("anchor");
-        builder.push("dev_voidtest");
-        VOID_TEST_HOLD_TICKS = builder.comment("dev_voidtest 被瞄准后需持续瞄准的 tick 数（20 tick = 1 秒）。默认 40。")
-                .defineInRange("holdTicks", 40, 1, 600);
-        VOID_TEST_DAMAGE = builder.comment("dev_voidtest 触发时造成的虚空伤害（10 点 = 5 颗心）。默认 10。")
-                .defineInRange("damage", 10.0D, 0.0D, 1000.0D);
-        builder.pop(2);
-
-        builder.comment("开发与测试：dev/test 内容。");
-        builder.push("dev");
-        DEV_ENABLED = builder.comment("是否注册 dev/test 灵感与外观。默认 false。")
-                .define("enabled", false);
         builder.pop();
 
         builder.comment("调试：日志输出。");
@@ -247,24 +213,9 @@ public final class WhimConfig
         return RENDER_TRACE_WIDTH.get();
     }
 
-    public static String defaultAnchor()
-    {
-        return DEFAULT_ANCHOR.get();
-    }
-
     public static int maxChainLength()
     {
         return MAX_CHAIN_LENGTH.get();
-    }
-
-    public static boolean spawnEnabled()
-    {
-        return SPAWN_ENABLED.get();
-    }
-
-    public static boolean devContent()
-    {
-        return DEV_ENABLED.get();
     }
 
     public static int commandPermissionLevel()
@@ -275,16 +226,6 @@ public final class WhimConfig
     public static double commandSuggestReach()
     {
         return COMMAND_SUGGEST_REACH.get();
-    }
-
-    public static int voidTestHoldTicks()
-    {
-        return VOID_TEST_HOLD_TICKS.get();
-    }
-
-    public static double voidTestDamage()
-    {
-        return VOID_TEST_DAMAGE.get();
     }
 
     public static boolean verboseLog()

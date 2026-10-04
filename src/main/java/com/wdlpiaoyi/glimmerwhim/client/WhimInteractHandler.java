@@ -10,7 +10,6 @@ import com.wdlpiaoyi.glimmerwhim.net.WhimHoldPacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimNetwork;
 import com.wdlpiaoyi.glimmerwhim.net.WhimUsePacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimVoidPacket;
-import com.wdlpiaoyi.glimmerwhim.whims.WhimRole;
 
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -83,7 +82,7 @@ public final class WhimInteractHandler
                 UUID root = WhimAim.aimed();
                 ClientWhimCache.WhimView view = root == null ? null : ClientWhimCache.view(root);
 
-                if (view != null && view.type().roles().contains(WhimRole.ELEMENT))
+                if (view != null && view.type().canChain() && view.type().canRoot())
                 {
                     chain = new ArrayList<>();
                     chain.add(root);
@@ -152,7 +151,9 @@ public final class WhimInteractHandler
             return;
         }
 
-        if (ClientWhimCache.view(id) != null)
+        ClientWhimCache.WhimView view = ClientWhimCache.view(id);
+
+        if (view != null && view.type().canChain())
         {
             chain.add(id);
         }

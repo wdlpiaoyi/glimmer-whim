@@ -6,13 +6,11 @@ import java.util.UUID;
 
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimSight;
 import com.wdlpiaoyi.glimmerwhim.net.WhimAimPacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimNetwork;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 public final class WhimAim
@@ -62,6 +60,11 @@ public final class WhimAim
 
         for (ClientWhimCache.WhimView whim : ClientWhimCache.all())
         {
+            if (!whim.type().interactable())
+            {
+                continue;
+            }
+
             Vec3 at = whim.anchor().position(level, eye, partialTick).orElse(null);
 
             if (at == null)
@@ -82,7 +85,8 @@ public final class WhimAim
                 continue;
             }
 
-            if (!WhimConfig.aimThroughWalls() && occluded(level, eye, at))
+            if ((!WhimConfig.aimThroughWalls() || whim.type().requiresLineOfSight())
+                    && WhimSight.occluded(level, eye, at, Minecraft.getInstance().player))
             {
                 continue;
             }
@@ -118,13 +122,5 @@ public final class WhimAim
         }
 
         return aimed;
-    }
-
-    private static boolean occluded(ClientLevel level, Vec3 eye, Vec3 at)
-    {
-        BlockHitResult hit = level.clip(new ClipContext(eye, at, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
-                Minecraft.getInstance().player));
-
-        return hit.getType() != HitResult.Type.MISS;
     }
 }
