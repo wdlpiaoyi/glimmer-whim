@@ -18,6 +18,7 @@ import net.minecraft.world.phys.Vec3;
 public final class WhimAim
 {
     private static UUID aimed;
+    private static UUID sent;
 
     private WhimAim()
     {
@@ -26,6 +27,29 @@ public final class WhimAim
     public static UUID aimed()
     {
         return aimed;
+    }
+
+    public static void flush()
+    {
+        if (Minecraft.getInstance().getConnection() == null)
+        {
+            sent = null;
+            return;
+        }
+
+        if (Objects.equals(aimed, sent))
+        {
+            return;
+        }
+
+        sent = aimed;
+        WhimNetwork.CHANNEL.sendToServer(new WhimAimPacket(aimed));
+    }
+
+    public static void clear()
+    {
+        aimed = null;
+        sent = null;
     }
 
     public static UUID update(ClientLevel level, Vec3 eye, Vec3 look, float partialTick)
@@ -90,11 +114,6 @@ public final class WhimAim
                 double angle = Math.toDegrees(Math.acos(Math.min(1.0D, bestDot)));
                 GlimmerWhim.log("[Whim] aim id={} element={} angle={}",
                         best.id(), best.type().id(), String.format(Locale.ROOT, "%.1f", angle));
-            }
-
-            if (Minecraft.getInstance().getConnection() != null)
-            {
-                WhimNetwork.CHANNEL.sendToServer(new WhimAimPacket(id));
             }
         }
 

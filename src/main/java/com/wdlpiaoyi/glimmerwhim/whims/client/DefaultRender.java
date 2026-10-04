@@ -19,9 +19,9 @@ import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.Vec3;
 
-public final class DevRender
+public final class DefaultRender
 {
-    private DevRender()
+    private DefaultRender()
     {
     }
 

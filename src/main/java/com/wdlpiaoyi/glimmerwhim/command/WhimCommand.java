@@ -6,6 +6,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -19,6 +20,7 @@ import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 import com.wdlpiaoyi.glimmerwhim.engine.Whim;
 import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
@@ -124,8 +126,7 @@ public final class WhimCommand
                                         .suggests((context, builder) -> suggestTail(
                                                 suggestionAnchor(StringArgumentType.getString(context, "whim"),
                                                         StringArgumentType.getString(context, "anchor")),
-                                                summonParams(StringArgumentType.getString(context, "whim"),
-                                                        StringArgumentType.getString(context, "anchor")),
+                                                summonParams(StringArgumentType.getString(context, "whim")),
                                                 context.getSource(), builder))
                                         .executes(context -> summon(context.getSource(),
                                                 StringArgumentType.getString(context, "whim"),
@@ -177,9 +178,23 @@ public final class WhimCommand
 
     private static ResourceLocation defaultAnchor()
     {
-        return WhimAnchors.resolve(WhimConfig.defaultAnchor())
+        return resolve(WhimConfig.defaultAnchor())
                 .filter(WhimAnchors.types()::contains)
                 .orElse(RayAnchor.TYPE);
+    }
+
+    private static Optional<ResourceLocation> resolve(String text)
+    {
+        try
+        {
+            return Optional.of(text.indexOf(':') >= 0
+                    ? ResourceLocation.parse(text)
+                    : ResourceLocation.fromNamespaceAndPath(GlimmerWhim.MODID, text));
+        }
+        catch (RuntimeException e)
+        {
+            return Optional.empty();
+        }
     }
 
     private static String anchorNames()
@@ -225,26 +240,26 @@ public final class WhimCommand
 
     private static boolean isWhim(String token)
     {
-        ResourceLocation id = Whims.resolve(token).orElse(null);
+        ResourceLocation id = resolve(token).orElse(null);
 
         return id != null && Whims.contains(id);
     }
 
     private static boolean isAnchor(String token)
     {
-        ResourceLocation id = WhimAnchors.resolve(token).orElse(null);
+        ResourceLocation id = resolve(token).orElse(null);
 
         return id != null && WhimAnchors.types().contains(id);
     }
 
     private static WhimType resolveWhim(String token)
     {
-        return Whims.get(Whims.resolve(token).orElse(null));
+        return Whims.get(resolve(token).orElse(null));
     }
 
     private static ResourceLocation resolveAnchor(String token)
     {
-        return WhimAnchors.resolve(token).filter(WhimAnchors.types()::contains).orElse(defaultAnchor());
+        return resolve(token).filter(WhimAnchors.types()::contains).orElse(defaultAnchor());
     }
 
     private static WhimVisibility resolveVisibility(MinecraftServer server, ServerPlayer player, String raw)
@@ -287,7 +302,7 @@ public final class WhimCommand
         return defaultAnchor();
     }
 
-    private static WhimParams summonParams(String first, String second)
+    private static WhimParams summonParams(String first)
     {
         WhimType whim = first != null && isWhim(first) ? resolveWhim(first) : null;
 

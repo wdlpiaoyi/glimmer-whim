@@ -15,6 +15,7 @@ import com.wdlpiaoyi.glimmerwhim.whims.WhimRole;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -52,10 +53,21 @@ public final class WhimInteractHandler
         }
 
         Minecraft minecraft = Minecraft.getInstance();
+        WhimAim.flush();
         LocalPlayer player = minecraft.player;
 
         if (player == null || minecraft.screen != null)
         {
+            if (chain != null)
+            {
+                if (minecraft.getConnection() != null)
+                {
+                    WhimNetwork.CHANNEL.sendToServer(new WhimVoidPacket(List.copyOf(chain)));
+                }
+
+                WhimTrace.dissolve();
+            }
+
             chain = null;
             wasDown = INTERACT.isDown();
             return;
@@ -122,6 +134,15 @@ public final class WhimInteractHandler
         }
 
         wasDown = down;
+    }
+
+    @SubscribeEvent
+    public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event)
+    {
+        chain = null;
+        wasDown = false;
+        WhimTrace.clear();
+        WhimAim.clear();
     }
 
     private static void append(UUID id)

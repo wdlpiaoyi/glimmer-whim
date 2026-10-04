@@ -1,7 +1,6 @@
 package com.wdlpiaoyi.glimmerwhim.client;
 
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -9,7 +8,6 @@ import java.util.UUID;
 import com.wdlpiaoyi.glimmerwhim.net.WhimRemovePacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimSummonPacket;
 import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
-import com.wdlpiaoyi.glimmerwhim.engine.Whim;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 import com.wdlpiaoyi.glimmerwhim.whims.Whims;
@@ -29,7 +27,6 @@ public final class ClientWhimCache
     }
 
     private static final Map<UUID, WhimView> WHIMES = new LinkedHashMap<>();
-    private static final Map<UUID, Integer> REMAINING = new LinkedHashMap<>();
     private static ResourceKey<Level> dimension;
 
     private ClientWhimCache()
@@ -38,7 +35,7 @@ public final class ClientWhimCache
 
     public static void accept(WhimSummonPacket packet)
     {
-        if (!sameWorld(packet.dimension()))
+        if (!sameWorld(packet.dimension()) || packet.anchor() == null)
         {
             return;
         }
@@ -51,7 +48,6 @@ public final class ClientWhimCache
         }
 
         WHIMES.put(packet.id(), new WhimView(packet.id(), packet.anchor(), type, packet.data()));
-        REMAINING.put(packet.id(), lifetime(packet.data()));
     }
 
     public static void remove(WhimRemovePacket packet)
@@ -62,7 +58,6 @@ public final class ClientWhimCache
         }
 
         WHIMES.remove(packet.id());
-        REMAINING.remove(packet.id());
     }
 
     public static Collection<WhimView> all()
@@ -83,7 +78,6 @@ public final class ClientWhimCache
     public static void clear()
     {
         WHIMES.clear();
-        REMAINING.clear();
         dimension = null;
     }
 
@@ -102,54 +96,8 @@ public final class ClientWhimCache
         }
 
         WHIMES.clear();
-        REMAINING.clear();
         dimension = incoming;
         return true;
-    }
-
-    private static int lifetime(WhimData data)
-    {
-        try
-        {
-            return Integer.parseInt(data.get(Whim.LIFETIME).orElse("-1"));
-        }
-        catch (NumberFormatException e)
-        {
-            return -1;
-        }
-    }
-
-    public static void tick()
-    {
-        if (REMAINING.isEmpty())
-        {
-            return;
-        }
-
-        Iterator<Map.Entry<UUID, Integer>> iterator = REMAINING.entrySet().iterator();
-
-        while (iterator.hasNext())
-        {
-            Map.Entry<UUID, Integer> entry = iterator.next();
-            int remaining = entry.getValue();
-
-            if (remaining < 0)
-            {
-                continue;
-            }
-
-            remaining--;
-
-            if (remaining <= 0)
-            {
-                iterator.remove();
-                WHIMES.remove(entry.getKey());
-            }
-            else
-            {
-                entry.setValue(remaining);
-            }
-        }
     }
 
     @SubscribeEvent
@@ -173,11 +121,8 @@ public final class ClientWhimCache
         if (!current.equals(dimension))
         {
             WHIMES.clear();
-            REMAINING.clear();
             dimension = current;
         }
-
-        tick();
     }
 
     @SubscribeEvent

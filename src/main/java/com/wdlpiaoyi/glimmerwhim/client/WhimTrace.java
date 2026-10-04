@@ -57,6 +57,18 @@ public final class WhimTrace
         return chain != null && !chain.isEmpty();
     }
 
+    public static void clear()
+    {
+        phase = Phase.IDLE;
+        frozen = List.of();
+        live = List.of();
+        origin = null;
+        target = null;
+        playMillis = 0.0F;
+        fadeMillis = 0.0F;
+        phaseStart = 0L;
+    }
+
     public static void release(ClientLevel level, Vec3 eye, List<UUID> chain, WhimTarget target)
     {
         List<Node> nodes = resolve(level, eye, 1.0F, chain);

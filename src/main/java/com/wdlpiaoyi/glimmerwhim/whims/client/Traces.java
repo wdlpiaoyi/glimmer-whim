@@ -39,7 +39,7 @@ public final class Traces
             WhimParams params)
     {
         float shift = (float) ((System.currentTimeMillis() % 5000L) / 5000.0D);
-        float[] color = DevRender.rotateHue(WhimConfig.renderDevColorElement(), shift);
+        float[] color = DefaultRender.rotateHue(WhimConfig.renderDevColorElement(), shift);
         stroke(pose, points, endpoint, color[0], color[1], color[2], (1.0F - fade) * color[3],
                 (float) WhimConfig.traceWidth());
     }

@@ -46,7 +46,8 @@ public final class WhimParam
     {
         try
         {
-            return Double.parseDouble(value) > 0.0D;
+            double parsed = Double.parseDouble(value);
+            return Double.isFinite(parsed) && parsed > 0.0D;
         }
         catch (NumberFormatException e)
         {

@@ -388,6 +388,11 @@ public final class WhimRegistry
 
     public static void setAimed(ServerPlayer player, UUID id)
     {
+        if (id != null && !visible(player, id))
+        {
+            id = null;
+        }
+
         UUID before = AIMED.get(player.getUUID());
 
         if (id == null)
@@ -413,6 +418,16 @@ public final class WhimRegistry
     public static UUID aimed(ServerPlayer player)
     {
         return AIMED.get(player.getUUID());
+    }
+
+    private static boolean visible(ServerPlayer player, UUID id)
+    {
+        WhimRegistry registry = of(player.serverLevel());
+        Tracked tracked = registry.tracked.get(id);
+
+        return tracked != null
+                && tracked.visibility().canUse(player)
+                && registry.sent.getOrDefault(player.getUUID(), Set.of()).contains(id);
     }
 
     public static boolean use(ServerPlayer player, List<UUID> chain, WhimTarget target)

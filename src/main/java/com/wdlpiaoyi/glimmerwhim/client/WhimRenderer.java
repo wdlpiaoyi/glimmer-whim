@@ -13,7 +13,7 @@ import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
-import com.wdlpiaoyi.glimmerwhim.whims.client.DevRender;
+import com.wdlpiaoyi.glimmerwhim.whims.client.DefaultRender;
 import com.wdlpiaoyi.glimmerwhim.whims.client.Traces;
 
 import net.minecraft.client.Minecraft;
@@ -93,17 +93,17 @@ public final class WhimRenderer
 
     public static Drawer drawer(ResourceLocation id)
     {
-        return DRAWERS.getOrDefault(id, DevRender::draw);
+        return DRAWERS.getOrDefault(id, DefaultRender::draw);
     }
 
     public static Hit hit(ResourceLocation id)
     {
-        return HITS.getOrDefault(id, DevRender::hit);
+        return HITS.getOrDefault(id, DefaultRender::hit);
     }
 
     public static Highlight highlight(ResourceLocation id)
     {
-        return HIGHLIGHTS.getOrDefault(id, DevRender::outline);
+        return HIGHLIGHTS.getOrDefault(id, DefaultRender::outline);
     }
 
     public static Trace elementTrace(ResourceLocation id)

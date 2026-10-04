@@ -3,7 +3,6 @@ package com.wdlpiaoyi.glimmerwhim.engine;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import com.wdlpiaoyi.glimmerwhim.whims.WhimModifier;
 
@@ -38,11 +37,6 @@ public final class WhimChain
     public WhimTarget target()
     {
         return this.target;
-    }
-
-    public List<UUID> ids()
-    {
-        return this.order.stream().map(Whim::id).toList();
     }
 
     public double value(ResourceLocation dimension)

@@ -1,7 +1,7 @@
 package com.wdlpiaoyi.glimmerwhim.whims.dev.client;
 
 import com.wdlpiaoyi.glimmerwhim.client.WhimRenderer;
-import com.wdlpiaoyi.glimmerwhim.whims.client.DevRender;
+import com.wdlpiaoyi.glimmerwhim.whims.client.DefaultRender;
 import com.wdlpiaoyi.glimmerwhim.whims.client.Traces;
 import com.wdlpiaoyi.glimmerwhim.whims.dev.DevWhim;
 import com.wdlpiaoyi.glimmerwhim.whims.dev.HighlightTestWhim;
@@ -15,9 +15,9 @@ public final class DevRenders
 
     public static void register()
     {
-        WhimRenderer.register(DevWhim.INSTANCE, DevRender::draw, DevRender::hit, DevRender::outline, null, null);
-        WhimRenderer.register(HighlightTestWhim.INSTANCE, DevRender::draw, DevRender::hit, DevRender::hue, null, null);
-        WhimRenderer.register(TraceTestWhim.INSTANCE, DevRender::draw, DevRender::hit, DevRender::hue, Traces::hue,
+        WhimRenderer.register(DevWhim.INSTANCE, DefaultRender::draw, DefaultRender::hit, DefaultRender::outline, null, null);
+        WhimRenderer.register(HighlightTestWhim.INSTANCE, DefaultRender::draw, DefaultRender::hit, DefaultRender::hue, null, null);
+        WhimRenderer.register(TraceTestWhim.INSTANCE, DefaultRender::draw, DefaultRender::hit, DefaultRender::hue, Traces::hue,
                 Traces::glow);
     }
 }

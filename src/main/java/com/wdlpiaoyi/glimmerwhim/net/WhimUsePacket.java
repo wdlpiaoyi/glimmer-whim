@@ -15,6 +15,8 @@ import net.minecraftforge.network.NetworkEvent;
 
 public record WhimUsePacket(List<UUID> chain, WhimTarget target)
 {
+    private static final int MAX_CHAIN = 64;
+
     public static void encode(WhimUsePacket packet, FriendlyByteBuf buf)
     {
         buf.writeVarInt(packet.chain.size());
@@ -44,7 +46,7 @@ public record WhimUsePacket(List<UUID> chain, WhimTarget target)
     public static WhimUsePacket decode(FriendlyByteBuf buf)
     {
         int size = buf.readVarInt();
-        List<UUID> chain = new ArrayList<>(size);
+        List<UUID> chain = new ArrayList<>(Math.min(Math.max(size, 0), MAX_CHAIN));
 
         for (int i = 0; i < size; i++)
         {

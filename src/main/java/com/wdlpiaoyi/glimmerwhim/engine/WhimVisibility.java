@@ -19,9 +19,4 @@ public final class WhimVisibility
     {
         return this.player == null || this.player.equals(player.getUUID());
     }
-
-    public String describe()
-    {
-        return this.player == null ? "all" : this.player.toString();
-    }
 }

@@ -9,16 +9,6 @@ import net.minecraft.world.phys.Vec3;
 
 public record WhimSpawnContext(ServerLevel level, ServerPlayer player, RandomSource random)
 {
-    public Vec3 eye()
-    {
-        return this.player.getEyePosition();
-    }
-
-    public long gameTime()
-    {
-        return this.level.getGameTime();
-    }
-
     public int nearby(double radius)
     {
         return WhimRegistry.of(this.level).countNear(this.player, radius);

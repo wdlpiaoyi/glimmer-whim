@@ -3,9 +3,6 @@ package com.wdlpiaoyi.glimmerwhim.whims;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
-
-import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 
 import net.minecraft.resources.ResourceLocation;
 
@@ -42,17 +39,4 @@ public final class Whims
         return TYPES.values();
     }
 
-    public static Optional<ResourceLocation> resolve(String text)
-    {
-        try
-        {
-            return Optional.of(text.indexOf(':') >= 0
-                    ? ResourceLocation.parse(text)
-                    : ResourceLocation.fromNamespaceAndPath(GlimmerWhim.MODID, text));
-        }
-        catch (RuntimeException e)
-        {
-            return Optional.empty();
-        }
-    }
 }

@@ -4,11 +4,11 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Function;
 
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 
+import io.netty.buffer.Unpooled;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
@@ -52,20 +52,6 @@ public final class WhimAnchors
         return List.copyOf(TYPES.keySet());
     }
 
-    public static Optional<ResourceLocation> resolve(String text)
-    {
-        try
-        {
-            return Optional.of(text.indexOf(':') >= 0
-                    ? ResourceLocation.parse(text)
-                    : ResourceLocation.fromNamespaceAndPath(GlimmerWhim.MODID, text));
-        }
-        catch (RuntimeException e)
-        {
-            return Optional.empty();
-        }
-    }
-
     public static Collection<String> suggestData(ResourceLocation type, CommandSourceStack source)
     {
         AnchorType anchor = type == null ? null : TYPES.get(type);
@@ -94,20 +80,28 @@ public final class WhimAnchors
 
     public static void write(FriendlyByteBuf buf, WhimAnchor anchor)
     {
+        FriendlyByteBuf payload = new FriendlyByteBuf(Unpooled.buffer());
+
+        anchor.write(payload);
+
         buf.writeResourceLocation(anchor.type());
-        anchor.write(buf);
+        buf.writeVarInt(payload.readableBytes());
+        buf.writeBytes(payload);
     }
 
     public static WhimAnchor read(FriendlyByteBuf buf)
     {
         ResourceLocation type = buf.readResourceLocation();
+        int length = buf.readVarInt();
         AnchorType anchor = TYPES.get(type);
 
         if (anchor == null)
         {
-            throw new IllegalArgumentException("未知的锚类型: " + type);
+            buf.skipBytes(length);
+            GlimmerWhim.log("[Whim] unknown anchor type: {}", type);
+            return null;
         }
 
-        return anchor.reader().apply(buf);
+        return anchor.reader().apply(new FriendlyByteBuf(buf.readBytes(length)));
     }
 }
