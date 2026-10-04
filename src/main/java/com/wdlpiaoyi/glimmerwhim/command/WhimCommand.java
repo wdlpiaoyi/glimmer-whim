@@ -2,6 +2,7 @@ package com.wdlpiaoyi.glimmerwhim.command;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -55,7 +56,20 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 public final class WhimCommand
 {
-    private static final List<String> ACTIONS = List.of("get", "kill");
+    @FunctionalInterface
+    private interface Action
+    {
+        int run(CommandSourceStack source, UUID target) throws CommandSyntaxException;
+    }
+
+    // 子动作表；命令树与 TAB 补全共用这里的键集合
+    private static final Map<String, Action> ACTIONS = new LinkedHashMap<>();
+
+    static
+    {
+        ACTIONS.put("get", WhimCommand::get);
+        ACTIONS.put("kill", WhimCommand::kill);
+    }
 
     private static final SimpleCommandExceptionType ERROR_PLAYER =
             new SimpleCommandExceptionType(Component.literal("该命令只能由玩家执行"));
@@ -83,10 +97,14 @@ public final class WhimCommand
 
     private static final DynamicCommandExceptionType ERROR_ACTION =
             new DynamicCommandExceptionType(action -> Component.literal("无效的动作: " + action
-                    + "（可用: " + String.join(", ", ACTIONS) + "）"));
+                    + "（可用: " + String.join(", ", ACTIONS.keySet()) + "）"));
 
     private static final SimpleCommandExceptionType ERROR_NO_AIM =
             new SimpleCommandExceptionType(Component.literal("未瞄准任何灵感，请提供 uuid"));
+
+    // glimmerwhim:default：用灵感自身的 spawn() 规则，不接受锚数据
+    private static final ResourceLocation DEFAULT_ANCHOR =
+            ResourceLocation.fromNamespaceAndPath(GlimmerWhim.MODID, "default");
 
     private WhimCommand()
     {
@@ -95,7 +113,8 @@ public final class WhimCommand
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event)
     {
-        LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("glimmerwhim")
+        // 根命令权限等级取自 COMMON 配置
+        LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal(GlimmerWhim.MODID)
                 .requires(source -> source.hasPermission(WhimConfig.commandPermissionLevel()));
 
         root.then(Commands.literal("help")
@@ -106,6 +125,7 @@ public final class WhimCommand
                 .then(Commands.literal("all")
                         .executes(context -> listAll(context.getSource())))
                 .then(Commands.argument("dimension", ResourceLocationArgument.id())
+                        // 补全服务器已加载的维度 id
                         .suggests((context, builder) -> SharedSuggestionProvider.suggest(
                                 context.getSource().getServer().levelKeys().stream()
                                         .map(key -> key.location().toString())
@@ -124,6 +144,7 @@ public final class WhimCommand
                                 .executes(context -> summon(context.getSource(),
                                         StringArgumentType.getString(context, "whim"),
                                         StringArgumentType.getString(context, "anchor"), null))
+                                // data 为贪心字符串：锚数据与 {参数} 都包含在内
                                 .then(Commands.argument("data", StringArgumentType.greedyString())
                                         .suggests((context, builder) -> suggestTail(
                                                 suggestionAnchor(StringArgumentType.getString(context, "anchor")),
@@ -136,7 +157,7 @@ public final class WhimCommand
 
         root.then(Commands.literal("whim")
                 .then(Commands.argument("action", StringArgumentType.word())
-                        .suggests((context, builder) -> suggestWords(ACTIONS, builder))
+                        .suggests((context, builder) -> suggestWords(ACTIONS.keySet(), builder))
                         .executes(context -> act(context.getSource(), null,
                                 StringArgumentType.getString(context, "action")))
                         .then(Commands.argument("id", StringArgumentType.word())
@@ -152,6 +173,7 @@ public final class WhimCommand
         ServerPlayer player = source.getPlayer();
         UUID id = player == null ? null : WhimRegistry.aimed(player);
 
+        // 瞄准目标须仍存活于注册表，否则视为无目标
         return id != null && WhimRegistry.find(id).isPresent() ? id : null;
     }
 
@@ -162,6 +184,7 @@ public final class WhimCommand
         return id == null ? List.of() : List.of(id.toString());
     }
 
+    // 解析失败抛命令异常而非让命令崩溃
     private static UUID uuid(CommandContext<CommandSourceStack> context, String name)
             throws CommandSyntaxException
     {
@@ -181,6 +204,7 @@ public final class WhimCommand
     {
         try
         {
+            // 无命名空间的 token 自动补 glimmerwhim: 前缀
             return Optional.of(text.indexOf(':') >= 0
                     ? ResourceLocation.parse(text)
                     : ResourceLocation.fromNamespaceAndPath(GlimmerWhim.MODID, text));
@@ -193,7 +217,9 @@ public final class WhimCommand
 
     private static String anchorNames()
     {
-        return WhimAnchors.types().stream().map(ResourceLocation::getPath).collect(Collectors.joining(", "));
+        // default 不是注册的锚类型，需单独列出
+        return WhimAnchors.types().stream().map(ResourceLocation::getPath).collect(Collectors.joining(", "))
+                + ", default";
     }
 
     private static String whimNames()
@@ -206,8 +232,8 @@ public final class WhimCommand
         return List.of(
                 "  /glimmerwhim list [维度|all]",
                 "  /glimmerwhim summon <灵感类型> [锚类型] [锚数据] {参数}"
-                        + "（省略锚类型时使用该灵感类型自身的生成规则；lifetime 默认取灵感类型自身，-1 = 永久；visibility 默认 all）",
-                "  /glimmerwhim whim " + String.join("｜", ACTIONS) + " [uuid]（省略 uuid 时作用于当前瞄准的灵感）",
+                        + "（省略锚类型或写 default 时使用该灵感类型自身的生成规则；default 不接受锚数据；lifetime 默认取灵感类型自身，-1 = 永久；visibility 默认 all）",
+                "  /glimmerwhim whim " + String.join("｜", ACTIONS.keySet()) + " [uuid]（省略 uuid 时作用于当前瞄准的灵感）",
                 "  锚数据格式与 {参数} 可通过 TAB 查看");
     }
 
@@ -217,6 +243,7 @@ public final class WhimCommand
         String remaining = builder.getRemaining();
         int open = remaining.lastIndexOf('{');
 
+        // 花括号未闭合时补全 {参数}，否则补全锚数据
         if (open > remaining.lastIndexOf('}'))
         {
             String inside = remaining.substring(open + 1);
@@ -243,7 +270,12 @@ public final class WhimCommand
     {
         ResourceLocation id = resolve(token).orElse(null);
 
-        return id != null && WhimAnchors.types().contains(id);
+        return id != null && (WhimAnchors.types().contains(id) || id.equals(DEFAULT_ANCHOR));
+    }
+
+    private static boolean isDefaultAnchor(String token)
+    {
+        return token != null && resolve(token).filter(DEFAULT_ANCHOR::equals).isPresent();
     }
 
     private static WhimType resolveWhim(String token)
@@ -310,6 +342,7 @@ public final class WhimCommand
     {
         int cut = Math.max(piece.indexOf(':'), piece.indexOf('='));
 
+        // 未写分隔符时提示参数名与默认值；已写则提示候选值
         if (cut < 0)
         {
             List<String> names = new ArrayList<>();
@@ -331,6 +364,7 @@ public final class WhimCommand
                 builder.createOffset(builder.getStart() + cut + 1));
     }
 
+    // 参数之间以逗号或分号分隔
     private static boolean written(String inside, String name)
     {
         for (String piece : inside.split("[,;]"))
@@ -359,6 +393,12 @@ public final class WhimCommand
             }
         }
 
+        if (DEFAULT_ANCHOR.getPath().startsWith(typed))
+        {
+            builder.suggest(DEFAULT_ANCHOR.getPath(),
+                    Component.literal("使用该灵感自身的生成规则；不接受锚数据"));
+        }
+
         return builder.buildFuture();
     }
 
@@ -377,6 +417,7 @@ public final class WhimCommand
         return builder.buildFuture();
     }
 
+    // 已完整输入某个候选时列出全部，否则只按前缀过滤
     private static CompletableFuture<Suggestions> suggestWords(Collection<String> candidates, SuggestionsBuilder builder)
     {
         String typed = builder.getRemaining().toLowerCase(Locale.ROOT);
@@ -468,6 +509,7 @@ public final class WhimCommand
 
     private static MutableComponent link(UUID id)
     {
+        // 点击把命令填入聊天框，便于查看/操作该灵感
         String command = "/glimmerwhim whim get " + id;
 
         return Component.literal(id.toString()).withStyle(Style.EMPTY
@@ -484,6 +526,7 @@ public final class WhimCommand
 
     private static int act(CommandSourceStack source, UUID id, String action) throws CommandSyntaxException
     {
+        // 省略 uuid 时作用于当前瞄准的灵感
         UUID target = id != null ? id : aimed(source);
 
         if (target == null)
@@ -491,12 +534,14 @@ public final class WhimCommand
             throw ERROR_NO_AIM.create();
         }
 
-        return switch (action)
+        Action handler = ACTIONS.get(action);
+
+        if (handler == null)
         {
-            case "get" -> get(source, target);
-            case "kill" -> kill(source, target);
-            default -> throw ERROR_ACTION.create(action);
-        };
+            throw ERROR_ACTION.create(action);
+        }
+
+        return handler.run(source, target);
     }
 
     private static int get(CommandSourceStack source, UUID id) throws CommandSyntaxException
@@ -534,6 +579,7 @@ public final class WhimCommand
             return "  参数=（该灵感不接受参数）";
         }
 
+        // 未显式给出的参数回退默认值并标注（默认）
         return "  参数=" + params.all().stream()
                 .map(param -> param.name() + "=" + params.text(data, param.name())
                         + (data.get(param.name()).isEmpty() ? "（默认）" : ""))
@@ -582,6 +628,7 @@ public final class WhimCommand
 
         WhimData.Split split;
         WhimData userData;
+        // 有效参数可能被灵感类型覆盖；解析 {参数} 时以它为准
         WhimParams params = whim.effectiveParams();
 
         try
@@ -596,8 +643,15 @@ public final class WhimCommand
 
         WhimSpawn placement;
 
-        if (second == null)
+        if (second == null || isDefaultAnchor(second))
         {
+            // default 锚不接受锚数据
+            if (second != null && !split.anchorData().isEmpty())
+            {
+                throw ERROR_DATA.create("default 锚不接受锚数据");
+            }
+
+            // 生成位置由灵感自身 spawn() 决定，可能失败
             placement = whim.spawn(new WhimSpawnContext(player.serverLevel(), player, player.getRandom()))
                     .orElse(null);
 
@@ -615,6 +669,7 @@ public final class WhimCommand
 
             try
             {
+                // 显式锚类型：交给锚工厂按锚数据生成位置
                 placement = new WhimSpawn(
                         WhimAnchors.create(resolve(second).orElse(null), source,
                                 split.anchorData().isEmpty() ? null : split.anchorData()),

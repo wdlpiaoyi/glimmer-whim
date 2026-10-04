@@ -6,7 +6,16 @@
 
 ## 恢复方法
 
-把要恢复的文件移回 `src/main/java/com/wdlpiaoyi/glimmerwhim/whims/dev/`（客户端渲染文件移到 `.../whims/dev/client/`），然后在 `whims/dev/DevWhims.onCommonSetup` 里补 `Whims.register(...)`、在 `whims/dev/client/DevRenders.onClientSetup` 里补 `WhimRenderer.register(...)`。
+把要恢复的文件移回 `src/main/java/com/wdlpiaoyi/glimmerwhim/whims/dev/`（客户端渲染文件移到 `.../whims/dev/client/`）：
+
+- 服务端：在 `whims/dev/DevWhims.onCommonSetup` 的 `WhimContent.register(...)` 里加上实例。
+- 客户端：若有自定义外观，在 `whims/dev/client/DevRenders.onClientSetup` 里补 `WhimRenderer.register(...)`。
+
+**恢复前必须先按当前引擎 API 校对**（这些文件停更于旧版本）：
+
+- modid 用 `GlimmerWhim.MODID`，不要再写 `"glimmerwhim"`。
+- `WhimChain` 已无 `value(...)` / `factor()`（`DevRootWhim` 受影响）。
+- 周期性生成器 `WhimSpawner` / `spawnInterval()` 已删除（`SpawnTestWhim` 受影响）。
 
 ## 移动原因
 

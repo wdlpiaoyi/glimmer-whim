@@ -2,6 +2,6 @@ package com.wdlpiaoyi.glimmerwhim.whims;
 
 public enum WhimRole
 {
-    ELEMENT,
-    MODIFIER
+    ELEMENT,  // 链根/元素
+    MODIFIER  // 链修饰符
 }

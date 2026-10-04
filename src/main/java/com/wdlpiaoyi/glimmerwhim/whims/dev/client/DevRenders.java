@@ -2,7 +2,6 @@ package com.wdlpiaoyi.glimmerwhim.whims.dev.client;
 
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.client.WhimRenderer;
-import com.wdlpiaoyi.glimmerwhim.whims.client.DefaultRender;
 import com.wdlpiaoyi.glimmerwhim.whims.dev.DevStrikeChargeWhim;
 import com.wdlpiaoyi.glimmerwhim.whims.dev.DevStrikeWhim;
 
@@ -21,9 +20,9 @@ public final class DevRenders
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event)
     {
-        WhimRenderer.register(DevStrikeWhim.INSTANCE, DefaultRender::draw, DefaultRender::hit, DevStrikeRender::highlight, null,
-                null);
-        WhimRenderer.register(DevStrikeChargeWhim.INSTANCE, DevStrikeChargeRender::draw, DefaultRender::hit,
-                DefaultRender::outline, null, null);
+        // strike 只注册瞄准高亮；charge 只注册本体绘制
+        WhimRenderer.register(DevStrikeWhim.INSTANCE, new WhimRenderer.RenderSpec().highlight(DevStrikeRender::highlight));
+        WhimRenderer.register(DevStrikeChargeWhim.INSTANCE,
+                new WhimRenderer.RenderSpec().draw(DevStrikeChargeRender::draw));
     }
 }

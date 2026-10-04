@@ -27,6 +27,7 @@ public final class DefaultRender
 
     public static void draw(PoseStack pose, Vec3 dir, WhimData data, WhimParams params)
     {
+        // shape=cube 画六面体，否则画面向视线的方形面片；half 为边长一半（方块）
         boolean cube = "cube".equals(params.text(data, "shape", "cube"));
         double half = params.number(data, "size", 1.0D) / 2.0D;
         int cells = WhimConfig.renderDevCheckerCells();
@@ -45,6 +46,7 @@ public final class DefaultRender
 
     public static void outline(PoseStack pose, Vec3 dir, WhimData data, WhimParams params)
     {
+        // 先用瞄准色画外扩 outline 宽的壳，再叠正常本体
         double outline = WhimConfig.renderOutlineWidth();
 
         if (outline > 0.0D)
@@ -72,6 +74,7 @@ public final class DefaultRender
         boolean cube = "cube".equals(params.text(data, "shape", "cube"));
         double half = params.number(data, "size", 1.0D) / 2.0D;
         int cells = WhimConfig.renderDevCheckerCells();
+        // 颜色按 5 秒周期循环色相
         float shift = (float) ((System.currentTimeMillis() % 5000L) / 5000.0D);
         float[] first = rotateHue(WhimConfig.renderDevColorElement(), shift);
         float[] second = rotateHue(WhimConfig.renderDevColorElementAlt(), shift);
@@ -86,6 +89,7 @@ public final class DefaultRender
         }
     }
 
+    // 保亮度的色相旋转（RGB→YIQ 旋转→RGB），shift 取 [0,1)
     static float[] rotateHue(float[] color, float shift)
     {
         double angle = shift * 2.0D * Math.PI;
@@ -113,6 +117,7 @@ public final class DefaultRender
         return (float) Math.max(0.0D, Math.min(1.0D, value));
     }
 
+    // 返回射线命中距离，未命中返回 -1；cube 用 AABB，quad 用面片
     public static double hit(Vec3 eye, Vec3 look, Vec3 at, WhimData data, WhimParams params)
     {
         boolean cube = "cube".equals(params.text(data, "shape", "cube"));
@@ -121,6 +126,7 @@ public final class DefaultRender
         return cube ? hitBox(eye, look, at, half) : hitQuad(eye, look, at, half);
     }
 
+    // slab 法求射线与 AABB 的最近交点
     private static double hitBox(Vec3 eye, Vec3 look, Vec3 at, double half)
     {
         double[] origin = { eye.x, eye.y, eye.z };
@@ -163,6 +169,7 @@ public final class DefaultRender
         return far < 0.0D ? -1.0D : near;
     }
 
+    // 面片正对视线；背向、距离非正或偏离面心超半宽即未命中
     private static double hitQuad(Vec3 eye, Vec3 look, Vec3 at, double half)
     {
         Vec3 normal = at.subtract(eye).normalize();
@@ -187,6 +194,7 @@ public final class DefaultRender
         return Math.abs(offset.dot(right)) <= half && Math.abs(offset.dot(up)) <= half ? distance : -1.0D;
     }
 
+    // 以视线为法线构建面向玩家的四边形面片
     private static void quad(PoseStack pose, Vec3 dir, double half, float[] first, float[] second, int cells)
     {
         Matrix4f matrix = pose.last().pose();
@@ -204,6 +212,7 @@ public final class DefaultRender
     {
         Matrix4f matrix = pose.last().pose();
         BufferBuilder builder = Tesselator.getInstance().getBuilder();
+        // 按面心到原点距离降序绘制（画家算法，由远及近）
         List<Side> sides = new ArrayList<>(SIDES);
         sides.sort(Comparator.comparingDouble(side -> -side.centre().lengthSqr()));
 
@@ -218,6 +227,7 @@ public final class DefaultRender
         BufferUploader.drawWithShader(builder.end());
     }
 
+    // 单位立方体一面：origin/u/v 描述面，facing 供明暗
     private record Side(Vec3 origin, Vec3 u, Vec3 v, Direction facing)
     {
         Vec3 centre()
@@ -226,6 +236,7 @@ public final class DefaultRender
         }
     }
 
+    // 六个面按原版朝向给明暗
     private static final List<Side> SIDES = List.of(
             new Side(new Vec3(-1.0D, -1.0D, -1.0D), new Vec3(0.0D, 0.0D, 2.0D), new Vec3(0.0D, 2.0D, 0.0D), Direction.WEST),
             new Side(new Vec3(1.0D, -1.0D, 1.0D), new Vec3(0.0D, 0.0D, -2.0D), new Vec3(0.0D, 2.0D, 0.0D), Direction.EAST),
@@ -234,6 +245,7 @@ public final class DefaultRender
             new Side(new Vec3(1.0D, -1.0D, -1.0D), new Vec3(-2.0D, 0.0D, 0.0D), new Vec3(0.0D, 2.0D, 0.0D), Direction.NORTH),
             new Side(new Vec3(-1.0D, -1.0D, 1.0D), new Vec3(2.0D, 0.0D, 0.0D), new Vec3(0.0D, 2.0D, 0.0D), Direction.SOUTH));
 
+    // 复刻原版面明暗：上 1.0、下 0.5、南北 0.8、东西 0.6
     private static double shade(Direction facing)
     {
         if (!WhimConfig.renderFaceShade())
@@ -253,6 +265,7 @@ public final class DefaultRender
     private static void face(BufferBuilder builder, Matrix4f matrix, Vec3 origin, Vec3 u, Vec3 v, float[] first,
             float[] second, double shade, int cells)
     {
+        // 每面切 cells×cells 小格，(i+j) 奇偶交替两色形成棋盘
         for (int i = 0; i < cells; i++)
         {
             for (int j = 0; j < cells; j++)
@@ -271,12 +284,14 @@ public final class DefaultRender
         }
     }
 
+    // 仅缩放 RGB，保留 alpha
     private static float[] tint(float[] color, double shade)
     {
         return new float[] { (float) (color[0] * shade), (float) (color[1] * shade), (float) (color[2] * shade),
                 color[3] };
     }
 
+    // 视线与世界上方向叉乘得右向；视线竖直时兜底 +X
     private static Vec3 right(Vec3 dir)
     {
         Vec3 right = dir.cross(new Vec3(0.0D, 1.0D, 0.0D));

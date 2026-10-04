@@ -8,6 +8,7 @@ public final class WhimReach
     {
     }
 
+    // 触及距离随有效渲染距离缩放，由引擎侧统一计算
     public static double blocks()
     {
         return com.wdlpiaoyi.glimmerwhim.engine.WhimReach.blocks(

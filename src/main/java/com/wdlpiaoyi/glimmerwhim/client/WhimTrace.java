@@ -21,6 +21,7 @@ import net.minecraft.world.phys.Vec3;
 
 public final class WhimTrace
 {
+    // IDLE 无轨迹；PLAY 从起点飞向目标；FADE 淡出
     private enum Phase
     {
         IDLE,
@@ -80,17 +81,20 @@ public final class WhimTrace
         }
 
         Node root = nodes.get(0);
+        // 根节点的 PLAYTIME 单位是 tick
         double play = root.params().number(root.data(), Whim.PLAYTIME, 0.0D);
 
         frozen = nodes;
         origin = eye;
         WhimTrace.target = target == null ? null : target.point();
+        // PLAYTIME 单位是 tick，×50 换成毫秒（20tps）
         playMillis = (float) Math.max(0.0D, play) * 50.0F;
         fadeMillis = WhimRenderer.elementTrace(root.type()).fadeMillis();
         phase = playMillis > 0.0F && WhimTrace.target != null ? Phase.PLAY : Phase.FADE;
         phaseStart = System.currentTimeMillis();
     }
 
+    // 链被中断时，把当前实时轨迹转为淡出
     public static void dissolve()
     {
         if (live.isEmpty())
@@ -107,6 +111,7 @@ public final class WhimTrace
         phaseStart = System.currentTimeMillis();
     }
 
+    // 按住期间画实时链；否则播放已冻结的轨迹
     public static void render(PoseStack pose, ClientLevel level, Vec3 eye, Vec3 look, Vec3 camera, float partialTick)
     {
         if (!WhimConfig.traceEnabled())
@@ -220,6 +225,7 @@ public final class WhimTrace
 
     private static Vec3 crosshair(ClientLevel level, Vec3 eye, Vec3 look)
     {
+        // 实时链终点取视线与方块的最近交点
         Vec3 end = eye.add(look.scale(WhimReach.blocks()));
         BlockHitResult hit = level.clip(
                 new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, null));

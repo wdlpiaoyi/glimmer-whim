@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerPlayer;
 
 public final class WhimEvent
 {
+    // 事件来源：瞄准边沿高亮/取消、存活 tick、使用链、按住
     public enum Kind
     {
         HIGHLIGHT,
@@ -21,7 +22,7 @@ public final class WhimEvent
     private final Whim whim;
     private final ServerPlayer player;
     private final WhimChain chain;
-    private WhimRemoveReason removal;
+    private WhimRemoveReason removal; // on() 中调用 remove() 登记，消费方据此移除
 
     WhimEvent(Kind kind, ServerLevel level, Whim whim, ServerPlayer player, WhimChain chain)
     {
@@ -62,6 +63,7 @@ public final class WhimEvent
         return Optional.ofNullable(this.chain);
     }
 
+    // 由 on() 调用，请求移除当前灵感
     public void remove(WhimRemoveReason reason)
     {
         this.removal = reason;

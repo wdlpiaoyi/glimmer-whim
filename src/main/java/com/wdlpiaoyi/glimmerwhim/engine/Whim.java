@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public final class Whim
 {
+    // 参数键：lifetime 存续 tick（-1 永久）；visibility 可见性；playtime 客户端播放 tick
     public static final String LIFETIME = "lifetime";
     public static final String VISIBILITY = "visibility";
     public static final String PLAYTIME = "playtime";
@@ -16,7 +17,7 @@ public final class Whim
     private final WhimType type;
     private final WhimData data;
     private final WhimVisibility visibility;
-    private int remaining;
+    private int remaining; // 剩余 tick；负值表示永久
 
     public Whim(UUID id, WhimAnchor anchor, WhimType type, WhimData data, WhimVisibility visibility)
     {
@@ -28,6 +29,7 @@ public final class Whim
         this.remaining = lifetime(data);
     }
 
+    // 解析 lifetime 参数；缺失或非法一律按永久处理
     private static int lifetime(WhimData data)
     {
         try
@@ -55,6 +57,7 @@ public final class Whim
         return this.type;
     }
 
+    // 存活时返回递减后的 lifetime；永久时原样返回
     public WhimData data()
     {
         return this.remaining < 0 ? this.data : this.data.with(LIFETIME, Integer.toString(this.remaining));
@@ -75,6 +78,7 @@ public final class Whim
         return this.remaining < 0;
     }
 
+    // 每服务端 tick 递减一次并钳到 0；永久（负）不递减
     public int tick()
     {
         if (this.remaining < 0)

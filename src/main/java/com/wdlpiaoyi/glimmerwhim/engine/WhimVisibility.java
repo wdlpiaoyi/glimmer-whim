@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerPlayer;
 
 public final class WhimVisibility
 {
+    // player==null 表示对所有玩家可见可用
     public static final WhimVisibility ALL = new WhimVisibility(null);
 
     private final UUID player;
@@ -16,6 +17,7 @@ public final class WhimVisibility
         this.player = player;
     }
 
+    // 解析 all / me / 玩家名 / UUID；找不到则报错
     public static WhimVisibility resolve(MinecraftServer server, ServerPlayer player, String raw)
     {
         if (raw.equals("all"))
@@ -45,6 +47,7 @@ public final class WhimVisibility
         }
     }
 
+    // 无归属时任何玩家可用，否则仅限该 UUID
     public boolean canUse(ServerPlayer player)
     {
         return this.player == null || this.player.equals(player.getUUID());

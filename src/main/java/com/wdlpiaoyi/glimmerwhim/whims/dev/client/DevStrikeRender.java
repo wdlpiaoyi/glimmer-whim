@@ -9,6 +9,7 @@ import net.minecraft.world.phys.Vec3;
 
 public final class DevStrikeRender
 {
+    // 高亮轮廓相对本体放大 25%
     private static final float HIGHLIGHT_SCALE = 1.25F;
 
     private DevStrikeRender()

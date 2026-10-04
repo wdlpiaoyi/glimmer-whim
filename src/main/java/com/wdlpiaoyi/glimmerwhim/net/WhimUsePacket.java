@@ -13,12 +13,15 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkEvent;
 
+// C2S：释放时提交整条链快照与命中目标；target/entity 均可空
 public record WhimUsePacket(List<UUID> chain, WhimTarget target)
 {
+    // 解码上限，防对端伪造超长链导致大分配
     private static final int MAX_CHAIN = 64;
 
     public static void encode(WhimUsePacket packet, FriendlyByteBuf buf)
     {
+        // 先写链长与逐个 UUID，再写 target/entity 存在位，最后写命中点
         buf.writeVarInt(packet.chain.size());
 
         for (UUID id : packet.chain)
@@ -45,6 +48,7 @@ public record WhimUsePacket(List<UUID> chain, WhimTarget target)
 
     public static WhimUsePacket decode(FriendlyByteBuf buf)
     {
+        // 负数或超限都夹到 [0, MAX_CHAIN]，与 encode 对称
         int size = buf.readVarInt();
         int count = Math.min(Math.max(size, 0), MAX_CHAIN);
         List<UUID> chain = new ArrayList<>(count);

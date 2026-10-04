@@ -9,6 +9,7 @@ import net.minecraft.world.phys.Vec3;
 
 public final class FreeLook
 {
+    // IDLE 不干预视角；ACTIVE 完全覆盖；FADING 平滑回正
     private enum State
     {
         IDLE,
@@ -86,6 +87,7 @@ public final class FreeLook
                 return;
             }
 
+            // 从过渡中的视角接管，避免跳变
             if (state == State.FADING)
             {
                 yaw = viewYaw(player, 1.0F);
@@ -129,6 +131,7 @@ public final class FreeLook
             return false;
         }
 
+        // 0.15 为基准灵敏度；yaw 相对身体夹在 yawLimit，pitch 夹在 pitchLimit（度）
         float step = (float) (0.15D * WhimConfig.freeLookSensitivity());
         float limit = (float) WhimConfig.freeLookPitchLimitDegrees();
         float yawLimit = (float) WhimConfig.freeLookYawLimitDegrees();
@@ -142,6 +145,7 @@ public final class FreeLook
         return true;
     }
 
+    // 平滑步进 3t²-2t³，span<=0 时直接完成
     private static float fade()
     {
         float span = (float) fadeMillis();

@@ -51,7 +51,7 @@
 /glimmerwhim whim <get|kill> [uuid]
 ```
 
-- `summon` 至少需要灵感类型；省略锚类型时使用该灵感类型自身的生成规则（`spawn()`），未声明则报错。
+- `summon` 至少需要灵感类型；省略锚类型或写 `default` 时使用该灵感类型自身的生成规则（`spawn()`），未声明则报错；`default` 不接受锚数据。
 - `whim get|kill` 省略 uuid 时作用于当前瞄准的灵感。
 - 锚数据与 `{参数}` 均可用 TAB 补全。
 
@@ -59,6 +59,7 @@
 
 ```
 /glimmerwhim summon dev_strike
+/glimmerwhim summon dev_strike default {lifetime:600}
 /glimmerwhim summon dev_strike ray ~ ~ ~ 8 {lifetime:600}
 /glimmerwhim summon dev_strike pos ~ ~ ~ {visibility:me}
 ```
@@ -69,6 +70,7 @@
 
 | 锚 | 锚数据 | 说明 |
 | --- | --- | --- |
+| `default` | （无） | 使用该灵感类型自身的生成规则（`spawn()`），不接受锚数据。 |
 | `ray` | `dx dy dz [distance]` | 自玩家眼睛沿方向偏移 `distance` 格，默认 `8`。任一分量写 `~` 表示视线方向。 |
 | `pos` | `x y z` | 固定坐标；任一分量写 `~` 表示执行者当前位置。 |
 
@@ -126,11 +128,11 @@
 
 ## 为开发者
 
-- **新增灵感**：实现 `whims/WhimType`，通过 `Whims.register` 注册。它声明 id、`{参数}`、角色（`roles()`）、修饰（`modifier()`）、目标限制（`acceptsTarget()`）、事件处理（`on()`）与生成规则（`spawn()`）。
-- **新增锚**：实现 `anchor/WhimAnchor`，通过 `WhimAnchors.register` 注册。
+- **新增灵感**：实现 `whims/WhimType`，通过 `whims/WhimContent.register(...)` 注册。它声明 id、`{参数}`、角色（`roles()`）、修饰（`modifier()`）、目标限制（`acceptsTarget()`）、事件处理（`on()`）、生成规则（`spawn()`），以及需要挂 Forge 事件时覆写 `bind()`。
+- **新增锚**：实现 `anchor/WhimAnchor`，在 `anchor/WhimAnchors` 的 `ANCHORS` 列表里加一项（类型、`read`、`parse`、`suggestData`、提示）。
 - **维度**：`engine/WhimDimensions`（`power` / `range`）。
 - **事件**：`engine/WhimEvent`（`HIGHLIGHT`、`UNHIGHLIGHT`、`HOLD`、`USE`、`TICK`）。
-- **渲染**：客户端 `client/WhimRenderer` 按类型注册绘制 / 命中 / 高亮 / 牵引。
+- **渲染**：客户端 `client/WhimRenderer` 按类型注册绘制 / 命中 / 高亮 / 牵引；该注册必须在客户端侧声明（渲染类不能在服务端加载）。
 
 ## 许可
 

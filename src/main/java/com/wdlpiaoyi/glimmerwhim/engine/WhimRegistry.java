@@ -34,12 +34,16 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 public final class WhimRegistry
 {
+    // 每维度一张登记表；维度卸载时移除
     private static final Map<ResourceKey<Level>, WhimRegistry> REGISTRIES = new HashMap<>();
 
+    // 玩家 -> 瞄准的灵感，仅服务端权威，用于 HIGHLIGHT 边沿
     private static final Map<UUID, UUID> AIMED = new HashMap<>();
 
+    // 玩家 -> 按住的灵感，HOLD 状态由它维持
     private static final Map<UUID, UUID> HELD = new HashMap<>();
 
+    // 每 20 tick（1 秒）全量重算一次可见性
     private static final int SYNC_INTERVAL = 20;
 
     public record Found(ResourceKey<Level> dimension, Whim whim)
@@ -47,7 +51,9 @@ public final class WhimRegistry
     }
 
     private final ServerLevel level;
+    // 本维度存活灵感，按召唤顺序
     private final Map<UUID, Whim> tracked = new LinkedHashMap<>();
+    // 玩家 UUID -> 已下发召唤包的灵感集，用于增删同步
     private final Map<UUID, Set<UUID>> sent = new HashMap<>();
 
     private WhimRegistry(ServerLevel level)
@@ -55,6 +61,7 @@ public final class WhimRegistry
         this.level = level;
     }
 
+    // 懒建；同维度共享同一实例
     public static WhimRegistry of(ServerLevel level)
     {
         return REGISTRIES.computeIfAbsent(level.dimension(), key -> new WhimRegistry(level));
@@ -65,6 +72,7 @@ public final class WhimRegistry
         return this.level;
     }
 
+    // 入表后立即向在场玩家同步，不等周期
     public void summon(Whim whim)
     {
         this.tracked.put(whim.id(), whim);
@@ -89,6 +97,7 @@ public final class WhimRegistry
         this.announceRemoval(id, reason);
     }
 
+    // 清理瞄准/按住记录，只给曾收到过该灵感的玩家发移除包
     private void announceRemoval(UUID id, WhimRemoveReason reason)
     {
         GlimmerWhim.log("[Whim] remove id={} dim={} reason={}", id, this.level.dimension().location(), reason);
@@ -114,6 +123,7 @@ public final class WhimRegistry
         }
     }
 
+    // 先扣寿命再派发 TICK；被按住且类型声明暂停时跳过倒计时
     public void tick()
     {
         Iterator<Map.Entry<UUID, Whim>> iterator = this.tracked.entrySet().iterator();
@@ -124,6 +134,7 @@ public final class WhimRegistry
             Whim whim = entry.getValue();
             boolean held = HELD.containsValue(entry.getKey()) && whim.type().pausesWhileHeld();
 
+            // 寿命归零按 EXPIRED 移除
             if (!held && whim.tick() == 0)
             {
                 iterator.remove();
@@ -141,6 +152,7 @@ public final class WhimRegistry
             }
         }
 
+        // 周期性对在场玩家重算可见性
         if (this.level.getGameTime() % SYNC_INTERVAL == 0)
         {
             for (ServerPlayer player : this.level.players())
@@ -150,6 +162,7 @@ public final class WhimRegistry
         }
     }
 
+    // 计算玩家应可见的灵感：归属可见 + 锚点可解析 + 在 reach 内
     private void sync(ServerPlayer player)
     {
         if (player.serverLevel() != this.level)
@@ -196,6 +209,7 @@ public final class WhimRegistry
             }
         }
 
+        // 仅当该维度内再无其他可见玩家在 reach 内，才真正移除
         for (UUID id : tooFar)
         {
             if (!this.anyPlayerInRange(id))
@@ -204,6 +218,7 @@ public final class WhimRegistry
             }
         }
 
+        // 本轮不可见的灵感只对这名玩家发移除包，不删服务端实体
         Iterator<UUID> gone = known.iterator();
 
         while (gone.hasNext())
@@ -224,6 +239,7 @@ public final class WhimRegistry
         return countNear(player, radius, null);
     }
 
+    // 以眼位为心统计半径内灵感；type 非空时只数该类型
     public int countNear(ServerPlayer player, double radius, WhimType type)
     {
         Vec3 eye = player.getEyePosition();
@@ -248,11 +264,13 @@ public final class WhimRegistry
         return count;
     }
 
+    // partialTick=1.0 取当前刻坐标；锚点无法解析时为 null
     private static Vec3 position(Whim whim, Level level, Vec3 eye)
     {
         return whim.anchor().position(level, eye, 1.0F).orElse(null);
     }
 
+    // 任一可用玩家在该灵感 reach 内即返回真
     private boolean anyPlayerInRange(UUID id)
     {
         Whim entry = this.tracked.get(id);
@@ -340,6 +358,7 @@ public final class WhimRegistry
         return false;
     }
 
+    // 单灵感事件（无链）；on() 登记了移除原因就执行
     private static void fire(WhimEvent.Kind kind, UUID id, ServerPlayer player)
     {
         for (WhimRegistry registry : REGISTRIES.values())
@@ -359,6 +378,7 @@ public final class WhimRegistry
         }
     }
 
+    // 链使用事件交给根元素；默认移除原因 USED，整条链一并移除
     private static void fireChain(WhimRegistry registry, WhimChain chain, ServerPlayer player)
     {
         WhimEvent event = new WhimEvent(WhimEvent.Kind.USE, registry.level, chain.root(), player, chain);
@@ -373,6 +393,7 @@ public final class WhimRegistry
         }
     }
 
+    // 目标不可见/超距/被遮挡时视为未瞄准；仅在变化时发高亮边沿
     public static void setAimed(ServerPlayer player, UUID id)
     {
         if (id != null && (!visible(player, id) || !withinSight(player, of(player.serverLevel()).tracked.get(id))))
@@ -407,6 +428,7 @@ public final class WhimRegistry
         return AIMED.get(player.getUUID());
     }
 
+    // 可见 = 归属允许 + 已下发过（sent）
     private static boolean visible(ServerPlayer player, UUID id)
     {
         WhimRegistry registry = of(player.serverLevel());
@@ -417,6 +439,7 @@ public final class WhimRegistry
                 && registry.sent.getOrDefault(player.getUUID(), Set.of()).contains(id);
     }
 
+    // 在 reach 内，且类型要求时通过方块/实体遮挡检测
     private static boolean withinSight(ServerPlayer player, Whim whim)
     {
         Vec3 eye = player.getEyePosition();
@@ -434,9 +457,12 @@ public final class WhimRegistry
             return false;
         }
 
-        return !whim.type().requiresLineOfSight() || !WhimSight.occluded(player.serverLevel(), eye, at, player);
+        return !whim.type().requiresLineOfSight() || !WhimSight.occluded(player.serverLevel(), eye, at, player,
+                whim.type().occludedByBlocks(whim.data()), whim.type().occludedByEntities(whim.data()),
+                whim.type().entityOcclusionRenderBox(whim.data()));
     }
 
+    // 按客户端顺序解析链：须已下发、可链；根须 canRoot，长度截到 maxChainLength
     public static boolean use(ServerPlayer player, List<UUID> chain, WhimTarget target)
     {
         if (chain == null || chain.isEmpty())
@@ -456,6 +482,7 @@ public final class WhimRegistry
             if (tracked == null || !tracked.visibility().canUse(player) || !sent.contains(id)
                     || !tracked.type().canChain())
             {
+                // 根节点无效直接拒绝；链中后续无效节点跳过
                 if (resolved.isEmpty())
                 {
                     GlimmerWhim.log("[Whim] chain rejected player={} id={}", player.getUUID(), id);
@@ -491,6 +518,7 @@ public final class WhimRegistry
                 resolved.stream().map(whim -> whim.type().id().toString()).toList(),
                 target == null ? "none" : target.describe());
 
+        // 目标无效则整链按 DROPPED 丢弃（仍算一次使用）
         if (target == null || !validTarget(player, target) || !built.root().type().acceptsTarget(target))
         {
             for (Whim whim : resolved)
@@ -505,6 +533,7 @@ public final class WhimRegistry
         return true;
     }
 
+    // 清空客户端已构建的链（未使用）；逐一按 DROPPED 移除
     public static boolean voidChain(ServerPlayer player, List<UUID> chain)
     {
         if (chain == null || chain.isEmpty())
@@ -532,6 +561,7 @@ public final class WhimRegistry
         return true;
     }
 
+    // 命中点须在 reach 内；带实体时须仍存在于该维度
     private static boolean validTarget(ServerPlayer player, WhimTarget target)
     {
         if (target.point() == null)
@@ -554,6 +584,7 @@ public final class WhimRegistry
         return true;
     }
 
+    // 按住要求可见且在视距/无遮挡内；成功回传 HOLD
     public static boolean hold(ServerPlayer player, UUID id)
     {
         WhimRegistry registry = of(player.serverLevel());
@@ -579,6 +610,7 @@ public final class WhimRegistry
         return true;
     }
 
+    // 维度卸载丢弃本表全部状态
     private void unload()
     {
         if (!this.tracked.isEmpty())
@@ -592,6 +624,7 @@ public final class WhimRegistry
     }
 
     @SubscribeEvent
+    // 仅 END 阶段，服务端每 tick 驱动本维度
     public static void onLevelTick(TickEvent.LevelTickEvent event)
     {
         if (event.phase == TickEvent.Phase.END && event.level instanceof ServerLevel level)
@@ -601,6 +634,7 @@ public final class WhimRegistry
     }
 
     @SubscribeEvent
+    // 登录补发当前可见灵感
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event)
     {
         if (event.getEntity() instanceof ServerPlayer player)
@@ -610,6 +644,7 @@ public final class WhimRegistry
     }
 
     @SubscribeEvent
+    // 换维度：清瞄准与各维度 sent，再对新维度重算
     public static void onPlayerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event)
     {
         if (event.getEntity() instanceof ServerPlayer player)
@@ -621,6 +656,7 @@ public final class WhimRegistry
     }
 
     @SubscribeEvent
+    // 登出清瞄准与 sent，避免残留
     public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event)
     {
         if (event.getEntity() instanceof ServerPlayer player)
@@ -630,6 +666,7 @@ public final class WhimRegistry
         }
     }
 
+    // 清 HELD 与所有维度中该玩家的 sent
     private static void forget(ServerPlayer player)
     {
         HELD.remove(player.getUUID());
@@ -643,6 +680,7 @@ public final class WhimRegistry
     @SubscribeEvent
     public static void onLevelUnload(LevelEvent.Unload event)
     {
+        // 维度卸载移除登记表并丢弃其状态
         if (event.getLevel() instanceof ServerLevel level)
         {
             WhimRegistry registry = REGISTRIES.remove(level.dimension());

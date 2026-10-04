@@ -13,8 +13,10 @@ public final class WhimData
 {
     public static final WhimData EMPTY = new WhimData(Map.of());
 
+    // 匹配 {名称:值} 组；锚数据是组外的剩余文本
     private static final Pattern GROUP = Pattern.compile("\\{([^{}]*)\\}");
 
+    // 组内以逗号/分号分隔多个 名称:值
     private static final Pattern SEPARATOR = Pattern.compile("[,;]");
 
     private final Map<String, String> values;
@@ -34,6 +36,7 @@ public final class WhimData
         return of(Map.of(name, value));
     }
 
+    // 不可变；返回覆盖/追加一个键的新实例
     public WhimData with(String name, String value)
     {
         Map<String, String> copy = new LinkedHashMap<>(this.values);
@@ -56,6 +59,7 @@ public final class WhimData
         return this.values.isEmpty();
     }
 
+    // 拆出所有 {名称:值} 组，剩余文本压掉多余空白后作为锚数据
     public static Split split(String tail)
     {
         String text = tail == null ? "" : tail;
@@ -74,6 +78,7 @@ public final class WhimData
         rest.append(text.substring(end));
         String anchorData = rest.toString().trim().replaceAll("\\s+", " ");
 
+        // 组外仍残留括号说明 {...} 未闭合
         if (anchorData.indexOf('{') >= 0 || anchorData.indexOf('}') >= 0)
         {
             throw new IllegalArgumentException("参数格式应为 {名称:值}，此处括号不匹配: " + text);
@@ -111,6 +116,7 @@ public final class WhimData
         }
     }
 
+    // 冒号与等号都算分隔符，取更靠前者
     private static int cut(String pair)
     {
         int colon = pair.indexOf(':');
@@ -124,6 +130,7 @@ public final class WhimData
         return equals < 0 ? colon : Math.min(colon, equals);
     }
 
+    // 网络编码：varInt 数量 + 若干 key/value，保持插入顺序
     public void write(FriendlyByteBuf buf)
     {
         buf.writeVarInt(this.values.size());
@@ -147,6 +154,7 @@ public final class WhimData
         return of(values);
     }
 
+    // anchorData 为不属于任何参数组的原始锚文本
     public record Split(WhimData data, String anchorData)
     {
     }

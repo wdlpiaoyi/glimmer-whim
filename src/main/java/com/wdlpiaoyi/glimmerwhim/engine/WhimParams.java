@@ -8,6 +8,7 @@ import java.util.Map;
 
 public final class WhimParams
 {
+    // 空参数集单例；plus 对空集走快捷返回
     public static final WhimParams NONE = new WhimParams(List.of());
 
     private final Map<String, WhimParam> params;
@@ -49,6 +50,7 @@ public final class WhimParams
         return this.params.get(name);
     }
 
+    // 合并参数集：other 同名覆盖 this
     public WhimParams plus(WhimParams other)
     {
         if (other.params.isEmpty())
@@ -105,6 +107,7 @@ public final class WhimParams
         return get(name) == null ? fallback : number(data, name);
     }
 
+    // 只做白名单校验（未知参数/非法值报错）；不填默认，读取时由 text/number 兜底
     public WhimData parse(WhimData raw)
     {
         if (raw.isEmpty())

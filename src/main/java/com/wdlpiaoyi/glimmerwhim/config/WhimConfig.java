@@ -4,14 +4,17 @@ import net.minecraftforge.common.ForgeConfigSpec;
 
 public final class WhimConfig
 {
+    // 自由视角按键模式：HOLD = 按住，TOGGLE = 切换
     public enum FreeLookMode
     {
         HOLD,
         TOGGLE
     }
 
+    // 客户端配置树：瞄准 / 自由视角 / 渲染
     public static final ForgeConfigSpec CLIENT_SPEC;
 
+    // 两端通用配置树：灵感 / 命令 / 调试
     public static final ForgeConfigSpec COMMON_SPEC;
 
     private static final ForgeConfigSpec.BooleanValue AIM_THROUGH_WALLS;
@@ -42,6 +45,7 @@ public final class WhimConfig
 
     private static final ForgeConfigSpec.ConfigValue<String> RENDER_DEV_COLOR_ELEMENT_ALT;
 
+    // 颜色字符串解析失败时的兜底 RGBA
     private static final float[] FALLBACK_DEV_ELEMENT = { 1.0F, 0.0F, 1.0F, 1.0F };
 
     private static final float[] FALLBACK_DEV_ELEMENT_ALT = { 0.0F, 0.0F, 0.0F, 1.0F };
@@ -233,6 +237,7 @@ public final class WhimConfig
         return DEBUG_VERBOSE_LOG.get();
     }
 
+    // 解析 #RRGGBB 或 #AARRGGBB；6 位补不透明 alpha；长度/字符非法时回退 fallback
     private static float[] color(String text, float[] fallback)
     {
         String hex = text == null ? "" : text.trim();

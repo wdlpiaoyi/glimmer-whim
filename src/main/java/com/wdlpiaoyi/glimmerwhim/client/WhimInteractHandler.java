@@ -22,9 +22,11 @@ import org.lwjgl.glfw.GLFW;
 
 public final class WhimInteractHandler
 {
+    // 鼠标右键；不 consume 原版 use，两者照常触发
     private static final KeyMapping INTERACT = new KeyMapping("key.glimmerwhim.interact", InputConstants.Type.MOUSE,
             GLFW.GLFW_MOUSE_BUTTON_RIGHT, "key.categories.glimmerwhim");
 
+    // 按住期间维护的链快照；null 表示未在交互
     private static List<UUID> chain;
     private static boolean wasDown;
 
@@ -57,6 +59,7 @@ public final class WhimInteractHandler
 
         if (player == null || minecraft.screen != null)
         {
+            // 掉线或打开界面时作废链，避免残留
             if (chain != null)
             {
                 if (minecraft.getConnection() != null)
@@ -76,6 +79,7 @@ public final class WhimInteractHandler
 
         if (down)
         {
+            // 按下沿：以当前瞄准为根开链并即时通知服务端
             if (!wasDown)
             {
                 chain = null;
@@ -122,6 +126,7 @@ public final class WhimInteractHandler
         {
             if (minecraft.getConnection() != null && minecraft.level != null)
             {
+                // 松开沿：定稿链，并把视线命中目标交给服务端结算
                 WhimTarget target = WhimTargeting.pick(minecraft.level, player, player.getEyePosition(),
                         FreeLook.viewVector(player, 1.0F));
 

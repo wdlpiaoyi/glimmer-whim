@@ -14,6 +14,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
+// S2C：按维度移除；dimension 只传 ResourceLocation，解码时重建为维度 key
 public record WhimRemovePacket(ResourceKey<Level> dimension, UUID id, WhimRemoveReason reason)
 {
     public static void encode(WhimRemovePacket packet, FriendlyByteBuf buf)
@@ -34,6 +35,7 @@ public record WhimRemovePacket(ResourceKey<Level> dimension, UUID id, WhimRemove
 
     public static void handle(WhimRemovePacket packet, Supplier<NetworkEvent.Context> context)
     {
+        // 仅客户端执行；服务端收到的调用为空操作
         context.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientWhimCache.remove(packet)));
         context.get().setPacketHandled(true);
     }

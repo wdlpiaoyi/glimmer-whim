@@ -9,6 +9,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
+// C2S：按下边沿即时锁定链根，id 非空
 public record WhimHoldPacket(UUID id)
 {
     public static void encode(WhimHoldPacket packet, FriendlyByteBuf buf)

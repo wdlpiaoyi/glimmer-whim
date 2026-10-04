@@ -11,8 +11,10 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
+// C2S：中断/清理时作废整条链
 public record WhimVoidPacket(List<UUID> chain)
 {
+    // 解码上限，防对端伪造超长链导致大分配
     private static final int MAX_CHAIN = 64;
 
     public static void encode(WhimVoidPacket packet, FriendlyByteBuf buf)

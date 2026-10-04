@@ -20,6 +20,7 @@ import net.minecraft.world.phys.Vec3;
 
 public final class Traces
 {
+    // 默认白；glow 为半透明白
     private static final float[] DEFAULT_COLOR = { 1.0F, 1.0F, 1.0F, 1.0F };
     private static final float[] GLOW_COLOR = { 1.0F, 1.0F, 1.0F, 0.5F };
 
@@ -30,6 +31,7 @@ public final class Traces
     public static void line(PoseStack pose, List<Vec3> points, Vec3 endpoint, float fade, WhimData data,
             WhimParams params)
     {
+        // alpha 随 fade 线性衰减，fade=0 时完全不透明
         float[] color = DEFAULT_COLOR;
         stroke(pose, points, endpoint, color[0], color[1], color[2], (1.0F - fade) * color[3],
                 (float) WhimConfig.traceWidth());
@@ -38,6 +40,7 @@ public final class Traces
     public static void hue(PoseStack pose, List<Vec3> points, Vec3 endpoint, float fade, WhimData data,
             WhimParams params)
     {
+        // 色相按 5 秒周期循环，基色取 dev 元素主色
         float shift = (float) ((System.currentTimeMillis() % 5000L) / 5000.0D);
         float[] color = DefaultRender.rotateHue(WhimConfig.renderDevColorElement(), shift);
         stroke(pose, points, endpoint, color[0], color[1], color[2], (1.0F - fade) * color[3],
@@ -47,6 +50,7 @@ public final class Traces
     public static void glow(PoseStack pose, List<Vec3> points, Vec3 endpoint, float fade, WhimData data,
             WhimParams params)
     {
+        // 双倍线宽半透明，叠出辉光
         stroke(pose, points, endpoint, GLOW_COLOR[0], GLOW_COLOR[1], GLOW_COLOR[2], (1.0F - fade) * GLOW_COLOR[3],
                 (float) WhimConfig.traceWidth() * 2.0F);
     }
@@ -54,6 +58,7 @@ public final class Traces
     private static void stroke(PoseStack pose, List<Vec3> points, Vec3 endpoint, float r, float g, float b, float a,
             float width)
     {
+        // 把末端点补到折线尾部，用 DEBUG_LINE_STRIP 一次连线
         List<Vec3> all = new ArrayList<>(points.size() + 1);
         all.addAll(points);
 

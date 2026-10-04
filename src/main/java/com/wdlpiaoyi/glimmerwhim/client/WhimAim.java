@@ -16,6 +16,7 @@ import net.minecraft.world.phys.Vec3;
 public final class WhimAim
 {
     private static UUID aimed;
+    // 上次已发给服务端的值，避免每 tick 重复发包
     private static UUID sent;
 
     private WhimAim()
@@ -50,6 +51,8 @@ public final class WhimAim
         sent = null;
     }
 
+    // 仅当目标变化时才发包
+    // 遍历 reach 内可交互灵感，取命中测试最近者，按遮挡配置与视线剔除
     public static UUID update(ClientLevel level, Vec3 eye, Vec3 look, float partialTick)
     {
         ClientWhimCache.WhimView best = null;
@@ -86,7 +89,9 @@ public final class WhimAim
             }
 
             if ((!WhimConfig.aimThroughWalls() || whim.type().requiresLineOfSight())
-                    && WhimSight.occluded(level, eye, at, Minecraft.getInstance().player))
+                    && WhimSight.occluded(level, eye, at, Minecraft.getInstance().player,
+                            whim.type().occludedByBlocks(whim.data()), whim.type().occludedByEntities(whim.data()),
+                            whim.type().entityOcclusionRenderBox(whim.data())))
             {
                 continue;
             }

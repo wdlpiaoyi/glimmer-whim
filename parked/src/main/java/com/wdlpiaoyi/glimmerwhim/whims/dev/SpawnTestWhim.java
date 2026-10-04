@@ -1,3 +1,4 @@
+// parked：已移出构建。恢复到 src 前需按当前引擎 API 校对（如 modid 用 GlimmerWhim.MODID；WhimChain 已无 value()/factor()；周期生成器 spawnInterval 已删除）。
 package com.wdlpiaoyi.glimmerwhim.whims.dev;
 
 import java.util.Optional;

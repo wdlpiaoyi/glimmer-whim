@@ -18,9 +18,11 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
+// S2C：召唤时同步维度、id、锚点、元素与数据
 public record WhimSummonPacket(ResourceKey<Level> dimension, UUID id, WhimAnchor anchor, ResourceLocation element,
         WhimData data)
 {
+    // 由服务端 Whim 构造；元素用 type().id()
     public static WhimSummonPacket of(ResourceKey<Level> dimension, Whim whim)
     {
         return new WhimSummonPacket(dimension, whim.id(), whim.anchor(), whim.type().id(), whim.data());
@@ -28,6 +30,7 @@ public record WhimSummonPacket(ResourceKey<Level> dimension, UUID id, WhimAnchor
 
     public static void encode(WhimSummonPacket packet, FriendlyByteBuf buf)
     {
+        // 字段顺序：dimension(RL)、id、anchor、element(RL)、data，需与 decode 严格对称
         buf.writeResourceLocation(packet.dimension.location());
         buf.writeUUID(packet.id);
         WhimAnchors.write(buf, packet.anchor);

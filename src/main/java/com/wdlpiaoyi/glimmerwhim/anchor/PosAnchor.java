@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 
 import net.minecraft.commands.CommandSourceStack;
@@ -20,7 +21,7 @@ import net.minecraft.world.phys.Vec3;
 
 public final class PosAnchor implements WhimAnchor
 {
-    public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "pos");
+    public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath(GlimmerWhim.MODID, "pos");
 
     private static final String WRONG = "锚数据需要三个坐标: x y z；任一分量写 ~ 表示执行者的位置";
 
@@ -45,6 +46,7 @@ public final class PosAnchor implements WhimAnchor
         buf.writeDouble(this.position.z);
     }
 
+    // 固定世界坐标，与 eye/partialTick 无关
     @Override
     public Optional<Vec3> position(Level level, Vec3 eye, float partialTick)
     {
@@ -56,6 +58,7 @@ public final class PosAnchor implements WhimAnchor
         return new PosAnchor(new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()));
     }
 
+    // 建议 ~ ~ ~ 与视线拾取点（受 commandSuggestReach 限制）
     public static Collection<String> suggestData(CommandSourceStack source)
     {
         ServerPlayer player = source.getPlayer();
@@ -71,6 +74,7 @@ public final class PosAnchor implements WhimAnchor
                 String.format(Locale.ROOT, "%.3f %.3f %.3f", hit.x, hit.y, hit.z));
     }
 
+    // 空数据取执行者位置；Vec3Argument 支持 ~ 相对坐标；尾部多余内容报错
     public static PosAnchor parse(CommandSourceStack source, String data)
     {
         if (data == null || data.isBlank())

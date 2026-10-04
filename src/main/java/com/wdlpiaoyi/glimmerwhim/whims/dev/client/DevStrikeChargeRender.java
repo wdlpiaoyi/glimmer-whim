@@ -22,6 +22,7 @@ public final class DevStrikeChargeRender
     {
         Minecraft minecraft = Minecraft.getInstance();
         float time = minecraft.level == null ? 0.0F : minecraft.level.getGameTime() + minecraft.getFrameTime();
+        // time 用游戏刻 + 帧插值，保证客户端帧率无关的平滑自转
         Quaternionf spin = new Quaternionf().rotationAxis(time * SPIN_SPEED, (float) dir.x, (float) dir.y, (float) dir.z);
 
         pose.pushPose();

@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
+import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
+
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
@@ -14,14 +16,16 @@ import net.minecraft.world.phys.Vec3;
 
 public final class RayAnchor implements WhimAnchor
 {
-    public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "ray");
+    public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath(GlimmerWhim.MODID, "ray");
 
+    // 默认距离 8 格
     private static final double DEFAULT_DISTANCE = 8.0D;
 
     private final Vec3 direction;
 
     private final double distance;
 
+    // 方向归一化，distance 为方块数
     public RayAnchor(Vec3 direction, double distance)
     {
         this.direction = direction.normalize();
@@ -43,6 +47,7 @@ public final class RayAnchor implements WhimAnchor
         buf.writeDouble(this.distance);
     }
 
+    // eye + 方向×距离；锚点随玩家视线实时移动
     @Override
     public Optional<Vec3> position(Level level, Vec3 eye, float partialTick)
     {
@@ -54,6 +59,7 @@ public final class RayAnchor implements WhimAnchor
         return new RayAnchor(new Vec3(buf.readFloat(), buf.readFloat(), buf.readFloat()), buf.readDouble());
     }
 
+    // 建议 ~ ~ ~、当前视线向量与「视线 + 默认距离」
     public static Collection<String> suggestData(CommandSourceStack source)
     {
         ServerPlayer player = source.getPlayer();
@@ -64,6 +70,7 @@ public final class RayAnchor implements WhimAnchor
                 "~ ~ ~ " + (int) DEFAULT_DISTANCE);
     }
 
+    // 空数据 = 视线方向 + 默认距离；分量 ~ 取视线方向而非位置
     public static RayAnchor parse(CommandSourceStack source, String data)
     {
         if (data == null || data.isBlank())
@@ -83,6 +90,7 @@ public final class RayAnchor implements WhimAnchor
 
         for (int i = 0; i < 3; i++)
         {
+            // 分量的 ~ 取视线方向对应轴
             if (parts[i].equals("~"))
             {
                 if (look == null)
@@ -121,6 +129,7 @@ public final class RayAnchor implements WhimAnchor
         return new RayAnchor(direction, distance);
     }
 
+    // 距离必须为正数
     private static double distance(String text)
     {
         double value;

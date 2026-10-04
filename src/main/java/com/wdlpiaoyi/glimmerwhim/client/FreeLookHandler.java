@@ -13,6 +13,7 @@ import org.lwjgl.glfw.GLFW;
 
 public final class FreeLookHandler
 {
+    // 默认左 Alt；HOLD 模式长按生效，否则单击切换
     private static final KeyMapping KEY = new KeyMapping("key.glimmerwhim.freelook",
             GLFW.GLFW_KEY_LEFT_ALT, "key.categories.glimmerwhim");
 
@@ -74,6 +75,7 @@ public final class FreeLookHandler
                 clicked = true;
             }
 
+            // 切换模式：仅在上升沿且无界面时切
             if (!wasDown && (down || clicked) && !ui)
             {
                 FreeLook.set(!FreeLook.active(), player);
@@ -84,6 +86,7 @@ public final class FreeLookHandler
     }
 
     @SubscribeEvent
+    // 在相机角度事件里替换偏航/俯仰，仅覆盖渲染视角，不改实体朝向
     public static void onCameraAngles(ViewportEvent.ComputeCameraAngles event)
     {
         LocalPlayer player = Minecraft.getInstance().player;

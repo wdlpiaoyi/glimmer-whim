@@ -1,6 +1,6 @@
 # 开发测试内容
 
-本模组的正式灵感内容尚未加入。源码树里目前只保留开发中的 `dev_strike` 与它的蓄力视觉体 `dev_strike_charge`，位于 `src/main/java/com/wdlpiaoyi/glimmerwhim/whims/dev/`。
+本模组的正式灵感内容尚未加入。源码树里目前只保留开发中的 `dev_strike` 与它的蓄力视觉体 `dev_strike_charge`、以及遮挡测试用 `dev_sighttest`，位于 `src/main/java/com/wdlpiaoyi/glimmerwhim/whims/dev/`。
 
 其余测试灵感已移到仓库根的 `parked/` 下（镜像原包的目录结构，不在源码树里、不参与构建）。需要时把对应文件移回 `whims/dev/`，并在 `DevWhims` / `DevRenders` 里重新登记即可。
 
@@ -14,6 +14,11 @@
 | --- | --- |
 | `dev_strike` | 近战命中时按概率在水平前方、抬到高空的天空处生成面片（被方块挡住则不生成），默认大小 ×4，只有该玩家可见，生成音效也只发给本人（该位置与寿命由它的 `spawn()` 声明，命令未指定锚时也复用）。拖到可攻击的实体上（优先该玩家最近攻击过的实体，若无任何记录则接受任意实体）：目标发光、warden 蓄力音效（视距内可见可闻），原地留一个自转、不可再交互的蓄力面片，动画结束后在目标（若已消失则在其消失原地）召唤闪电并造成大量伤害；选错目标播放火把熄灭音效。 |
 | `dev_strike_charge` | `dev_strike` 的蓄力视觉体：自转、不可交互、不可被瞄准或串联。 |
+| `dev_sighttest` | 遮挡测试用：`{blocks:true\|false}`（默认 true）决定是否被不透明方块挡住，`{entities:true\|false}`（默认 false）决定是否被生物挡住，`{geometry:hitbox\|render}`（默认 hitbox）决定实体遮挡按攻击碰撞箱还是渲染剔除框判定；无锚时生成在视线前方 8 格。被使用时在聊天栏回显其当前开关。 |
+
+视线开关：每个灵感类型用 `occludedByBlocks(data)` / `occludedByEntities(data)` 声明「什么能挡住它」，`WhimType` 默认方块挡、生物不挡。实体判定几何用 `entityOcclusionRenderBox(data)` 选择攻击箱/渲染剔除框（默认攻击箱）。`dev_strike` 即用该默认（方块挡、生物不挡）。
+
+渲染遮挡：声明被实体遮挡的灵感在绘制时开启深度测试，由场景深度真正挡住像素（因此可出现部分遮挡，露出一半）；其余灵感不做深度测试，保持透过。注意深度测试无法区分方块与实体。方块遮挡始终以灵感中心点单射线 + `canOcclude()` 判定。
 
 ## 稳定性
 

@@ -15,36 +15,38 @@ import net.minecraft.resources.ResourceLocation;
 
 public final class WhimAnchors
 {
+    // 命令字符串 -> 锚实例；失败抛 IllegalArgumentException
     @FunctionalInterface
     public interface AnchorDataParser
     {
         WhimAnchor parse(CommandSourceStack source, String data);
     }
 
-    private record AnchorType(Function<FriendlyByteBuf, WhimAnchor> reader, AnchorDataParser parser,
-            Function<CommandSourceStack, Collection<String>> suggestions, String hint)
+    // 一种锚的读取、解析、补全与提示
+    private record AnchorType(ResourceLocation type, Function<FriendlyByteBuf, WhimAnchor> reader,
+            AnchorDataParser parser, Function<CommandSourceStack, Collection<String>> suggestions, String hint)
     {
     }
+
+    // 注册顺序即补全/展示顺序
+    private static final List<AnchorType> ANCHORS = List.of(
+            new AnchorType(RayAnchor.TYPE, RayAnchor::read, RayAnchor::parse, RayAnchor::suggestData,
+                    "dx dy dz [distance]；~ 表示视线方向"),
+            new AnchorType(PosAnchor.TYPE, PosAnchor::read, PosAnchor::parse, PosAnchor::suggestData,
+                    "x y z；~ 表示当前位置"));
 
     private static final Map<ResourceLocation, AnchorType> TYPES = new LinkedHashMap<>();
 
     static
     {
-        register(RayAnchor.TYPE, RayAnchor::read, RayAnchor::parse, RayAnchor::suggestData,
-                "dx dy dz [distance]；~ 表示视线方向");
-
-        register(PosAnchor.TYPE, PosAnchor::read, PosAnchor::parse, PosAnchor::suggestData,
-                "x y z；~ 表示当前位置");
+        for (AnchorType anchor : ANCHORS)
+        {
+            TYPES.put(anchor.type(), anchor);
+        }
     }
 
     private WhimAnchors()
     {
-    }
-
-    public static void register(ResourceLocation type, Function<FriendlyByteBuf, WhimAnchor> reader,
-            AnchorDataParser parser, Function<CommandSourceStack, Collection<String>> suggestions, String hint)
-    {
-        TYPES.put(type, new AnchorType(reader, parser, suggestions, hint));
     }
 
     public static Collection<ResourceLocation> types()
@@ -78,6 +80,7 @@ public final class WhimAnchors
         return anchor.parser().parse(source, data);
     }
 
+    // 先写入临时 buffer，再写 type + 长度 + 内容；未知类型可安全跳过
     public static void write(FriendlyByteBuf buf, WhimAnchor anchor)
     {
         FriendlyByteBuf payload = new FriendlyByteBuf(Unpooled.buffer());
@@ -89,6 +92,7 @@ public final class WhimAnchors
         buf.writeBytes(payload);
     }
 
+    // 未知锚类型跳过其字节并返回 null，保证兼容
     public static WhimAnchor read(FriendlyByteBuf buf)
     {
         ResourceLocation type = buf.readResourceLocation();

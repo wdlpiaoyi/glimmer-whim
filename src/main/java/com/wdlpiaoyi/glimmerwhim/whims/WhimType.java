@@ -21,26 +21,31 @@ public interface WhimType
 
     WhimParams params();
 
+    // 类型参数 + 内置 lifetime + visibility；后加者覆盖同名
     default WhimParams effectiveParams()
     {
         return params().plus(WhimParams.lifetime(defaultLifetime())).plus(WhimParams.visibility());
     }
 
+    // -1 = 永久
     default int defaultLifetime()
     {
         return -1;
     }
 
+    // 默认仅 ELEMENT 角色
     default Set<WhimRole> roles()
     {
         return EnumSet.of(WhimRole.ELEMENT);
     }
 
+    // 作为链修饰符时输出的数值；空 = 无
     default Optional<WhimModifier> modifier(WhimData data)
     {
         return Optional.empty();
     }
 
+    // 根元素是否接受该交互目标
     default boolean acceptsTarget(WhimTarget target)
     {
         return true;
@@ -61,30 +66,55 @@ public interface WhimType
         return false;
     }
 
+    default boolean occludedByBlocks(WhimData data)
+    {
+        return true;
+    }
+
+    default boolean occludedByEntities(WhimData data)
+    {
+        return false;
+    }
+
+    default boolean entityOcclusionRenderBox(WhimData data)
+    {
+        return false;
+    }
+
     default boolean interactable()
     {
         return true;
     }
 
+    // 可作链根 = 具 ELEMENT 角色
     default boolean canRoot()
     {
         return roles().contains(WhimRole.ELEMENT);
     }
 
+    // 可入链 = interactable
     default boolean canChain()
     {
         return interactable();
     }
 
+    // 真则被 HELD 时暂停寿命倒计时
     default boolean pausesWhileHeld()
     {
         return false;
     }
 
+    // 事件回调；可调用 event.remove() 请求移除
     default void on(WhimEvent event)
     {
     }
 
+    // 注册时的一次性初始化钩子
+    default void bind()
+    {
+    }
+
+    // 无显式锚时生成默认落点；空表示必须指定锚
     default Optional<WhimSpawn> spawn(WhimSpawnContext context)
     {
         return Optional.empty();

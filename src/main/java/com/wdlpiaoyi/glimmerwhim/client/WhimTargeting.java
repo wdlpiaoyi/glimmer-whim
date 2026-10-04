@@ -18,6 +18,7 @@ public final class WhimTargeting
     {
     }
 
+    // 先做方块裁剪，再在裁剪范围内找可拾取实体；实体优先于方块
     public static WhimTarget pick(ClientLevel level, Entity source, Vec3 eye, Vec3 look)
     {
         double reach = WhimReach.blocks();
@@ -25,6 +26,7 @@ public final class WhimTargeting
         BlockHitResult block = level.clip(
                 new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, source));
         Vec3 limit = block.getType() == HitResult.Type.MISS ? end : block.getLocation();
+        // 以裁剪终点为界扩展包围盒并膨胀 1 格，沿用原版投射物拾取范围
         AABB bounds = source.getBoundingBox().expandTowards(limit.subtract(eye)).inflate(1.0D);
         EntityHitResult entity = ProjectileUtil.getEntityHitResult(level, source, eye, limit, bounds,
                 candidate -> candidate != source && !candidate.isSpectator() && candidate.isPickable());

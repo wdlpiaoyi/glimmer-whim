@@ -4,7 +4,7 @@ import java.util.List;
 
 public final class WhimChain
 {
-    private final List<Whim> order;
+    private final List<Whim> order; // order[0] 为根元素，其余为按点击顺序叠加的修饰符
     private final WhimTarget target;
 
     public WhimChain(List<Whim> order, WhimTarget target)

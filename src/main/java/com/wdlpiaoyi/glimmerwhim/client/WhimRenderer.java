@@ -50,16 +50,61 @@ public final class WhimRenderer
     {
         void draw(PoseStack pose, List<Vec3> points, Vec3 endpoint, float fade, WhimData data, WhimParams params);
 
+        // 默认淡出时长，单位毫秒
         default float fadeMillis()
         {
             return 300.0F;
         }
     }
 
-    private record Drawable(ClientWhimCache.WhimView whim, WhimParams params, Vec3 at)
+    public static final class RenderSpec
+    {
+        private Drawer draw = DefaultRender::draw;
+
+        private Hit hit = DefaultRender::hit;
+
+        private Highlight highlight = DefaultRender::outline;
+
+        private Trace elementTrace;
+
+        private Trace modifierTrace;
+
+        public RenderSpec draw(Drawer draw)
+        {
+            this.draw = draw;
+            return this;
+        }
+
+        public RenderSpec hit(Hit hit)
+        {
+            this.hit = hit;
+            return this;
+        }
+
+        public RenderSpec highlight(Highlight highlight)
+        {
+            this.highlight = highlight;
+            return this;
+        }
+
+        public RenderSpec elementTrace(Trace elementTrace)
+        {
+            this.elementTrace = elementTrace;
+            return this;
+        }
+
+        public RenderSpec modifierTrace(Trace modifierTrace)
+        {
+            this.modifierTrace = modifierTrace;
+            return this;
+        }
+    }
+
+    private record Drawable(ClientWhimCache.WhimView whim, WhimParams params, Vec3 at, boolean depth)
     {
     }
 
+    // 注册表均按元素 id 索引；除 modifierTrace 外未注册都会回落到默认实现
     private static final Map<ResourceLocation, Drawer> DRAWERS = new LinkedHashMap<>();
 
     private static final Map<ResourceLocation, Hit> HITS = new LinkedHashMap<>();
@@ -74,21 +119,20 @@ public final class WhimRenderer
     {
     }
 
-    public static void register(WhimType type, Drawer drawer, Hit hit, Highlight highlight, Trace elementTrace,
-            Trace modifierTrace)
+    public static void register(WhimType type, RenderSpec spec)
     {
-        DRAWERS.put(type.id(), drawer);
-        HITS.put(type.id(), hit);
-        HIGHLIGHTS.put(type.id(), highlight);
+        DRAWERS.put(type.id(), spec.draw);
+        HITS.put(type.id(), spec.hit);
+        HIGHLIGHTS.put(type.id(), spec.highlight);
 
-        if (elementTrace != null)
+        if (spec.elementTrace != null)
         {
-            ELEMENT_TRACES.put(type.id(), elementTrace);
+            ELEMENT_TRACES.put(type.id(), spec.elementTrace);
         }
 
-        if (modifierTrace != null)
+        if (spec.modifierTrace != null)
         {
-            MODIFIER_TRACES.put(type.id(), modifierTrace);
+            MODIFIER_TRACES.put(type.id(), spec.modifierTrace);
         }
     }
 
@@ -120,6 +164,7 @@ public final class WhimRenderer
     @SubscribeEvent
     public static void onRenderLevelStage(RenderLevelStageEvent event)
     {
+        // 选在粒子之后：深度已就绪，可做实体遮挡判定
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES)
         {
             return;
@@ -141,10 +186,10 @@ public final class WhimRenderer
         PoseStack pose = event.getPoseStack();
         UUID aimed = WhimAim.update(level, eye, look, partialTick);
 
+        // 半透明叠加：开混合、关剔除、关深度写入
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableCull();
-        RenderSystem.disableDepthTest();
         RenderSystem.depthMask(false);
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
 
@@ -166,19 +211,33 @@ public final class WhimRenderer
                 continue;
             }
 
-            if (whim.type().requiresLineOfSight()
-                    && WhimSight.occluded(level, eye, at, Minecraft.getInstance().player))
+            // 声明被实体遮挡的类型开深度测试，使其能被实体挡住
+            boolean depth = whim.type().occludedByEntities(whim.data());
+
+            if (!depth && whim.type().requiresLineOfSight()
+                    && WhimSight.occluded(level, eye, at, Minecraft.getInstance().player,
+                            whim.type().occludedByBlocks(whim.data()), false, false))
             {
                 continue;
             }
 
-            drawable.add(new Drawable(whim, whim.type().params(), at));
+            drawable.add(new Drawable(whim, whim.type().params(), at, depth));
         }
 
+        // 远到近排序，保证半透明叠加顺序
         drawable.sort(Comparator.comparingDouble(entry -> -entry.at().distanceToSqr(eye)));
 
         for (Drawable entry : drawable)
         {
+            if (entry.depth())
+            {
+                RenderSystem.enableDepthTest();
+            }
+            else
+            {
+                RenderSystem.disableDepthTest();
+            }
+
             ClientWhimCache.WhimView whim = entry.whim();
             Vec3 dir = entry.at().subtract(eye).normalize();
             Vec3 position = entry.at().subtract(camera);
@@ -198,8 +257,10 @@ public final class WhimRenderer
             pose.popPose();
         }
 
+        RenderSystem.disableDepthTest();
         WhimTrace.render(pose, level, eye, look, camera, partialTick);
 
+        // 恢复渲染状态，避免影响后续阶段
         RenderSystem.depthMask(true);
         RenderSystem.enableDepthTest();
         RenderSystem.enableCull();

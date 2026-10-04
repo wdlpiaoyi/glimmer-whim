@@ -27,16 +27,19 @@ public final class WhimParam
         return new WhimParam(name, defaultValue, list::contains, String.join(" 或 ", list), list);
     }
 
+    // 接受任意正 double（排除 NaN/Inf）
     public static WhimParam positiveNumber(String name, String defaultValue)
     {
         return new WhimParam(name, defaultValue, WhimParam::isPositive, "正数", List.of());
     }
 
+    // -1 或 1..Integer.MAX_VALUE
     public static WhimParam lifetime(String defaultValue)
     {
         return new WhimParam("lifetime", defaultValue, WhimParam::isLifetime, "正整数或 -1（永久）", List.of());
     }
 
+    // 非空白即可：all / me / 玩家名 / UUID；前两者参与补全
     public static WhimParam player(String name, String defaultValue)
     {
         return new WhimParam(name, defaultValue, value -> !value.isBlank(), "all、me 或玩家名", List.of("all", "me"));
@@ -55,6 +58,7 @@ public final class WhimParam
         }
     }
 
+    // 先用 long 解析再判范围，避免 int 溢出
     private static boolean isLifetime(String value)
     {
         try

@@ -26,7 +26,9 @@ public final class ClientWhimCache
     {
     }
 
+    // 客户端镜像，仅用于渲染与瞄准，服务端才是权威
     private static final Map<UUID, WhimView> WHIMES = new LinkedHashMap<>();
+    // 缓存所属维度；跨维度或重连时整体清空
     private static ResourceKey<Level> dimension;
 
     private ClientWhimCache()
@@ -35,6 +37,7 @@ public final class ClientWhimCache
 
     public static void accept(WhimSummonPacket packet)
     {
+        // 维度不符、锚点为空或元素未知时直接丢弃
         if (!sameWorld(packet.dimension()) || packet.anchor() == null)
         {
             return;
@@ -81,6 +84,7 @@ public final class ClientWhimCache
         dimension = null;
     }
 
+    // 维度不符返回 false；首次匹配到当前维度时清掉旧维度缓存
     private static boolean sameWorld(ResourceKey<Level> incoming)
     {
         if (incoming.equals(dimension))
