@@ -1,0 +1,45 @@
+# AGENTS.md
+
+Minecraft Forge 1.20.1 mod, modid `glimmerwhim`, package `com.wdlpiaoyi.glimmerwhim`, version `0.1.0`.
+Currently a framework/testbed: engine, interaction, chaining and rendering exist; official `whims/` content does not (only `whims/dev/`).
+
+## Build & run
+
+- Build **offline**: `.\gradlew.bat compileJava --offline` (POSIX: `./gradlew ...`). Dependencies are cached locally; prefer `--offline`.
+- Java **17** toolchain is required by ForgeGradle. If the Gradle home is missing, point `GRADLE_USER_HOME` at the repo's sandbox `.gradle-home/` and make a local JDK 17 available (the machine has HMCL JDKs; see the gitignored `环境提示.md`).
+- `gradle.properties` sets `org.gradle.daemon=false`, so every build is a cold JVM; `runClient` takes minutes.
+- Full build: `.\gradlew.bat build --offline` → `build/libs/`. Dev client: `.\gradlew.bat runClient --offline`; working dir is `run/`, log is `run/logs/latest.log`.
+- **There is no test suite.** Verification = `compileJava` exiting clean plus a manual `runClient` session.
+
+## Architecture
+
+Server-authoritative core lives in `engine/`:
+- `engine/WhimRegistry.java` — per-dimension registries; visibility sync (`sent` set, `SYNC_INTERVAL=20`), aim/hold/use, removal.
+- `engine/WhimLifecycle.java` — the **single** spawn entry (`summon(...)`); all `new Whim(...)` goes through it.
+- `engine/Whim.java` / `WhimData.java` / `WhimParams.java` / `WhimEvent.java` — data model, `{name:value}` parsing, typed params, event kinds (`HIGHLIGHT`/`UNHIGHLIGHT`/`HOLD`/`USE`/`TICK`).
+- `engine/WhimSight.java` — occlusion (center ray; blocks via `canOcclude`; entities via bounding box, hit-box or render-culling box).
+
+Other packages:
+- `anchor/` — placement only; `anchor/WhimAnchors.ANCHORS` is the anchor registry (type + `read`/`parse`/`suggestData` + hint).
+- `whims/` — `WhimType` implementations; `whims/WhimContent.register(...)` also calls `WhimType.bind()` for Forge-event hooks; `whims/client/` holds draw code; `whims/dev/` holds dev/test content.
+- `client/` render/aim/interact/freelook, `net/` packets, `command/` the `/glimmerwhim` tree, `config/` config, `mixin/` client mixins.
+
+## Registration & test content
+
+- Registration is centralized by design: a new whim = implement `whims/WhimType`, `WhimContent.register(...)`, override `bind()` if it needs the Forge event bus, and register client rendering in a **client-side** class. A new anchor = one row in `anchor/WhimAnchors.ANCHORS`.
+- Dev content activates by presence: `whims/dev/` self-registers via `@Mod.EventBusSubscriber`; there is no runtime toggle. Moving files out of `whims/dev/` disables them.
+- `parked/` mirrors the source package but is **not compiled**. Restoring a parked file requires moving it back into `whims/dev/` and re-registering it in `DevWhims`/`DevRenders`.
+
+## Conventions
+
+- Comments, docs and in-game strings are **Simplified Chinese**. Commit messages are a single concise Chinese line (no `feat:`/type prefix).
+- Code style: Allman braces (opening brace on its own line), 4-space indent, one top-level class per file.
+- Comments should be sparse and point out non-obvious mechanics/invariants/magic numbers only — not narration.
+- Never commit `环境提示.md`, `设计纲要.md`, `.toolchain/`, `.gradle-home/` (gitignored), nor any absolute local paths.
+
+## Gotchas
+
+- Mixins: after editing `mixin/`, confirm the refmap regenerated and targets mapped (e.g. `CommandSuggestions.formatText` → `m_93892_`, `FormattedCharSequence.forward` → `m_13714_`) in `build/tmp/compileJava/compileJava-refmap.json`.
+- Client render registration must live in a `Dist.CLIENT`-only class; render classes cannot load on the server.
+- `/glimmerwhim summon <type> [anchor] [anchorData] {data}`: the anchor is not implicit — omit it (or write `default`) only when the whim declares its own `spawn()`; otherwise the command errors. Anchor data is positional and outside `{}`; `{...}` holds `name:value` pairs separated by `,` or `;`.
+- `lifetime` is in **ticks** (`-1` = permanent); client trace durations are in **milliseconds**.
