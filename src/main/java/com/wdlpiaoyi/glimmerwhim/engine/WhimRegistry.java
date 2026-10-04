@@ -21,6 +21,7 @@ import com.wdlpiaoyi.glimmerwhim.net.WhimNetwork;
 import com.wdlpiaoyi.glimmerwhim.net.WhimRemovePacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimSummonPacket;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimRole;
+import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -136,6 +137,8 @@ public final class WhimRegistry
                 this.sync(player);
             }
         }
+
+        WhimSpawner.tick(this.level);
     }
 
     private void sync(ServerPlayer player)
@@ -205,6 +208,35 @@ public final class WhimRegistry
                         new WhimRemovePacket(this.level.dimension(), id, WhimRemoveReason.OUT_OF_RANGE));
             }
         }
+    }
+
+    public int countNear(ServerPlayer player, double radius)
+    {
+        return countNear(player, radius, null);
+    }
+
+    public int countNear(ServerPlayer player, double radius, WhimType type)
+    {
+        Vec3 eye = player.getEyePosition();
+        double square = radius * radius;
+        int count = 0;
+
+        for (Tracked entry : this.tracked.values())
+        {
+            if (type != null && entry.whim().type() != type)
+            {
+                continue;
+            }
+
+            Vec3 at = position(entry.whim(), this.level, eye);
+
+            if (at != null && at.distanceToSqr(eye) <= square)
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     private static Vec3 position(Whim whim, Level level, Vec3 eye)

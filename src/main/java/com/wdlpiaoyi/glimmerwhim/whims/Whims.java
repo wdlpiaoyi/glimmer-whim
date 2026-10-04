@@ -16,6 +16,7 @@ public final class Whims
     static
     {
         register(DevWhim.INSTANCE);
+        register(SpawnTestWhim.INSTANCE);
         register(DevMarkWhim.INSTANCE);
         register(DevEntityWhim.INSTANCE);
         register(DevCoordWhim.INSTANCE);
@@ -53,6 +54,11 @@ public final class Whims
     public static Collection<ResourceLocation> ids()
     {
         return TYPES.keySet();
+    }
+
+    public static Collection<WhimType> types()
+    {
+        return TYPES.values();
     }
 
     public static Optional<ResourceLocation> resolve(String text)

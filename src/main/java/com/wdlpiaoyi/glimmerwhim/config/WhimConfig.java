@@ -52,6 +52,8 @@ public final class WhimConfig
 
     private static final ForgeConfigSpec.IntValue MAX_CHAIN_LENGTH;
 
+    private static final ForgeConfigSpec.BooleanValue SPAWN_ENABLED;
+
     private static final ForgeConfigSpec.IntValue COMMAND_PERMISSION_LEVEL;
 
     private static final ForgeConfigSpec.DoubleValue COMMAND_SUGGEST_REACH;
@@ -129,6 +131,12 @@ public final class WhimConfig
         MAX_CHAIN_LENGTH = builder
                 .comment("一次施法最多串联的灵感条数（含根）；0 = 禁止串联（只能用根）。默认 8。")
                 .defineInRange("maxChainLength", 8, 0, 64);
+        builder.pop();
+
+        builder.comment("生成：灵感按各自的生成规则周期性出现（每个 WhimType 自己声明）。");
+        builder.push("spawn");
+        SPAWN_ENABLED = builder.comment("是否启用灵感生成。默认 true。")
+                .define("enabled", true);
         builder.pop();
 
         builder.comment("命令：/glimmerwhim 的权限与补全。");
@@ -239,6 +247,11 @@ public final class WhimConfig
     public static int maxChainLength()
     {
         return MAX_CHAIN_LENGTH.get();
+    }
+
+    public static boolean spawnEnabled()
+    {
+        return SPAWN_ENABLED.get();
     }
 
     public static int commandPermissionLevel()
