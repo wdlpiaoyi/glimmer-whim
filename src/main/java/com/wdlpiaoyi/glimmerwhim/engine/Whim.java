@@ -14,7 +14,8 @@ public final class Whim
     private final UUID id;
     private final WhimAnchor anchor;
     private final WhimType type;
-    private WhimData data;
+    private final WhimData data;
+    private int remaining;
 
     public Whim(UUID id, WhimAnchor anchor, WhimType type, WhimData data)
     {
@@ -22,6 +23,19 @@ public final class Whim
         this.anchor = anchor;
         this.type = type;
         this.data = data;
+        this.remaining = lifetime(data);
+    }
+
+    private static int lifetime(WhimData data)
+    {
+        try
+        {
+            return Integer.parseInt(data.get(LIFETIME).orElse("-1"));
+        }
+        catch (NumberFormatException e)
+        {
+            return -1;
+        }
     }
 
     public UUID id()
@@ -41,38 +55,28 @@ public final class Whim
 
     public WhimData data()
     {
-        return this.data;
+        return this.remaining < 0 ? this.data : this.data.with(LIFETIME, Integer.toString(this.remaining));
     }
 
     public int lifetime()
     {
-        try
-        {
-            return Integer.parseInt(this.data.get(LIFETIME).orElse("-1"));
-        }
-        catch (NumberFormatException e)
-        {
-            return -1;
-        }
+        return this.remaining;
     }
 
     public boolean permanent()
     {
-        return this.lifetime() < 0;
+        return this.remaining < 0;
     }
 
     public int tick()
     {
-        int lifetime = this.lifetime();
-
-        if (lifetime < 0)
+        if (this.remaining < 0)
         {
-            return lifetime;
+            return this.remaining;
         }
 
-        lifetime = Math.max(0, lifetime - 1);
-        this.data = this.data.with(LIFETIME, Integer.toString(lifetime));
+        this.remaining = Math.max(0, this.remaining - 1);
 
-        return lifetime;
+        return this.remaining;
     }
 }

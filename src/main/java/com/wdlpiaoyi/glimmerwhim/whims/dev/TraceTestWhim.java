@@ -35,7 +35,7 @@ public final class TraceTestWhim implements WhimType
     {
         return WhimParams.of(WhimParam.choice("shape", "cube", "cube", "quad"),
                 WhimParam.positiveNumber("size", "1"),
-                WhimParam.positiveNumber(Whim.PLAYTIME, "1"));
+                WhimParam.positiveNumber(Whim.PLAYTIME, "20"));
     }
 
     @Override

@@ -94,6 +94,11 @@ public final class WhimRegistry
             return;
         }
 
+        this.announceRemoval(id, reason);
+    }
+
+    private void announceRemoval(UUID id, WhimRemoveReason reason)
+    {
         GlimmerWhim.log("[Whim] remove id={} dim={} reason={}", id, this.level.dimension().location(), reason);
 
         AIMED.values().removeIf(id::equals);
@@ -118,15 +123,27 @@ public final class WhimRegistry
 
     public void tick()
     {
-        for (Whim whim : this.all())
+        Iterator<Map.Entry<UUID, Tracked>> iterator = this.tracked.entrySet().iterator();
+
+        while (iterator.hasNext())
         {
+            Map.Entry<UUID, Tracked> entry = iterator.next();
+            Whim whim = entry.getValue().whim();
+
             if (whim.tick() == 0)
             {
-                this.removeWhim(whim.id(), WhimRemoveReason.EXPIRED);
+                iterator.remove();
+                this.announceRemoval(entry.getKey(), WhimRemoveReason.EXPIRED);
+                continue;
             }
-            else
+
+            WhimEvent event = new WhimEvent(WhimEvent.Kind.TICK, this.level, whim, null, null);
+            whim.type().on(event);
+
+            if (event.removal().isPresent())
             {
-                fire(WhimEvent.Kind.TICK, whim.id(), null);
+                iterator.remove();
+                this.announceRemoval(entry.getKey(), event.removal().get());
             }
         }
 

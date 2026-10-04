@@ -73,8 +73,8 @@ public final class WhimTrace
         frozen = nodes;
         origin = eye;
         WhimTrace.target = target == null ? null : target.point();
-        playMillis = (float) Math.max(0.0D, play) * 1000.0F;
-        fadeMillis = WhimRenderer.elementTrace(root.type()).fadeDuration() * 1000.0F;
+        playMillis = (float) Math.max(0.0D, play) * 50.0F;
+        fadeMillis = WhimRenderer.elementTrace(root.type()).fadeMillis();
         phase = playMillis > 0.0F && WhimTrace.target != null ? Phase.PLAY : Phase.FADE;
         phaseStart = System.currentTimeMillis();
     }
@@ -90,7 +90,7 @@ public final class WhimTrace
         frozen = live;
         target = null;
         playMillis = 0.0F;
-        fadeMillis = WhimRenderer.elementTrace(frozen.get(0).type()).fadeDuration() * 1000.0F;
+        fadeMillis = WhimRenderer.elementTrace(frozen.get(0).type()).fadeMillis();
         phase = Phase.FADE;
         phaseStart = System.currentTimeMillis();
     }

@@ -49,9 +49,9 @@ public final class WhimRenderer
     {
         void draw(PoseStack pose, List<Vec3> points, Vec3 endpoint, float fade, WhimData data, WhimParams params);
 
-        default float fadeDuration()
+        default float fadeMillis()
         {
-            return 0.3F;
+            return 300.0F;
         }
     }
 
