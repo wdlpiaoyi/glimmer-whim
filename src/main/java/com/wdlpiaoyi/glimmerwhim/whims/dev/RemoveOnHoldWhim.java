@@ -1,8 +1,9 @@
-package com.wdlpiaoyi.glimmerwhim.whims;
+package com.wdlpiaoyi.glimmerwhim.whims.dev;
 
 import com.wdlpiaoyi.glimmerwhim.engine.WhimEvent;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimRemoveReason;
+import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 
 import net.minecraft.resources.ResourceLocation;
 

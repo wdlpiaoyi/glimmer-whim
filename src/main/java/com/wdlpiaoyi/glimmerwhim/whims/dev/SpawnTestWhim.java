@@ -1,4 +1,4 @@
-package com.wdlpiaoyi.glimmerwhim.whims;
+package com.wdlpiaoyi.glimmerwhim.whims.dev;
 
 import java.util.Optional;
 
@@ -6,6 +6,7 @@ import com.wdlpiaoyi.glimmerwhim.anchor.PosAnchor;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimSpawn;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimSpawnContext;
+import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;

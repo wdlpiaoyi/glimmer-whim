@@ -1,4 +1,4 @@
-package com.wdlpiaoyi.glimmerwhim.whims;
+package com.wdlpiaoyi.glimmerwhim.whims.dev;
 
 import java.util.EnumSet;
 import java.util.Optional;
@@ -8,16 +8,19 @@ import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimDimensions;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParam;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
+import com.wdlpiaoyi.glimmerwhim.whims.WhimModifier;
+import com.wdlpiaoyi.glimmerwhim.whims.WhimRole;
+import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 
 import net.minecraft.resources.ResourceLocation;
 
-public final class DevPowerWhim implements WhimType
+public final class DevRangeWhim implements WhimType
 {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev_power");
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev_range");
 
-    public static final DevPowerWhim INSTANCE = new DevPowerWhim();
+    public static final DevRangeWhim INSTANCE = new DevRangeWhim();
 
-    private DevPowerWhim()
+    private DevRangeWhim()
     {
     }
 
@@ -42,6 +45,6 @@ public final class DevPowerWhim implements WhimType
     @Override
     public Optional<WhimModifier> modifier(WhimData data)
     {
-        return Optional.of(new WhimModifier(WhimDimensions.POWER, params().number(data, "amount")));
+        return Optional.of(new WhimModifier(WhimDimensions.RANGE, params().number(data, "amount")));
     }
 }

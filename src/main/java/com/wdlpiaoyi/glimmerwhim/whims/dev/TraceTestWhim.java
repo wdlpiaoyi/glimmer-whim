@@ -1,4 +1,4 @@
-package com.wdlpiaoyi.glimmerwhim.whims;
+package com.wdlpiaoyi.glimmerwhim.whims.dev;
 
 import java.util.EnumSet;
 import java.util.Set;
@@ -8,6 +8,8 @@ import com.wdlpiaoyi.glimmerwhim.engine.WhimEvent;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParam;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimRemoveReason;
+import com.wdlpiaoyi.glimmerwhim.whims.WhimRole;
+import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;

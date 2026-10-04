@@ -1,17 +1,18 @@
-package com.wdlpiaoyi.glimmerwhim.whims;
+package com.wdlpiaoyi.glimmerwhim.whims.dev;
 
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParam;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
+import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 
 import net.minecraft.resources.ResourceLocation;
 
-public final class DevWhim implements WhimType
+public final class HighlightTestWhim implements WhimType
 {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev");
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "highlight_test");
 
-    public static final DevWhim INSTANCE = new DevWhim();
+    public static final HighlightTestWhim INSTANCE = new HighlightTestWhim();
 
-    private DevWhim()
+    private HighlightTestWhim()
     {
     }
 

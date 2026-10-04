@@ -13,25 +13,6 @@ public final class Whims
 {
     private static final Map<ResourceLocation, WhimType> TYPES = new LinkedHashMap<>();
 
-    static
-    {
-        register(DevWhim.INSTANCE);
-        register(SpawnTestWhim.INSTANCE);
-        register(DevMarkWhim.INSTANCE);
-        register(DevEntityWhim.INSTANCE);
-        register(DevCoordWhim.INSTANCE);
-        register(DevRootWhim.INSTANCE);
-        register(DevBoostWhim.INSTANCE);
-        register(DevPowerWhim.INSTANCE);
-        register(DevRangeWhim.INSTANCE);
-        register(HighlightTestWhim.INSTANCE);
-        register(TraceTestWhim.INSTANCE);
-        register(ExpiresWhim.INSTANCE);
-        register(RemoveOnHoldWhim.INSTANCE);
-        register(RemoveOnReleaseWhim.INSTANCE);
-        register(VoidTestWhim.INSTANCE);
-    }
-
     private Whims()
     {
     }

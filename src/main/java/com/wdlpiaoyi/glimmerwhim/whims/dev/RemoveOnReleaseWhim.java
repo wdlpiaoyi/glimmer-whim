@@ -1,19 +1,19 @@
-package com.wdlpiaoyi.glimmerwhim.whims;
+package com.wdlpiaoyi.glimmerwhim.whims.dev;
 
 import com.wdlpiaoyi.glimmerwhim.engine.WhimEvent;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimRemoveReason;
+import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
-public final class DevMarkWhim implements WhimType
+public final class RemoveOnReleaseWhim implements WhimType
 {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev_mark");
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev_removeonrelease");
 
-    public static final DevMarkWhim INSTANCE = new DevMarkWhim();
+    public static final RemoveOnReleaseWhim INSTANCE = new RemoveOnReleaseWhim();
 
-    private DevMarkWhim()
+    private RemoveOnReleaseWhim()
     {
     }
 
@@ -34,8 +34,6 @@ public final class DevMarkWhim implements WhimType
     {
         if (event.kind() == WhimEvent.Kind.USE)
         {
-            event.target().ifPresent(target -> event.player()
-                    .sendSystemMessage(Component.literal("dev_mark: " + target.describe())));
             event.remove(WhimRemoveReason.USED);
         }
     }

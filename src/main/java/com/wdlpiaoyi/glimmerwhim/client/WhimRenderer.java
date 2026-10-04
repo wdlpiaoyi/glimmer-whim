@@ -12,9 +12,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
-import com.wdlpiaoyi.glimmerwhim.whims.DevWhim;
-import com.wdlpiaoyi.glimmerwhim.whims.HighlightTestWhim;
-import com.wdlpiaoyi.glimmerwhim.whims.TraceTestWhim;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 import com.wdlpiaoyi.glimmerwhim.whims.client.DevRender;
 import com.wdlpiaoyi.glimmerwhim.whims.client.Traces;
@@ -71,13 +68,6 @@ public final class WhimRenderer
     private static final Map<ResourceLocation, Trace> ELEMENT_TRACES = new LinkedHashMap<>();
 
     private static final Map<ResourceLocation, Trace> MODIFIER_TRACES = new LinkedHashMap<>();
-
-    static
-    {
-        register(DevWhim.INSTANCE, DevRender::draw, DevRender::hit, DevRender::outline, null, null);
-        register(HighlightTestWhim.INSTANCE, DevRender::draw, DevRender::hit, DevRender::hue, null, null);
-        register(TraceTestWhim.INSTANCE, DevRender::draw, DevRender::hit, DevRender::hue, Traces::hue, Traces::glow);
-    }
 
     private WhimRenderer()
     {

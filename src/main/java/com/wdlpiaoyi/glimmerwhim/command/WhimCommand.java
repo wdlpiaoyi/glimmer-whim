@@ -29,7 +29,6 @@ import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimRegistry;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimVisibility;
 import com.wdlpiaoyi.glimmerwhim.anchor.RayAnchor;
-import com.wdlpiaoyi.glimmerwhim.whims.DevWhim;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 import com.wdlpiaoyi.glimmerwhim.whims.Whims;
 
@@ -240,9 +239,7 @@ public final class WhimCommand
 
     private static WhimType resolveWhim(String token)
     {
-        WhimType type = Whims.get(Whims.resolve(token).orElse(null));
-
-        return type == null ? DevWhim.INSTANCE : type;
+        return Whims.get(Whims.resolve(token).orElse(null));
     }
 
     private static ResourceLocation resolveAnchor(String token)
@@ -292,9 +289,10 @@ public final class WhimCommand
 
     private static WhimParams summonParams(String first, String second)
     {
-        WhimType whim = first != null && isWhim(first) ? resolveWhim(first) : DevWhim.INSTANCE;
+        WhimType whim = first != null && isWhim(first) ? resolveWhim(first) : null;
 
-        return whim.params().plus(WhimParams.lifetime(whim.defaultLifetime())).plus(WhimParams.visibility());
+        return whim == null ? WhimParams.NONE
+                : whim.params().plus(WhimParams.lifetime(whim.defaultLifetime())).plus(WhimParams.visibility());
     }
 
     private static CompletableFuture<Suggestions> suggestTypes(SuggestionsBuilder builder)
@@ -595,7 +593,7 @@ public final class WhimCommand
             throw ERROR_PLAYER.create();
         }
 
-        WhimType whim = DevWhim.INSTANCE;
+        WhimType whim = null;
         ResourceLocation type = defaultAnchor();
 
         if (first != null)
@@ -616,6 +614,11 @@ public final class WhimCommand
 
                 type = resolveAnchor(second);
             }
+        }
+
+        if (whim == null)
+        {
+            throw ERROR_WHIM.create(first);
         }
 
         String rest = tail == null ? "" : tail;

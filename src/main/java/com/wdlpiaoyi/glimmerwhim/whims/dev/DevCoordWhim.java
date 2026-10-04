@@ -1,20 +1,21 @@
-package com.wdlpiaoyi.glimmerwhim.whims;
+package com.wdlpiaoyi.glimmerwhim.whims.dev;
 
 import com.wdlpiaoyi.glimmerwhim.engine.WhimEvent;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimRemoveReason;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimTarget;
+import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
-public final class DevEntityWhim implements WhimType
+public final class DevCoordWhim implements WhimType
 {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev_entity");
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("glimmerwhim", "dev_coord");
 
-    public static final DevEntityWhim INSTANCE = new DevEntityWhim();
+    public static final DevCoordWhim INSTANCE = new DevCoordWhim();
 
-    private DevEntityWhim()
+    private DevCoordWhim()
     {
     }
 
@@ -33,7 +34,7 @@ public final class DevEntityWhim implements WhimType
     @Override
     public boolean acceptsTarget(WhimTarget target)
     {
-        return target != null && target.entity() != null;
+        return target != null && target.entity() == null;
     }
 
     @Override
@@ -42,7 +43,7 @@ public final class DevEntityWhim implements WhimType
         if (event.kind() == WhimEvent.Kind.USE)
         {
             event.target().ifPresent(target -> event.player()
-                    .sendSystemMessage(Component.literal("dev_entity: " + target.describe())));
+                    .sendSystemMessage(Component.literal("dev_coord: " + target.describe())));
             event.remove(WhimRemoveReason.USED);
         }
     }
