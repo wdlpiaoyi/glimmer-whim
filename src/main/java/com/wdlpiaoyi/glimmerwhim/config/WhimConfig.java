@@ -160,8 +160,8 @@ public final class WhimConfig
 
         builder.comment("开发与测试：dev/test 内容。");
         builder.push("dev");
-        DEV_ENABLED = builder.comment("是否注册 dev/test 灵感与外观；正式发布前设为 false。默认 true。")
-                .define("enabled", true);
+        DEV_ENABLED = builder.comment("是否注册 dev/test 灵感与外观。默认 false。")
+                .define("enabled", false);
         builder.pop();
 
         builder.comment("调试：日志输出。");
