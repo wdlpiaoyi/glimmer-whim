@@ -9,6 +9,7 @@ public final class Whim
 {
     public static final String LIFETIME = "lifetime";
     public static final String VISIBILITY = "visibility";
+    public static final String PLAYTIME = "playtime";
 
     private final UUID id;
     private final WhimAnchor anchor;

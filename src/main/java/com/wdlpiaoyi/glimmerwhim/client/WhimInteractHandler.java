@@ -32,6 +32,11 @@ public final class WhimInteractHandler
     {
     }
 
+    public static List<UUID> chain()
+    {
+        return chain;
+    }
+
     @SubscribeEvent
     public static void onRegisterKeys(RegisterKeyMappingsEvent event)
     {
@@ -83,6 +88,7 @@ public final class WhimInteractHandler
                         WhimNetwork.CHANNEL.sendToServer(new WhimVoidPacket(List.copyOf(chain)));
                     }
 
+                    WhimTrace.dissolve();
                     chain = null;
                 }
                 else
@@ -91,6 +97,7 @@ public final class WhimInteractHandler
 
                     if (chain.isEmpty())
                     {
+                        WhimTrace.dissolve();
                         chain = null;
                     }
                     else
@@ -107,6 +114,7 @@ public final class WhimInteractHandler
                 WhimTarget target = WhimTargeting.pick(minecraft.level, player, player.getEyePosition(),
                         FreeLook.viewVector(player, 1.0F));
 
+                WhimTrace.release(minecraft.level, player.getEyePosition(), chain, target);
                 WhimNetwork.CHANNEL.sendToServer(new WhimUsePacket(List.copyOf(chain), target));
             }
 
@@ -123,9 +131,7 @@ public final class WhimInteractHandler
             return;
         }
 
-        ClientWhimCache.WhimView view = ClientWhimCache.view(id);
-
-        if (view != null && view.type().roles().contains(WhimRole.MODIFIER))
+        if (ClientWhimCache.view(id) != null)
         {
             chain.add(id);
         }

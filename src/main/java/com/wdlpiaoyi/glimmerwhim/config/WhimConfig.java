@@ -32,6 +32,10 @@ public final class WhimConfig
 
     private static final ForgeConfigSpec.ConfigValue<String> RENDER_COLOR_AIMED;
 
+    private static final ForgeConfigSpec.BooleanValue RENDER_TRACE_ENABLED;
+
+    private static final ForgeConfigSpec.DoubleValue RENDER_TRACE_WIDTH;
+
     private static final ForgeConfigSpec.IntValue RENDER_DEV_CHECKER_CELLS;
 
     private static final ForgeConfigSpec.ConfigValue<String> RENDER_DEV_COLOR_ELEMENT;
@@ -94,6 +98,10 @@ public final class WhimConfig
                 .define("faceShade", true);
         RENDER_COLOR_AIMED = builder.comment("瞄准时高亮轮廓颜色。默认 FFFFFF（白）。")
                 .define("colorAimed", "FFFFFF");
+        RENDER_TRACE_ENABLED = builder.comment("是否绘制串联灵感时的牵引折线（trace）。默认 true。")
+                .define("traceEnabled", true);
+        RENDER_TRACE_WIDTH = builder.comment("牵引折线的线宽（像素）。默认 2.0。")
+                .defineInRange("traceWidth", 2.0D, 1.0D, 16.0D);
 
         builder.comment("dev 元素外观：紫黑棋盘格。",
                 "该配置仅用于 dev 元素，正式元素各自实现。");
@@ -211,6 +219,16 @@ public final class WhimConfig
     public static float[] renderColorAimed()
     {
         return color(RENDER_COLOR_AIMED.get(), FALLBACK_AIMED);
+    }
+
+    public static boolean traceEnabled()
+    {
+        return RENDER_TRACE_ENABLED.get();
+    }
+
+    public static double traceWidth()
+    {
+        return RENDER_TRACE_WIDTH.get();
     }
 
     public static String defaultAnchor()

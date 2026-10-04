@@ -329,13 +329,12 @@ public final class WhimRegistry
 
         chain.root().type().on(event);
 
-        event.removal().ifPresent(reason ->
+        WhimRemoveReason reason = event.removal().orElse(WhimRemoveReason.USED);
+
+        for (Whim whim : chain.order())
         {
-            for (Whim whim : chain.order())
-            {
-                registry.removeWhim(whim.id(), reason);
-            }
-        });
+            registry.removeWhim(whim.id(), reason);
+        }
     }
 
     public static void setAimed(ServerPlayer player, UUID id)
@@ -394,19 +393,11 @@ public final class WhimRegistry
                 continue;
             }
 
-            Set<WhimRole> roles = tracked.whim().type().roles();
-
-            if (resolved.isEmpty())
+            if (resolved.isEmpty() && !tracked.whim().type().roles().contains(WhimRole.ELEMENT))
             {
-                if (!roles.contains(WhimRole.ELEMENT))
-                {
-                    GlimmerWhim.log("[Whim] chain rejected player={} id={} roles={}", player.getUUID(), id, roles);
-                    return false;
-                }
-            }
-            else if (!roles.contains(WhimRole.MODIFIER))
-            {
-                continue;
+                GlimmerWhim.log("[Whim] chain rejected player={} id={} roles={}", player.getUUID(), id,
+                        tracked.whim().type().roles());
+                return false;
             }
 
             if (resolved.size() >= limit)

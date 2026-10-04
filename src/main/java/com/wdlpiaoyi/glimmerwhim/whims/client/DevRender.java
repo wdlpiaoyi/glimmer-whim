@@ -86,7 +86,7 @@ public final class DevRender
         }
     }
 
-    private static float[] rotateHue(float[] color, float shift)
+    static float[] rotateHue(float[] color, float shift)
     {
         double angle = shift * 2.0D * Math.PI;
         double cos = Math.cos(angle);

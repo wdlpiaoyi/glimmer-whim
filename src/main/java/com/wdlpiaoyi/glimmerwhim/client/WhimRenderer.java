@@ -14,8 +14,10 @@ import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.whims.DevWhim;
 import com.wdlpiaoyi.glimmerwhim.whims.HighlightTestWhim;
+import com.wdlpiaoyi.glimmerwhim.whims.TraceTestWhim;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 import com.wdlpiaoyi.glimmerwhim.whims.client.DevRender;
+import com.wdlpiaoyi.glimmerwhim.whims.client.Traces;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
@@ -45,6 +47,17 @@ public final class WhimRenderer
         void draw(PoseStack pose, Vec3 dir, WhimData data, WhimParams params);
     }
 
+    @FunctionalInterface
+    public interface Trace
+    {
+        void draw(PoseStack pose, List<Vec3> points, Vec3 endpoint, float fade, WhimData data, WhimParams params);
+
+        default float fadeDuration()
+        {
+            return 0.3F;
+        }
+    }
+
     private record Drawable(ClientWhimCache.WhimView whim, WhimParams params, Vec3 at)
     {
     }
@@ -55,21 +68,37 @@ public final class WhimRenderer
 
     private static final Map<ResourceLocation, Highlight> HIGHLIGHTS = new LinkedHashMap<>();
 
+    private static final Map<ResourceLocation, Trace> ELEMENT_TRACES = new LinkedHashMap<>();
+
+    private static final Map<ResourceLocation, Trace> MODIFIER_TRACES = new LinkedHashMap<>();
+
     static
     {
-        register(DevWhim.INSTANCE, DevRender::draw, DevRender::hit, DevRender::outline);
-        register(HighlightTestWhim.INSTANCE, DevRender::draw, DevRender::hit, DevRender::hue);
+        register(DevWhim.INSTANCE, DevRender::draw, DevRender::hit, DevRender::outline, null, null);
+        register(HighlightTestWhim.INSTANCE, DevRender::draw, DevRender::hit, DevRender::hue, null, null);
+        register(TraceTestWhim.INSTANCE, DevRender::draw, DevRender::hit, DevRender::hue, Traces::hue, Traces::glow);
     }
 
     private WhimRenderer()
     {
     }
 
-    public static void register(WhimType type, Drawer drawer, Hit hit, Highlight highlight)
+    public static void register(WhimType type, Drawer drawer, Hit hit, Highlight highlight, Trace elementTrace,
+            Trace modifierTrace)
     {
         DRAWERS.put(type.id(), drawer);
         HITS.put(type.id(), hit);
         HIGHLIGHTS.put(type.id(), highlight);
+
+        if (elementTrace != null)
+        {
+            ELEMENT_TRACES.put(type.id(), elementTrace);
+        }
+
+        if (modifierTrace != null)
+        {
+            MODIFIER_TRACES.put(type.id(), modifierTrace);
+        }
     }
 
     public static Drawer drawer(ResourceLocation id)
@@ -87,6 +116,16 @@ public final class WhimRenderer
         return HIGHLIGHTS.getOrDefault(id, DevRender::outline);
     }
 
+    public static Trace elementTrace(ResourceLocation id)
+    {
+        return ELEMENT_TRACES.getOrDefault(id, Traces::line);
+    }
+
+    public static Trace modifierTrace(ResourceLocation id)
+    {
+        return MODIFIER_TRACES.get(id);
+    }
+
     @SubscribeEvent
     public static void onRenderLevelStage(RenderLevelStageEvent event)
     {
@@ -98,7 +137,8 @@ public final class WhimRenderer
         Minecraft minecraft = Minecraft.getInstance();
         ClientLevel level = minecraft.level;
 
-        if (level == null || minecraft.player == null || ClientWhimCache.all().isEmpty())
+        if (level == null || minecraft.player == null
+                || ClientWhimCache.all().isEmpty() && !WhimTrace.active())
         {
             return;
         }
@@ -160,6 +200,8 @@ public final class WhimRenderer
 
             pose.popPose();
         }
+
+        WhimTrace.render(pose, level, eye, look, camera, partialTick);
 
         RenderSystem.depthMask(true);
         RenderSystem.enableDepthTest();

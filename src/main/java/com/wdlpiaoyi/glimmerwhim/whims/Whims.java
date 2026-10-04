@@ -24,6 +24,7 @@ public final class Whims
         register(DevPowerWhim.INSTANCE);
         register(DevRangeWhim.INSTANCE);
         register(HighlightTestWhim.INSTANCE);
+        register(TraceTestWhim.INSTANCE);
         register(ExpiresWhim.INSTANCE);
         register(RemoveOnHoldWhim.INSTANCE);
         register(RemoveOnReleaseWhim.INSTANCE);
