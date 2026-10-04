@@ -17,16 +17,19 @@ public final class Whim
     private final WhimType type;
     private final WhimData data;
     private final WhimVisibility visibility;
-    private int remaining; // 剩余 tick；负值表示永久
+    private long deadline; // 到期游戏刻；负值表示永久
+    private long frozenRemaining = -1L; // 非负表示被按住暂停，保存剩余 tick
 
-    public Whim(UUID id, WhimAnchor anchor, WhimType type, WhimData data, WhimVisibility visibility)
+    public Whim(UUID id, WhimAnchor anchor, WhimType type, WhimData data, WhimVisibility visibility, long now)
     {
         this.id = id;
         this.anchor = anchor;
         this.type = type;
         this.data = data;
         this.visibility = visibility;
-        this.remaining = lifetime(data);
+
+        int ticks = lifetime(data);
+        this.deadline = ticks < 0 ? -1L : now + ticks;
     }
 
     // 解析 lifetime 参数；缺失或非法一律按永久处理
@@ -57,10 +60,9 @@ public final class Whim
         return this.type;
     }
 
-    // 存活时返回递减后的 lifetime；永久时原样返回
     public WhimData data()
     {
-        return this.remaining < 0 ? this.data : this.data.with(LIFETIME, Integer.toString(this.remaining));
+        return this.data;
     }
 
     public WhimVisibility visibility()
@@ -68,26 +70,43 @@ public final class Whim
         return this.visibility;
     }
 
-    public int lifetime()
+    // 剩余 tick；永久返回 -1，暂停态返回冻结时的剩余
+    public int lifetime(long now)
     {
-        return this.remaining;
+        if (this.deadline < 0)
+        {
+            return -1;
+        }
+
+        if (this.frozenRemaining >= 0)
+        {
+            return (int) this.frozenRemaining;
+        }
+
+        return (int) Math.max(0L, this.deadline - now);
     }
 
     public boolean permanent()
     {
-        return this.remaining < 0;
+        return this.deadline < 0;
     }
 
-    // 每服务端 tick 递减一次并钳到 0；永久（负）不递减
-    public int tick()
+    // 按住暂停：记下当前剩余并停表
+    public void freeze(long now)
     {
-        if (this.remaining < 0)
+        if (this.deadline >= 0 && this.frozenRemaining < 0)
         {
-            return this.remaining;
+            this.frozenRemaining = Math.max(0L, this.deadline - now);
         }
+    }
 
-        this.remaining = Math.max(0, this.remaining - 1);
-
-        return this.remaining;
+    // 松开恢复：以冻结的剩余重新起算
+    public void resume(long now)
+    {
+        if (this.frozenRemaining >= 0)
+        {
+            this.deadline = now + this.frozenRemaining;
+            this.frozenRemaining = -1L;
+        }
     }
 }

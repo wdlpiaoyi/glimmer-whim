@@ -1,16 +1,16 @@
 package com.wdlpiaoyi.glimmerwhim.engine;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
+import java.util.TreeMap;
 import java.util.UUID;
 
 import net.minecraft.server.level.ServerLevel;
 
-// 每维度任务表：按游戏刻到点执行；owner 灵感移除即取消
+// 每维度任务表：按游戏刻有序，每 tick 只取到点任务；owner 灵感移除即取消
 public final class WhimScheduler
 {
-    private final List<WhimTask> tasks = new ArrayList<>();
+    private final TreeMap<Long, List<WhimTask>> tasks = new TreeMap<>();
 
     public static WhimTask schedule(ServerLevel level, UUID owner, int delayTicks, Runnable action)
     {
@@ -26,7 +26,7 @@ public final class WhimScheduler
     private WhimTask add(ServerLevel level, UUID owner, int interval, int delay, Runnable action)
     {
         WhimTask task = new WhimTask(owner, interval, level.getGameTime() + delay, action);
-        this.tasks.add(task);
+        this.tasks.computeIfAbsent(task.executeAt(), key -> new ArrayList<>()).add(task);
         return task;
     }
 
@@ -39,53 +39,33 @@ public final class WhimScheduler
         }
 
         long now = level.getGameTime();
-        List<WhimTask> due = null;
-        Iterator<WhimTask> iterator = this.tasks.iterator();
+        List<WhimTask> due = new ArrayList<>();
 
-        while (iterator.hasNext())
+        while (!this.tasks.isEmpty() && this.tasks.firstKey() <= now)
         {
-            WhimTask task = iterator.next();
+            due.addAll(this.tasks.pollFirstEntry().getValue());
+        }
 
+        for (WhimTask task : due)
+        {
             if (task.cancelled())
-            {
-                iterator.remove();
-                continue;
-            }
-
-            if (task.executeAt() > now)
             {
                 continue;
             }
 
             if (task.repeating())
             {
-                task.advance();
-            }
-            else
-            {
-                iterator.remove();
+                reschedule(task);
             }
 
-            if (due == null)
-            {
-                due = new ArrayList<>();
-            }
-
-            due.add(task);
+            task.run();
         }
+    }
 
-        if (due == null)
-        {
-            return;
-        }
-
-        for (WhimTask task : due)
-        {
-            if (!task.cancelled())
-            {
-                task.run();
-            }
-        }
+    private void reschedule(WhimTask task)
+    {
+        task.advance();
+        this.tasks.computeIfAbsent(task.executeAt(), key -> new ArrayList<>()).add(task);
     }
 
     void cancelAll(UUID owner)
@@ -95,7 +75,8 @@ public final class WhimScheduler
             return;
         }
 
-        this.tasks.removeIf(task -> owner.equals(task.owner()));
+        this.tasks.values().forEach(list -> list.removeIf(task -> owner.equals(task.owner())));
+        this.tasks.values().removeIf(List::isEmpty);
     }
 
     void clear()

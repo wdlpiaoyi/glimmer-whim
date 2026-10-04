@@ -57,6 +57,8 @@ public final class WhimRegistry
     private final Map<UUID, Set<UUID>> sent = new HashMap<>();
     // 本维度通用调度任务
     private final WhimScheduler scheduler = new WhimScheduler();
+    // 声明 ticks() 的类型，逐 tick 收 TICK
+    private final Set<UUID> ticking = new HashSet<>();
 
     private WhimRegistry(ServerLevel level)
     {
@@ -84,9 +86,14 @@ public final class WhimRegistry
     {
         this.tracked.put(whim.id(), whim);
 
+        if (whim.type().ticks())
+        {
+            this.ticking.add(whim.id());
+        }
+
         GlimmerWhim.log("[Whim] summon id={} dim={} anchor={} element={} lifetime={} visibility={}",
-                whim.id(), this.level.dimension().location(), whim.anchor().type(), whim.type().id(), whim.lifetime(),
-                whim.visibility().describe());
+                whim.id(), this.level.dimension().location(), whim.anchor().type(), whim.type().id(),
+                whim.lifetime(this.level.getGameTime()), whim.visibility().describe());
 
         WhimEvent summoned = new WhimEvent(WhimEvent.Kind.SUMMON, this.level, whim, null, null);
         whim.type().on(summoned);
@@ -96,6 +103,8 @@ public final class WhimRegistry
             this.removeWhim(whim.id(), summoned.removal().get());
             return;
         }
+
+        this.armExpiry(whim);
 
         for (ServerPlayer player : this.level.players())
         {
@@ -119,6 +128,7 @@ public final class WhimRegistry
     private void finishRemoval(Whim whim, WhimRemoveReason reason)
     {
         this.scheduler.cancelAll(whim.id());
+        this.ticking.remove(whim.id());
 
         WhimEvent event = new WhimEvent(WhimEvent.Kind.REMOVE, this.level, whim, null, null, reason);
         whim.type().on(event);
@@ -151,36 +161,26 @@ public final class WhimRegistry
         }
     }
 
-    // 先扣寿命再派发 TICK；被按住且类型声明暂停时跳过倒计时
+    // TICK 只派发给声明 ticks() 的类型；到期改由调度任务触发
     public void tick()
     {
-        Iterator<Map.Entry<UUID, Whim>> iterator = this.tracked.entrySet().iterator();
-
-        while (iterator.hasNext())
+        if (!this.ticking.isEmpty())
         {
-            Map.Entry<UUID, Whim> entry = iterator.next();
-            Whim whim = entry.getValue();
-            boolean held = HELD.containsValue(entry.getKey()) && whim.type().pausesWhileHeld();
-
-            // 寿命归零：EXPIRE 可覆盖移除原因，缺省 EXPIRED
-            if (!held && whim.tick() == 0)
+            for (UUID id : List.copyOf(this.ticking))
             {
-                WhimEvent expired = new WhimEvent(WhimEvent.Kind.EXPIRE, this.level, whim, null, null);
-                whim.type().on(expired);
-                iterator.remove();
-                this.finishRemoval(whim, expired.removal().orElse(WhimRemoveReason.EXPIRED));
-                continue;
-            }
+                Whim whim = this.tracked.get(id);
 
-            if (whim.type().ticks())
-            {
+                if (whim == null)
+                {
+                    continue;
+                }
+
                 WhimEvent event = new WhimEvent(WhimEvent.Kind.TICK, this.level, whim, null, null);
                 whim.type().on(event);
 
                 if (event.removal().isPresent())
                 {
-                    iterator.remove();
-                    this.finishRemoval(whim, event.removal().get());
+                    this.removeWhim(id, event.removal().get());
                 }
             }
         }
@@ -194,8 +194,52 @@ public final class WhimRegistry
             }
         }
 
-        // 执行本维度到期任务
+        // 执行本维度到点任务（含到期）
         this.scheduler.tick(this.level);
+    }
+
+    // 非永久灵感登记到点到期；主循环不再逐 tick 查寿命
+    private void armExpiry(Whim whim)
+    {
+        if (whim.permanent())
+        {
+            return;
+        }
+
+        UUID id = whim.id();
+        WhimScheduler.schedule(this.level, id, whim.lifetime(this.level.getGameTime()), () -> this.expire(id));
+    }
+
+    // 到期任务：派发 EXPIRE（可覆盖移除原因）后移除
+    private void expire(UUID id)
+    {
+        Whim whim = this.tracked.get(id);
+
+        if (whim == null)
+        {
+            return;
+        }
+
+        WhimEvent event = new WhimEvent(WhimEvent.Kind.EXPIRE, this.level, whim, null, null);
+        whim.type().on(event);
+        this.tracked.remove(id);
+        this.finishRemoval(whim, event.removal().orElse(WhimRemoveReason.EXPIRED));
+    }
+
+    // 解除暂停并按剩余重新登记到期
+    private void resume(UUID id)
+    {
+        Whim whim = this.tracked.get(id);
+
+        if (whim == null || whim.permanent() || !whim.type().pausesWhileHeld())
+        {
+            return;
+        }
+
+        long now = this.level.getGameTime();
+        whim.resume(now);
+        this.scheduler.cancelAll(id);
+        WhimScheduler.schedule(this.level, id, Math.max(0, whim.lifetime(now)), () -> this.expire(id));
     }
 
     // 计算玩家应可见的灵感：归属可见 + 锚点可解析 + 在 reach 内
@@ -506,6 +550,9 @@ public final class WhimRegistry
             return false;
         }
 
+        // 松开即结束按住，暂停型灵感恢复倒计时
+        releaseHeld(player);
+
         WhimRegistry registry = of(player.serverLevel());
         Set<UUID> sent = registry.sent.getOrDefault(player.getUUID(), Set.of());
         int limit = Math.max(1, WhimConfig.maxChainLength());
@@ -577,6 +624,8 @@ public final class WhimRegistry
             return false;
         }
 
+        releaseHeld(player);
+
         WhimRegistry registry = of(player.serverLevel());
         Set<UUID> sent = registry.sent.getOrDefault(player.getUUID(), Set.of());
 
@@ -641,7 +690,19 @@ public final class WhimRegistry
 
         GlimmerWhim.log("[Whim] hold player={} id={}", player.getUUID(), id);
 
-        HELD.put(player.getUUID(), id);
+        UUID previous = HELD.put(player.getUUID(), id);
+
+        if (previous != null && !previous.equals(id))
+        {
+            registry.resume(previous);
+        }
+
+        if (tracked.type().pausesWhileHeld())
+        {
+            tracked.freeze(registry.level.getGameTime());
+            registry.scheduler.cancelAll(id);
+        }
+
         fire(WhimEvent.Kind.HOLD, id, player);
         return true;
     }
@@ -657,6 +718,7 @@ public final class WhimRegistry
 
         this.tracked.clear();
         this.sent.clear();
+        this.ticking.clear();
         this.scheduler.clear();
     }
 
@@ -706,11 +768,31 @@ public final class WhimRegistry
     // 清 HELD 与所有维度中该玩家的 sent
     private static void forget(ServerPlayer player)
     {
-        HELD.remove(player.getUUID());
+        releaseHeld(player);
 
         for (WhimRegistry registry : REGISTRIES.values())
         {
             registry.sent.remove(player.getUUID());
+        }
+    }
+
+    // 结束该玩家的按住；若其灵感暂停则恢复倒计时
+    private static void releaseHeld(ServerPlayer player)
+    {
+        UUID id = HELD.remove(player.getUUID());
+
+        if (id == null)
+        {
+            return;
+        }
+
+        for (WhimRegistry registry : REGISTRIES.values())
+        {
+            if (registry.tracked.containsKey(id))
+            {
+                registry.resume(id);
+                return;
+            }
         }
     }
 

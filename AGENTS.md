@@ -17,7 +17,7 @@ Server-authoritative core lives in `engine/`:
 - `engine/WhimRegistry.java` — per-dimension registries; visibility sync (`sent` set, `SYNC_INTERVAL=20`), aim/hold/use, removal.
 - `engine/WhimLifecycle.java` — the **single** spawn entry (`summon(...)`); all `new Whim(...)` goes through it.
 - `engine/Whim.java` / `WhimData.java` / `WhimParams.java` / `WhimEvent.java` — data model, `{name:value}` parsing, typed params, event kinds (`SUMMON`/`HIGHLIGHT`/`UNHIGHLIGHT`/`TICK`/`HOLD`/`USE`/`EXPIRE`/`REMOVE`; `TICK` only when `WhimType.ticks()`).
-- `engine/WhimScheduler.java` / `WhimTask.java` — per-dimension delayed/repeating tasks; a task is cancelled when its owning whim is removed.
+- `engine/WhimScheduler.java` / `WhimTask.java` — per-dimension delayed/repeating tasks; a task is cancelled when its owning whim is removed. Whim expiry is one such task, so the main loop no longer scans lifetimes per tick.
 - `engine/WhimSight.java` — occlusion (center ray; blocks via `canOcclude`; entities via bounding box, hit-box or render-culling box).
 
 Other packages:

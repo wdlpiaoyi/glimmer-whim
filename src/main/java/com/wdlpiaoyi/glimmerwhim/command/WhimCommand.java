@@ -149,6 +149,8 @@ public final class WhimCommand
                                         .suggests((context, builder) -> suggestTail(
                                                 suggestionAnchor(StringArgumentType.getString(context, "anchor")),
                                                 summonParams(StringArgumentType.getString(context, "whim")),
+                                                summonDefaults(StringArgumentType.getString(context, "whim"),
+                                                        context.getSource()),
                                                 context.getSource(), builder))
                                         .executes(context -> summon(context.getSource(),
                                                 StringArgumentType.getString(context, "whim"),
@@ -238,7 +240,7 @@ public final class WhimCommand
     }
 
     private static CompletableFuture<Suggestions> suggestTail(ResourceLocation anchor, WhimParams params,
-            CommandSourceStack source, SuggestionsBuilder builder)
+            WhimData defaults, CommandSourceStack source, SuggestionsBuilder builder)
     {
         String remaining = builder.getRemaining();
         int open = remaining.lastIndexOf('{');
@@ -249,7 +251,7 @@ public final class WhimCommand
             String inside = remaining.substring(open + 1);
             int cut = Math.max(inside.lastIndexOf(','), inside.lastIndexOf(';')) + 1;
 
-            return suggestParam(params, inside, inside.substring(cut),
+            return suggestParam(params, defaults, inside, inside.substring(cut),
                     builder.createOffset(builder.getStart() + open + 1 + cut));
         }
 
@@ -295,6 +297,21 @@ public final class WhimCommand
         return whim == null ? WhimParams.NONE : whim.effectiveParams();
     }
 
+    // 该灵感 spawn() 声明的初始数据；补全默认值与 summon 初始值同源
+    private static WhimData summonDefaults(String first, CommandSourceStack source)
+    {
+        WhimType whim = first != null && isWhim(first) ? resolveWhim(first) : null;
+        ServerPlayer player = source.getPlayer();
+
+        if (whim == null || player == null)
+        {
+            return WhimData.EMPTY;
+        }
+
+        return whim.spawn(new WhimSpawnContext(player.serverLevel(), player, player.getRandom()))
+                .map(WhimSpawn::data).orElse(WhimData.EMPTY);
+    }
+
     private static CompletableFuture<Suggestions> suggestTypes(SuggestionsBuilder builder)
     {
         String typed = builder.getRemaining().toLowerCase(Locale.ROOT);
@@ -337,8 +354,8 @@ public final class WhimCommand
         return target.buildFuture();
     }
 
-    private static CompletableFuture<Suggestions> suggestParam(WhimParams params, String inside, String piece,
-            SuggestionsBuilder builder)
+    private static CompletableFuture<Suggestions> suggestParam(WhimParams params, WhimData defaults, String inside,
+            String piece, SuggestionsBuilder builder)
     {
         int cut = Math.max(piece.indexOf(':'), piece.indexOf('='));
 
@@ -351,7 +368,8 @@ public final class WhimCommand
             {
                 if (!written(inside, param.name()))
                 {
-                    names.add(param.name() + ":" + param.defaultValue());
+                    // 默认值优先取该灵感 spawn() 声明的初始数据
+                    names.add(param.name() + ":" + defaults.get(param.name()).orElse(param.defaultValue()));
                 }
             }
 
@@ -519,9 +537,9 @@ public final class WhimCommand
                         Component.literal(command + "\n点击填入聊天框"))));
     }
 
-    private static String remaining(Whim whim)
+    private static String remaining(Whim whim, long now)
     {
-        return whim.permanent() ? "永久" : whim.lifetime() + "t";
+        return whim.permanent() ? "永久" : whim.lifetime(now) + "t";
     }
 
     private static int act(CommandSourceStack source, UUID id, String action) throws CommandSyntaxException
@@ -559,7 +577,7 @@ public final class WhimCommand
         source.sendSuccess(() -> Component.literal("  维度=" + found.dimension().location()), false);
         source.sendSuccess(() -> Component.literal("  锚=" + whim.anchor().type()), false);
         source.sendSuccess(() -> Component.literal("  元素=" + whim.type().id()), false);
-        source.sendSuccess(() -> Component.literal("  剩余=" + remaining(whim)), false);
+        source.sendSuccess(() -> Component.literal("  剩余=" + remaining(whim, source.getLevel().getGameTime())), false);
 
         String visibility = whim.visibility().describe();
 
@@ -641,6 +659,10 @@ public final class WhimCommand
             throw ERROR_DATA.create(e.getMessage());
         }
 
+        // 初始数据一律取自灵感自身的 spawn()，锚只决定位置
+        WhimSpawn defaults = whim.spawn(new WhimSpawnContext(player.serverLevel(), player, player.getRandom()))
+                .orElse(null);
+        WhimData base = defaults == null ? WhimData.EMPTY : defaults.data();
         WhimSpawn placement;
 
         if (second == null || isDefaultAnchor(second))
@@ -651,14 +673,13 @@ public final class WhimCommand
                 throw ERROR_DATA.create("default 锚不接受锚数据");
             }
 
-            // 生成位置由灵感自身 spawn() 决定，可能失败
-            placement = whim.spawn(new WhimSpawnContext(player.serverLevel(), player, player.getRandom()))
-                    .orElse(null);
-
-            if (placement == null)
+            // 无 spawn() 规则时没有可用的生成位置
+            if (defaults == null)
             {
                 throw ERROR_PLACEMENT.create(whim.id().toString());
             }
+
+            placement = new WhimSpawn(defaults.anchor(), base);
         }
         else
         {
@@ -673,7 +694,7 @@ public final class WhimCommand
                 placement = new WhimSpawn(
                         WhimAnchors.create(resolve(second).orElse(null), source,
                                 split.anchorData().isEmpty() ? null : split.anchorData()),
-                        WhimData.EMPTY);
+                        base);
             }
             catch (RuntimeException e)
             {
@@ -693,7 +714,7 @@ public final class WhimCommand
         }
 
         source.sendSuccess(() -> Component.literal("已生成灵感 " + summoned.id() + "，"
-                + (summoned.permanent() ? "永久" : "存活 " + summoned.lifetime() + " tick")
+                + (summoned.permanent() ? "永久" : "存活 " + summoned.lifetime(player.serverLevel().getGameTime()) + " tick")
                 + (userData.isEmpty() ? "" : "，参数 " + userData)), true);
         return 1;
     }
