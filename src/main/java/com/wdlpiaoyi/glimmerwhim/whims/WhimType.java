@@ -10,6 +10,7 @@ import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimSpawn;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimSpawnContext;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimTarget;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimTargets;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimTraces;
 
 import net.minecraft.resources.ResourceLocation;
@@ -68,12 +69,12 @@ public interface WhimType
 
     default Optional<Entity> resolveTarget(ServerPlayer player, WhimTarget target)
     {
-        if (target == null || target.entity() == null)
+        if (target == null)
         {
             return Optional.empty();
         }
 
-        return Optional.ofNullable(player.serverLevel().getEntities().get(target.entity()));
+        return WhimTargets.entity(target.data()).map(id -> player.serverLevel().getEntities().get(id));
     }
 
     default boolean requiresLineOfSight()
@@ -113,10 +114,10 @@ public interface WhimType
         return interactable();
     }
 
-    // 真则被 HELD 时暂停寿命倒计时
-    default boolean pausesWhileHeld()
+    // 真则进链（被按住或作为修饰）时暂停寿命倒计时；声明假才继续倒计时
+    default boolean pausesInChain()
     {
-        return false;
+        return true;
     }
 
     // 真则每 tick 收到 TICK 事件

@@ -46,7 +46,7 @@ public final class Traces
         register(WhimTraces.LINE, Traces::line);
         register(WhimTraces.GLOW, Traces::glow);
         register(WhimTraces.NONE, NONE);
-        TINTS.put(WhimTraces.HUE, Traces::hueColor);
+        tint(WhimTraces.HUE, Traces::hueColor);
     }
 
     private Traces()
@@ -72,6 +72,12 @@ public final class Traces
     public static boolean known(ResourceLocation id)
     {
         return STYLES.containsKey(id) || TINTS.containsKey(id);
+    }
+
+    // 登记合成样式：它不画几何，只给之后的绘制染色
+    public static void tint(ResourceLocation id, Tint impl)
+    {
+        TINTS.put(id, impl);
     }
 
     public static Tint tint(ResourceLocation id)
@@ -100,10 +106,10 @@ public final class Traces
 
     public static float[] hueColor(WhimData data, WhimParams params, int stack)
     {
-        // 色相按 5 秒周期循环，基色取 dev 元素主色；叠加时周期按层数缩短，即循环加快
+        // 色相按 5 秒周期循环，基色取白色；叠加时周期按层数缩短，即循环加快
         long period = 5000L / Math.max(1, stack);
         float shift = (float) ((System.currentTimeMillis() % period) / (double) period);
-        return DefaultRender.rotateHue(WhimConfig.renderDevColorElement(), shift);
+        return DefaultRender.rotateHue(DEFAULT_COLOR, shift);
     }
 
     public static void glow(PoseStack pose, List<Vec3> points, Vec3 endpoint, float fade, WhimData data,

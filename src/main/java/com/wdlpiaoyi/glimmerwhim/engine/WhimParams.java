@@ -37,7 +37,7 @@ public final class WhimParams
 
     public static WhimParams visibility()
     {
-        return new WhimParams(List.of(WhimParam.player(Whim.VISIBILITY, "all")));
+        return new WhimParams(List.of(WhimParam.player(Whim.VISIBILITY, WhimVisibility.DEFAULT_MODE)));
     }
 
     // 链的轨迹样式：element 决定整条链，modifier 叠在其上

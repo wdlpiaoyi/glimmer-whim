@@ -20,10 +20,10 @@
 - `{参数}`
 - 角色（`ELEMENT` / `MODIFIER`）
 - 修饰维度（`power` / `range`）
-- 可接受的目标类型
+- 可接受的目标类型（`point` 命中点 / `entity` 实体 / `whim` 灵感；新种类在 `engine/WhimTargets` 登记，附带 payload 的位置与描述语义）
 - 生命周期
 - 生成规则
-- 轨迹样式（`element_trace` / `modifier_trace` 的 id，见 `engine/WhimTraces` 与 `whims/client/Traces`）
+- 轨迹样式（`element_trace` / `modifier_trace` 的 id，见 `engine/WhimTraces` 与 `whims/client/Traces`，登记经 `whims/client/WhimRenders`）
 
 ## 生成
 

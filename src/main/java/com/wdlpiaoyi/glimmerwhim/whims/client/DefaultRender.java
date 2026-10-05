@@ -30,9 +30,9 @@ public final class DefaultRender
         // shape=cube 画六面体，否则画面向视线的方形面片；half 为边长一半（方块）
         boolean cube = "cube".equals(params.text(data, "shape", "cube"));
         double half = params.number(data, "size", 1.0D) / 2.0D;
-        int cells = WhimConfig.renderDevCheckerCells();
-        float[] first = WhimConfig.renderDevColorElement();
-        float[] second = WhimConfig.renderDevColorElementAlt();
+        int cells = WhimConfig.renderDefaultCheckerCells();
+        float[] first = WhimConfig.renderDefaultColorElement();
+        float[] second = WhimConfig.renderDefaultColorElementAlt();
 
         if (cube)
         {
@@ -53,7 +53,7 @@ public final class DefaultRender
         {
             boolean cube = "cube".equals(params.text(data, "shape", "cube"));
             double half = params.number(data, "size", 1.0D) / 2.0D;
-            int cells = WhimConfig.renderDevCheckerCells();
+            int cells = WhimConfig.renderDefaultCheckerCells();
             float[] aimedColor = WhimConfig.renderColorAimed();
 
             if (cube)
@@ -73,11 +73,11 @@ public final class DefaultRender
     {
         boolean cube = "cube".equals(params.text(data, "shape", "cube"));
         double half = params.number(data, "size", 1.0D) / 2.0D;
-        int cells = WhimConfig.renderDevCheckerCells();
+        int cells = WhimConfig.renderDefaultCheckerCells();
         // 颜色按 5 秒周期循环色相
         float shift = (float) ((System.currentTimeMillis() % 5000L) / 5000.0D);
-        float[] first = rotateHue(WhimConfig.renderDevColorElement(), shift);
-        float[] second = rotateHue(WhimConfig.renderDevColorElementAlt(), shift);
+        float[] first = rotateHue(WhimConfig.renderDefaultColorElement(), shift);
+        float[] second = rotateHue(WhimConfig.renderDefaultColorElementAlt(), shift);
 
         if (cube)
         {

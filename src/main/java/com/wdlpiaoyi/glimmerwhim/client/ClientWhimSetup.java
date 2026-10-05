@@ -18,6 +18,7 @@ public final class ClientWhimSetup
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event)
     {
+        WhimTargeting.register();
         // 注册到游戏事件总线（非 MOD 总线）
         MinecraftForge.EVENT_BUS.register(WhimRenderer.class);
         MinecraftForge.EVENT_BUS.register(ClientWhimCache.class);

@@ -39,16 +39,16 @@ public final class WhimConfig
 
     private static final ForgeConfigSpec.DoubleValue RENDER_TRACE_WIDTH;
 
-    private static final ForgeConfigSpec.IntValue RENDER_DEV_CHECKER_CELLS;
+    private static final ForgeConfigSpec.IntValue RENDER_DEFAULT_CHECKER_CELLS;
 
-    private static final ForgeConfigSpec.ConfigValue<String> RENDER_DEV_COLOR_ELEMENT;
+    private static final ForgeConfigSpec.ConfigValue<String> RENDER_DEFAULT_COLOR_ELEMENT;
 
-    private static final ForgeConfigSpec.ConfigValue<String> RENDER_DEV_COLOR_ELEMENT_ALT;
+    private static final ForgeConfigSpec.ConfigValue<String> RENDER_DEFAULT_COLOR_ELEMENT_ALT;
 
     // 颜色字符串解析失败时的兜底 RGBA
-    private static final float[] FALLBACK_DEV_ELEMENT = { 1.0F, 0.0F, 1.0F, 1.0F };
+    private static final float[] FALLBACK_COLOR = { 1.0F, 0.0F, 1.0F, 1.0F };
 
-    private static final float[] FALLBACK_DEV_ELEMENT_ALT = { 0.0F, 0.0F, 0.0F, 1.0F };
+    private static final float[] FALLBACK_COLOR_ALT = { 0.0F, 0.0F, 0.0F, 1.0F };
 
     private static final float[] FALLBACK_AIMED = { 1.0F, 1.0F, 1.0F, 1.0F };
 
@@ -88,7 +88,7 @@ public final class WhimConfig
         builder.pop();
 
         builder.comment("渲染：灵感的绘制外观。",
-                "通用设置在顶层；单个元素的外观放在 [render.<元素>] 下（当前仅有 [render.dev]）。");
+                "这里与具体元素无关；没有自定义绘制的元素用 [render.default] 的外观。");
         builder.push("render");
         RENDER_OUTLINE = builder.comment("瞄准时高亮轮廓相对本体的外扩宽度（方块）。0 = 不绘制高亮。默认 0.08。")
                 .defineInRange("outlineWidth", 0.08D, 0.0D, 0.5D);
@@ -101,14 +101,14 @@ public final class WhimConfig
         RENDER_TRACE_WIDTH = builder.comment("牵引折线的线宽（像素）。默认 2.0。")
                 .defineInRange("traceWidth", 2.0D, 1.0D, 16.0D);
 
-        builder.comment("dev 元素外观：紫黑棋盘格。",
-                "该配置仅用于 dev 元素，正式元素各自实现。");
-        builder.push("dev");
-        RENDER_DEV_CHECKER_CELLS = builder.comment("每个面划分的棋盘格数。默认 2。")
+        builder.comment("默认外观：没有自定义绘制的元素都以此绘制。",
+                "元素用 WhimRenders 登记自己的绘制后不再受这里影响。");
+        builder.push("default");
+        RENDER_DEFAULT_CHECKER_CELLS = builder.comment("每个面划分的棋盘格数。默认 2。")
                 .defineInRange("checkerCells", 2, 1, 8);
-        RENDER_DEV_COLOR_ELEMENT = builder.comment("棋盘主色，RRGGBB 或 AARRGGBB（可含 #）。默认 FF00FF（紫）。")
+        RENDER_DEFAULT_COLOR_ELEMENT = builder.comment("棋盘主色，RRGGBB 或 AARRGGBB（可含 #）。默认 FF00FF（紫）。")
                 .define("colorElement", "FF00FF");
-        RENDER_DEV_COLOR_ELEMENT_ALT = builder.comment("棋盘副色。默认 000000（黑）。")
+        RENDER_DEFAULT_COLOR_ELEMENT_ALT = builder.comment("棋盘副色。默认 000000（黑）。")
                 .define("colorElementAlt", "000000");
         builder.pop(2);
 
@@ -182,9 +182,9 @@ public final class WhimConfig
         return RENDER_OUTLINE.get();
     }
 
-    public static int renderDevCheckerCells()
+    public static int renderDefaultCheckerCells()
     {
-        return RENDER_DEV_CHECKER_CELLS.get();
+        return RENDER_DEFAULT_CHECKER_CELLS.get();
     }
 
     public static boolean renderFaceShade()
@@ -192,14 +192,14 @@ public final class WhimConfig
         return RENDER_FACE_SHADE.get();
     }
 
-    public static float[] renderDevColorElement()
+    public static float[] renderDefaultColorElement()
     {
-        return color(RENDER_DEV_COLOR_ELEMENT.get(), FALLBACK_DEV_ELEMENT);
+        return color(RENDER_DEFAULT_COLOR_ELEMENT.get(), FALLBACK_COLOR);
     }
 
-    public static float[] renderDevColorElementAlt()
+    public static float[] renderDefaultColorElementAlt()
     {
-        return color(RENDER_DEV_COLOR_ELEMENT_ALT.get(), FALLBACK_DEV_ELEMENT_ALT);
+        return color(RENDER_DEFAULT_COLOR_ELEMENT_ALT.get(), FALLBACK_COLOR_ALT);
     }
 
     public static float[] renderColorAimed()

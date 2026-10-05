@@ -20,6 +20,7 @@ import com.wdlpiaoyi.glimmerwhim.engine.WhimSight;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimSpawn;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimSpawnContext;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimTarget;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimVisibility;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 
 import net.minecraft.resources.ResourceLocation;
@@ -92,17 +93,11 @@ public final class DevStrikeWhim implements WhimType
     {
         // 锚定天空生成点；visibility=me 只对召唤者可见
         return Optional.of(new WhimSpawn(new PosAnchor(placement(context.player())),
-                WhimData.of(Whim.LIFETIME, Integer.toString(LIFETIME)).with(Whim.VISIBILITY, "me")));
+                WhimData.of(Whim.LIFETIME, Integer.toString(LIFETIME)).with(Whim.VISIBILITY, WhimVisibility.ME_MODE)));
     }
 
     @Override
     public boolean requiresLineOfSight()
-    {
-        return true;
-    }
-
-    @Override
-    public boolean pausesWhileHeld()
     {
         return true;
     }

@@ -16,8 +16,8 @@ public final class WhimData
     // 匹配 {名称:值} 组；锚数据是组外的剩余文本
     private static final Pattern GROUP = Pattern.compile("\\{([^{}]*)\\}");
 
-    // 组内以逗号/分号分隔多个 名称:值
-    private static final Pattern SEPARATOR = Pattern.compile("[,;]");
+    // 组内以逗号/分号分隔多个 名称:值；命令补全也复用它
+    public static final Pattern SEPARATOR = Pattern.compile("[,;]");
 
     private final Map<String, String> values;
 
@@ -116,8 +116,8 @@ public final class WhimData
         }
     }
 
-    // 冒号与等号都算分隔符，取更靠前者
-    private static int cut(String pair)
+    // 冒号与等号都算分隔符，取更靠前者；命令补全也复用它
+    public static int cut(String pair)
     {
         int colon = pair.indexOf(':');
         int equals = pair.indexOf('=');

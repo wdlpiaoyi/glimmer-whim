@@ -89,7 +89,7 @@ public final class WhimTrace
 
         frozen = nodes;
         origin = eye;
-        WhimTrace.target = target == null ? null : target.point();
+        WhimTrace.target = target == null ? null : target.point().orElse(null);
         // PLAYTIME 单位是 tick，×50 换成毫秒（20tps）
         playMillis = (float) Math.max(0.0D, play) * 50.0F;
         fadeMillis = WhimRenderer.elementTrace(root.params(), root.data()).fadeMillis();

@@ -5,15 +5,17 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimRegistry;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimTarget;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimTargets;
 
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkEvent;
 
-// C2S：释放时提交整条链快照与命中目标；target/entity 均可空
+// C2S：释放时提交整条链快照与命中目标；目标编码为 种类 id + payload
 public record WhimUsePacket(List<UUID> chain, WhimTarget target)
 {
     // 解码上限，防对端伪造超长链导致大分配
@@ -21,7 +23,7 @@ public record WhimUsePacket(List<UUID> chain, WhimTarget target)
 
     public static void encode(WhimUsePacket packet, FriendlyByteBuf buf)
     {
-        // 先写链长与逐个 UUID，再写 target/entity 存在位，最后写命中点
+        // 先写链长与逐个 UUID，再写目标存在位、种类与 payload
         buf.writeVarInt(packet.chain.size());
 
         for (UUID id : packet.chain)
@@ -33,16 +35,8 @@ public record WhimUsePacket(List<UUID> chain, WhimTarget target)
 
         if (packet.target != null)
         {
-            buf.writeBoolean(packet.target.entity() != null);
-
-            if (packet.target.entity() != null)
-            {
-                buf.writeUUID(packet.target.entity());
-            }
-
-            buf.writeDouble(packet.target.point().x);
-            buf.writeDouble(packet.target.point().y);
-            buf.writeDouble(packet.target.point().z);
+            buf.writeResourceLocation(packet.target.kind().id());
+            packet.target.data().write(buf);
         }
     }
 
@@ -63,10 +57,12 @@ public record WhimUsePacket(List<UUID> chain, WhimTarget target)
             return new WhimUsePacket(chain, null);
         }
 
-        UUID entity = buf.readBoolean() ? buf.readUUID() : null;
-        Vec3 point = new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble());
+        ResourceLocation id = buf.readResourceLocation();
+        WhimData data = WhimData.read(buf);
+        WhimTargets.Kind kind = WhimTargets.get(id);
 
-        return new WhimUsePacket(chain, new WhimTarget(entity, point));
+        // 未登记的种类按无目标处理，使用时会按 DROPPED 丢弃
+        return new WhimUsePacket(chain, kind == null ? null : new WhimTarget(kind, data));
     }
 
     public static void handle(WhimUsePacket packet, Supplier<NetworkEvent.Context> context)

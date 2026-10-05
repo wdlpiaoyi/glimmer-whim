@@ -114,6 +114,12 @@ public final class WhimRenderer
         return HIGHLIGHTS.getOrDefault(id, DefaultRender::outline);
     }
 
+    // 是否登记过自己的绘制；未登记的元素用默认外观（见 WhimRenders）
+    public static boolean custom(ResourceLocation id)
+    {
+        return DRAWERS.containsKey(id);
+    }
+
     // 链的轨迹样式：data 覆盖、类型默认兜底；未登记/拼错的 id 回落到 fallback 并打日志
     public static Trace elementTrace(WhimParams params, WhimData data)
     {

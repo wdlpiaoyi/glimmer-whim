@@ -40,8 +40,8 @@ public final class WhimRegistry
     // 玩家 -> 瞄准的灵感，仅服务端权威，用于 HIGHLIGHT 边沿
     private static final Map<UUID, UUID> AIMED = new HashMap<>();
 
-    // 玩家 -> 按住的灵感，HOLD 状态由它维持
-    private static final Map<UUID, UUID> HELD = new HashMap<>();
+    // 玩家 -> 当前链快照（索引 0 为根），按链维持 HOLD 与寿命暂停
+    private static final Map<UUID, List<UUID>> HELD = new HashMap<>();
 
     // 每 20 tick（1 秒）全量重算一次可见性
     private static final int SYNC_INTERVAL = 20;
@@ -141,7 +141,9 @@ public final class WhimRegistry
         GlimmerWhim.log("[Whim] remove id={} dim={} reason={}", id, this.level.dimension().location(), reason);
 
         AIMED.values().removeIf(id::equals);
-        HELD.values().removeIf(id::equals);
+        HELD.replaceAll((owner, chain) -> chain.contains(id)
+                ? chain.stream().filter(other -> !other.equals(id)).toList()
+                : chain);
 
         WhimRemovePacket packet = new WhimRemovePacket(this.level.dimension(), id, reason);
 
@@ -231,7 +233,7 @@ public final class WhimRegistry
     {
         Whim whim = this.tracked.get(id);
 
-        if (whim == null || whim.permanent() || !whim.type().pausesWhileHeld())
+        if (whim == null || whim.permanent() || !whim.type().pausesInChain())
         {
             return;
         }
@@ -509,7 +511,7 @@ public final class WhimRegistry
     }
 
     // 可见 = 归属允许 + 已下发过（sent）
-    private static boolean visible(ServerPlayer player, UUID id)
+    public static boolean visible(ServerPlayer player, UUID id)
     {
         WhimRegistry registry = of(player.serverLevel());
         Whim tracked = registry.tracked.get(id);
@@ -646,34 +648,35 @@ public final class WhimRegistry
         return true;
     }
 
-    // 命中点须在 reach 内；带实体时须仍存在于该维度
+    // 种类须已登记、自身校验通过；带命中点的种类还须在 reach 内
     private static boolean validTarget(ServerPlayer player, WhimTarget target)
     {
-        if (target.point() == null)
+        Optional<Vec3> point = target.point();
+
+        if (point.isPresent())
         {
-            return false;
+            double reach = WhimReach.blocks(player);
+
+            if (player.getEyePosition().distanceToSqr(point.get()) > reach * reach)
+            {
+                return false;
+            }
         }
 
-        double reach = WhimReach.blocks(player);
-
-        if (player.getEyePosition().distanceToSqr(target.point()) > reach * reach)
-        {
-            return false;
-        }
-
-        if (target.entity() != null)
-        {
-            return player.serverLevel().getEntities().get(target.entity()) != null;
-        }
-
-        return true;
+        return target.kind() != null && target.kind().valid().test(player, target.data());
     }
 
-    // 按住要求可见且在视距/无遮挡内；成功回传 HOLD
-    public static boolean hold(ServerPlayer player, UUID id)
+    // 按住/组链要求根可见且在视距与视线内；链变化时同步冻结与恢复
+    public static boolean hold(ServerPlayer player, List<UUID> chain)
     {
+        if (chain == null || chain.isEmpty())
+        {
+            return false;
+        }
+
         WhimRegistry registry = of(player.serverLevel());
-        Whim tracked = registry.tracked.get(id);
+        UUID root = chain.get(0);
+        Whim tracked = registry.tracked.get(root);
 
         if (tracked == null)
         {
@@ -681,30 +684,58 @@ public final class WhimRegistry
         }
 
         if (!tracked.visibility().canUse(player)
-                || !registry.sent.getOrDefault(player.getUUID(), Set.of()).contains(id)
+                || !registry.sent.getOrDefault(player.getUUID(), Set.of()).contains(root)
                 || !withinSight(player, tracked))
         {
-            GlimmerWhim.log("[Whim] hold rejected player={} id={}", player.getUUID(), id);
+            GlimmerWhim.log("[Whim] hold rejected player={} id={}", player.getUUID(), root);
             return false;
         }
 
-        GlimmerWhim.log("[Whim] hold player={} id={}", player.getUUID(), id);
+        List<UUID> previous = HELD.put(player.getUUID(), List.copyOf(chain));
 
-        UUID previous = HELD.put(player.getUUID(), id);
-
-        if (previous != null && !previous.equals(id))
+        if (previous == null || !previous.get(0).equals(root))
         {
-            registry.resume(previous);
+            GlimmerWhim.log("[Whim] hold player={} id={}", player.getUUID(), root);
+            fire(WhimEvent.Kind.HOLD, root, player);
         }
 
-        if (tracked.type().pausesWhileHeld())
-        {
-            tracked.freeze(registry.level.getGameTime());
-            registry.scheduler.cancelAll(id);
-        }
-
-        fire(WhimEvent.Kind.HOLD, id, player);
+        registry.pauseChain(previous, chain);
         return true;
+    }
+
+    // 链变化：新入链且声明暂停的冻结寿命，已出链的恢复倒计时
+    private void pauseChain(List<UUID> previous, List<UUID> current)
+    {
+        long now = this.level.getGameTime();
+
+        for (UUID id : current)
+        {
+            if (previous != null && previous.contains(id))
+            {
+                continue;
+            }
+
+            Whim whim = this.tracked.get(id);
+
+            if (whim != null && !whim.permanent() && whim.type().pausesInChain())
+            {
+                whim.freeze(now);
+                this.scheduler.cancelAll(id);
+            }
+        }
+
+        if (previous == null)
+        {
+            return;
+        }
+
+        for (UUID id : previous)
+        {
+            if (!current.contains(id))
+            {
+                resume(id);
+            }
+        }
     }
 
     // 维度卸载丢弃本表全部状态
@@ -776,22 +807,25 @@ public final class WhimRegistry
         }
     }
 
-    // 结束该玩家的按住；若其灵感暂停则恢复倒计时
+    // 结束该玩家的按住；整链恢复倒计时
     private static void releaseHeld(ServerPlayer player)
     {
-        UUID id = HELD.remove(player.getUUID());
+        List<UUID> chain = HELD.remove(player.getUUID());
 
-        if (id == null)
+        if (chain == null)
         {
             return;
         }
 
-        for (WhimRegistry registry : REGISTRIES.values())
+        for (UUID id : chain)
         {
-            if (registry.tracked.containsKey(id))
+            for (WhimRegistry registry : REGISTRIES.values())
             {
-                registry.resume(id);
-                return;
+                if (registry.tracked.containsKey(id))
+                {
+                    registry.resume(id);
+                    break;
+                }
             }
         }
     }

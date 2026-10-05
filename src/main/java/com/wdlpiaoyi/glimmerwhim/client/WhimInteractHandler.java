@@ -2,6 +2,7 @@ package com.wdlpiaoyi.glimmerwhim.client;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import com.mojang.blaze3d.platform.InputConstants;
@@ -28,7 +29,11 @@ public final class WhimInteractHandler
 
     // 按住期间维护的链快照；null 表示未在交互
     private static List<UUID> chain;
+    // 最后一次发给服务端的链快照，避免重复发包
+    private static List<UUID> sent;
     private static boolean wasDown;
+    // 按住期间是否离开过链根；离开再回到根才算以根为目标
+    private static boolean left;
 
     private WhimInteractHandler()
     {
@@ -71,6 +76,8 @@ public final class WhimInteractHandler
             }
 
             chain = null;
+            sent = null;
+            left = false;
             wasDown = INTERACT.isDown();
             return;
         }
@@ -90,7 +97,9 @@ public final class WhimInteractHandler
                 {
                     chain = new ArrayList<>();
                     chain.add(root);
-                    WhimNetwork.CHANNEL.sendToServer(new WhimHoldPacket(root));
+                    left = false;
+                    sent = null;
+                    syncHold(minecraft);
                 }
             }
 
@@ -105,10 +114,12 @@ public final class WhimInteractHandler
 
                     WhimTrace.dissolve();
                     chain = null;
+                    sent = null;
                 }
                 else
                 {
                     chain.removeIf(id -> !ClientWhimCache.contains(id));
+                    syncHold(minecraft);
 
                     if (chain.isEmpty())
                     {
@@ -117,7 +128,13 @@ public final class WhimInteractHandler
                     }
                     else
                     {
+                        if (!Objects.equals(WhimAim.aimed(), chain.get(0)))
+                        {
+                            left = true;
+                        }
+
                         append(WhimAim.aimed());
+                        syncHold(minecraft);
                     }
                 }
             }
@@ -126,15 +143,18 @@ public final class WhimInteractHandler
         {
             if (minecraft.getConnection() != null && minecraft.level != null)
             {
-                // 松开沿：定稿链，并把视线命中目标交给服务端结算
-                WhimTarget target = WhimTargeting.pick(minecraft.level, player, player.getEyePosition(),
-                        FreeLook.viewVector(player, 1.0F));
+                // 松开沿：定稿链，并把准星目标交给服务端结算
+                WhimTargeters.Context context = new WhimTargeters.Context(minecraft.level, player,
+                        player.getEyePosition(), FreeLook.viewVector(player, 1.0F), chain.get(0), left);
+                WhimTarget target = WhimTargeters.pick(context).orElse(null);
 
                 WhimTrace.release(minecraft.level, player.getEyePosition(), chain, target);
                 WhimNetwork.CHANNEL.sendToServer(new WhimUsePacket(List.copyOf(chain), target));
             }
 
             chain = null;
+            sent = null;
+            left = false;
         }
 
         wasDown = down;
@@ -144,9 +164,23 @@ public final class WhimInteractHandler
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event)
     {
         chain = null;
+        sent = null;
         wasDown = false;
+        left = false;
         WhimTrace.clear();
         WhimAim.clear();
+    }
+
+    // 链有变化时把整条链发给服务端，用于按链暂停寿命
+    private static void syncHold(Minecraft minecraft)
+    {
+        if (chain == null || chain.equals(sent) || minecraft.getConnection() == null)
+        {
+            return;
+        }
+
+        sent = List.copyOf(chain);
+        WhimNetwork.CHANNEL.sendToServer(new WhimHoldPacket(sent));
     }
 
     private static void append(UUID id)

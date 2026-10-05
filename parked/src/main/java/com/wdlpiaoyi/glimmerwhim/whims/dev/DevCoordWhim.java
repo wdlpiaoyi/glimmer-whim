@@ -5,6 +5,7 @@ import com.wdlpiaoyi.glimmerwhim.engine.WhimEvent;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimRemoveReason;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimTarget;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimTargets;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 
 import net.minecraft.network.chat.Component;
@@ -35,7 +36,7 @@ public final class DevCoordWhim implements WhimType
     @Override
     public boolean acceptsTarget(WhimTarget target)
     {
-        return target != null && target.entity() == null;
+        return target != null && WhimTargets.POINT.equals(target.kind());
     }
 
     @Override

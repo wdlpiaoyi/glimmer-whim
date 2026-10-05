@@ -38,13 +38,13 @@ public final class WhimParam
     // -1 或 1..Integer.MAX_VALUE
     public static WhimParam lifetime(String defaultValue)
     {
-        return new WhimParam("lifetime", defaultValue, WhimParam::isLifetime, "正整数或 -1（永久）", List.of());
+        return new WhimParam(Whim.LIFETIME, defaultValue, WhimParam::isLifetime, "正整数或 -1（永久）", List.of());
     }
 
-    // 非空白即可：all / me / 玩家名 / UUID；前两者参与补全
+    // 取值词汇与校验都来自 WhimVisibility
     public static WhimParam player(String name, String defaultValue)
     {
-        return new WhimParam(name, defaultValue, value -> !value.isBlank(), "all、me 或玩家名", List.of("all", "me"));
+        return new WhimParam(name, defaultValue, WhimVisibility::valid, WhimVisibility.HINT, WhimVisibility.MODES);
     }
 
     // 轨迹样式 id，须是 WhimTraces 已登记的（含运行期登记）

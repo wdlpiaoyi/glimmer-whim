@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -21,6 +22,7 @@ import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import com.mojang.brigadier.tree.CommandNode;
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 import com.wdlpiaoyi.glimmerwhim.engine.Whim;
@@ -102,9 +104,11 @@ public final class WhimCommand
     private static final SimpleCommandExceptionType ERROR_NO_AIM =
             new SimpleCommandExceptionType(Component.literal("未瞄准任何灵感，请提供 uuid"));
 
-    // glimmerwhim:default：用灵感自身的 spawn() 规则，不接受锚数据
-    private static final ResourceLocation DEFAULT_ANCHOR =
-            ResourceLocation.fromNamespaceAndPath(GlimmerWhim.MODID, "default");
+    // 子命令说明；用法文本由命令树生成，这里只补一句人话
+    private static final Map<String, String> DESCRIPTIONS = Map.of(
+            "list", "列出该维度存活的灵感",
+            "summon", "省略锚类型或写 default 时使用该灵感自身的生成规则；default 不接受锚数据；lifetime 默认取灵感自身，-1 = 永久；visibility 默认 all",
+            "whim", "省略 uuid 时作用于当前瞄准的灵感");
 
     private WhimCommand()
     {
@@ -219,9 +223,7 @@ public final class WhimCommand
 
     private static String anchorNames()
     {
-        // default 不是注册的锚类型，需单独列出
-        return WhimAnchors.types().stream().map(ResourceLocation::getPath).collect(Collectors.joining(", "))
-                + ", default";
+        return WhimAnchors.types().stream().map(ResourceLocation::getPath).collect(Collectors.joining(", "));
     }
 
     private static String whimNames()
@@ -229,14 +231,31 @@ public final class WhimCommand
         return Whims.ids().stream().map(ResourceLocation::getPath).collect(Collectors.joining(", "));
     }
 
-    private static List<String> helpLines()
+    private static List<String> helpLines(CommandSourceStack source)
     {
-        return List.of(
-                "  /glimmerwhim list [维度|all]",
-                "  /glimmerwhim summon <灵感类型> [锚类型] [锚数据] {参数}"
-                        + "（省略锚类型或写 default 时使用该灵感类型自身的生成规则；default 不接受锚数据；lifetime 默认取灵感类型自身，-1 = 永久；visibility 默认 all）",
-                "  /glimmerwhim whim " + String.join("｜", ACTIONS.keySet()) + " [uuid]（省略 uuid 时作用于当前瞄准的灵感）",
-                "  锚数据格式与 {参数} 可通过 TAB 查看");
+        CommandDispatcher<CommandSourceStack> dispatcher = source.getServer().getCommands().getDispatcher();
+        CommandNode<CommandSourceStack> root = dispatcher.getRoot().getChild(GlimmerWhim.MODID);
+
+        if (root == null)
+        {
+            return List.of();
+        }
+
+        List<String> lines = new ArrayList<>();
+
+        // 用法文本由命令树生成，新增或改名子命令不会与 help 脱节
+        dispatcher.getSmartUsage(root, source)
+                .forEach((node, usage) -> lines.add("  /" + usage + description(node.getName())));
+        lines.add("  锚数据格式与 {参数} 可通过 TAB 查看");
+
+        return lines;
+    }
+
+    private static String description(String name)
+    {
+        String text = DESCRIPTIONS.get(name);
+
+        return text == null || text.isEmpty() ? "" : "（" + text + "）";
     }
 
     private static CompletableFuture<Suggestions> suggestTail(ResourceLocation anchor, WhimParams params,
@@ -272,12 +291,12 @@ public final class WhimCommand
     {
         ResourceLocation id = resolve(token).orElse(null);
 
-        return id != null && (WhimAnchors.types().contains(id) || id.equals(DEFAULT_ANCHOR));
+        return id != null && WhimAnchors.types().contains(id);
     }
 
     private static boolean isDefaultAnchor(String token)
     {
-        return token != null && resolve(token).filter(DEFAULT_ANCHOR::equals).isPresent();
+        return token != null && resolve(token).filter(WhimAnchors.DEFAULT::equals).isPresent();
     }
 
     private static WhimType resolveWhim(String token)
@@ -357,7 +376,8 @@ public final class WhimCommand
     private static CompletableFuture<Suggestions> suggestParam(WhimParams params, WhimData defaults, String inside,
             String piece, SuggestionsBuilder builder)
     {
-        int cut = Math.max(piece.indexOf(':'), piece.indexOf('='));
+        // 分隔符规则与数据模型共用 WhimData
+        int cut = WhimData.cut(piece);
 
         // 未写分隔符时提示参数名与默认值；已写则提示候选值
         if (cut < 0)
@@ -385,9 +405,9 @@ public final class WhimCommand
     // 参数之间以逗号或分号分隔
     private static boolean written(String inside, String name)
     {
-        for (String piece : inside.split("[,;]"))
+        for (String piece : WhimData.SEPARATOR.split(inside))
         {
-            int cut = Math.max(piece.indexOf(':'), piece.indexOf('='));
+            int cut = WhimData.cut(piece);
             String written = (cut < 0 ? piece : piece.substring(0, cut)).trim();
 
             if (written.equals(name))
@@ -409,12 +429,6 @@ public final class WhimCommand
             {
                 builder.suggest(type.getPath(), Component.literal(WhimAnchors.hint(type)));
             }
-        }
-
-        if (DEFAULT_ANCHOR.getPath().startsWith(typed))
-        {
-            builder.suggest(DEFAULT_ANCHOR.getPath(),
-                    Component.literal("使用该灵感自身的生成规则；不接受锚数据"));
         }
 
         return builder.buildFuture();
@@ -463,7 +477,7 @@ public final class WhimCommand
 
     private static int help(CommandSourceStack source)
     {
-        for (String line : helpLines())
+        for (String line : helpLines(source))
         {
             source.sendSuccess(() -> Component.literal(line), false);
         }
@@ -528,7 +542,7 @@ public final class WhimCommand
     private static MutableComponent link(UUID id)
     {
         // 点击把命令填入聊天框，便于查看/操作该灵感
-        String command = "/glimmerwhim whim get " + id;
+        String command = "/" + GlimmerWhim.MODID + " whim get " + id;
 
         return Component.literal(id.toString()).withStyle(Style.EMPTY
                 .withColor(ChatFormatting.AQUA)

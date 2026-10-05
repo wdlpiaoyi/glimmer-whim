@@ -63,7 +63,8 @@ public final class DevExplosionWhim implements WhimType
         }
 
         WhimTarget target = event.target().orElse(null);
-        Vec3 at = target == null ? null : resolveTarget(event.player(), target).map(Entity::position).orElse(target.point());
+        Vec3 at = target == null ? null
+                : resolveTarget(event.player(), target).map(Entity::position).orElse(target.point().orElse(null));
 
         if (at == null)
         {

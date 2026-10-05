@@ -92,6 +92,7 @@
 - 松开时整条链一起结算、一起消耗。
 - 链长上限由 `whim.maxChainLength` 决定（默认 `8`，`0` 表示禁止串联）。
 - 牵引过程中根消失，或松开时没有有效目标，则整链作废。
+- 链上的灵感寿命默认暂停（被按住或作为修饰）；类型声明 `pausesInChain() = false` 时继续倒计时。
 - 修饰按维度（`power`、`range`）叠加。
 
 ## 生成
@@ -106,7 +107,7 @@
 | --- | --- |
 | `aim` | 瞄准是否忽略方块遮挡。 |
 | `freelook` | 自由视角模式（按住/切换）、回正时长、灵敏度、角度限制。 |
-| `render` | 高亮轮廓、面明暗、瞄准颜色、牵引折线；`render.dev` 为 dev 元素外观。 |
+| `render` | 高亮轮廓、面明暗、瞄准颜色、牵引折线；`render.default` 为没有自定义绘制的元素的默认外观。 |
 | `whim` | 串联上限。 |
 | `command` | 命令权限等级、TAB 补全的拾取距离。 |
 | `debug` | 日志详细程度。 |
@@ -133,7 +134,7 @@
 - **维度**：`engine/WhimDimensions`（`power` / `range`）。
 - **事件**：`engine/WhimEvent`（`SUMMON`、`HIGHLIGHT`、`UNHIGHLIGHT`、`TICK`、`HOLD`、`USE`、`EXPIRE`、`REMOVE`）；`TICK` 需 `ticks()` 开启。
 - **调度**：`engine/WhimScheduler`（`schedule` / `scheduleRepeating`），任务以灵感为 owner，灵感移除即取消；灵感到期同样登记为任务，主循环不再逐 tick 扫描寿命。
-- **渲染**：客户端 `client/WhimRenderer` 按类型注册绘制 / 命中 / 高亮 / 牵引；该注册必须在客户端侧声明（渲染类不能在服务端加载）。
+- **渲染**：客户端用 `whims/client/WhimRenders` 登记某个元素的绘制 / 命中 / 高亮 / 牵引与轨迹样式（底层是 `client/WhimRenderer`）；该注册必须在客户端侧声明（渲染类不能在服务端加载），未登记的灵感用 `render.default` 外观。
 
 ## 许可
 

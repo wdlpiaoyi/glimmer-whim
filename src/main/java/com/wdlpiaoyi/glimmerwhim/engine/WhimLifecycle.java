@@ -55,7 +55,7 @@ public final class WhimLifecycle
         }
 
         WhimData data = WhimData.of(values);
-        WhimVisibility visibility = WhimVisibility.resolve(level.getServer(), player, raw == null ? "all" : raw);
+        WhimVisibility visibility = WhimVisibility.resolve(level.getServer(), player, raw == null ? WhimVisibility.DEFAULT_MODE : raw);
         Whim whim = new Whim(UUID.randomUUID(), placement.anchor(), type, data, visibility, level.getGameTime());
         WhimRegistry.of(level).summon(whim);
 

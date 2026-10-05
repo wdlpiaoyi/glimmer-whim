@@ -19,6 +19,6 @@ public final class DevWhims
     {
         // 开发内容：源码存在 whims/dev/ 即注册为可用灵感
         DevTraces.register();
-        WhimContent.register(DevStrikeWhim.INSTANCE, DevStrikeChargeWhim.INSTANCE);
+        WhimContent.register(DevStrikeWhim.INSTANCE, DevStrikeChargeWhim.INSTANCE, DevEntityWhim.INSTANCE);
     }
 }

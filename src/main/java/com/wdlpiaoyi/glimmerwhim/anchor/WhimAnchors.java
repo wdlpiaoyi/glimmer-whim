@@ -1,5 +1,6 @@
 package com.wdlpiaoyi.glimmerwhim.anchor;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,7 +34,14 @@ public final class WhimAnchors
             new AnchorType(RayAnchor.TYPE, RayAnchor::read, RayAnchor::parse, RayAnchor::suggestData,
                     "dx dy dz [distance]；~ 表示视线方向"),
             new AnchorType(PosAnchor.TYPE, PosAnchor::read, PosAnchor::parse, PosAnchor::suggestData,
-                    "x y z；~ 表示当前位置"));
+                    "x y z；~ 表示当前位置"),
+            new AnchorType(EntityAnchor.TYPE, EntityAnchor::read, EntityAnchor::parse, EntityAnchor::suggestData,
+                    "实体选择器（例如 @e[limit=1]）；锚点跟随该实体"));
+
+    // 伪锚：不产生位置，改用灵感自身的 spawn() 规则；只存在于命令，不进网络
+    public static final ResourceLocation DEFAULT = ResourceLocation.fromNamespaceAndPath(GlimmerWhim.MODID, "default");
+
+    private static final String DEFAULT_HINT = "使用该灵感自身的生成规则；不接受锚数据";
 
     private static final Map<ResourceLocation, AnchorType> TYPES = new LinkedHashMap<>();
 
@@ -51,11 +59,21 @@ public final class WhimAnchors
 
     public static Collection<ResourceLocation> types()
     {
-        return List.copyOf(TYPES.keySet());
+        // 注册顺序即补全/展示顺序；伪锚 default 列在末尾
+        List<ResourceLocation> types = new ArrayList<>(TYPES.keySet());
+        types.add(DEFAULT);
+
+        return List.copyOf(types);
     }
 
     public static Collection<String> suggestData(ResourceLocation type, CommandSourceStack source)
     {
+        // 伪锚不接受锚数据
+        if (DEFAULT.equals(type))
+        {
+            return List.of();
+        }
+
         AnchorType anchor = type == null ? null : TYPES.get(type);
 
         return anchor == null ? List.of() : anchor.suggestions().apply(source);
@@ -63,6 +81,11 @@ public final class WhimAnchors
 
     public static String hint(ResourceLocation type)
     {
+        if (DEFAULT.equals(type))
+        {
+            return DEFAULT_HINT;
+        }
+
         AnchorType anchor = type == null ? null : TYPES.get(type);
 
         return anchor == null ? "" : anchor.hint();
