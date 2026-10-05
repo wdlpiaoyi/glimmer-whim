@@ -40,6 +40,14 @@ public final class WhimParams
         return new WhimParams(List.of(WhimParam.player(Whim.VISIBILITY, "all")));
     }
 
+    // 链的轨迹样式：element 决定整条链，modifier 叠在其上
+    public static WhimParams traces(String elementDefault, String modifierDefault)
+    {
+        return new WhimParams(List.of(
+                WhimParam.trace(Whim.ELEMENT_TRACE, elementDefault),
+                WhimParam.trace(Whim.MODIFIER_TRACE, modifierDefault)));
+    }
+
     public Collection<WhimParam> all()
     {
         return this.params.values();

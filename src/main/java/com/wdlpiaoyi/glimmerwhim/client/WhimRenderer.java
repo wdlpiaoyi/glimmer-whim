@@ -9,12 +9,17 @@ import java.util.UUID;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
+import com.wdlpiaoyi.glimmerwhim.engine.Whim;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimSight;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimTraces;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 import com.wdlpiaoyi.glimmerwhim.whims.client.DefaultRender;
+import com.wdlpiaoyi.glimmerwhim.whims.client.Tint;
+import com.wdlpiaoyi.glimmerwhim.whims.client.Trace;
 import com.wdlpiaoyi.glimmerwhim.whims.client.Traces;
 
 import net.minecraft.client.Minecraft;
@@ -45,18 +50,6 @@ public final class WhimRenderer
         void draw(PoseStack pose, Vec3 dir, WhimData data, WhimParams params);
     }
 
-    @FunctionalInterface
-    public interface Trace
-    {
-        void draw(PoseStack pose, List<Vec3> points, Vec3 endpoint, float fade, WhimData data, WhimParams params);
-
-        // 默认淡出时长，单位毫秒
-        default float fadeMillis()
-        {
-            return 300.0F;
-        }
-    }
-
     public static final class RenderSpec
     {
         private Drawer draw = DefaultRender::draw;
@@ -64,10 +57,6 @@ public final class WhimRenderer
         private Hit hit = DefaultRender::hit;
 
         private Highlight highlight = DefaultRender::outline;
-
-        private Trace elementTrace;
-
-        private Trace modifierTrace;
 
         public RenderSpec draw(Drawer draw)
         {
@@ -86,34 +75,18 @@ public final class WhimRenderer
             this.highlight = highlight;
             return this;
         }
-
-        public RenderSpec elementTrace(Trace elementTrace)
-        {
-            this.elementTrace = elementTrace;
-            return this;
-        }
-
-        public RenderSpec modifierTrace(Trace modifierTrace)
-        {
-            this.modifierTrace = modifierTrace;
-            return this;
-        }
     }
 
     private record Drawable(ClientWhimCache.WhimView whim, WhimParams params, Vec3 at, boolean depth)
     {
     }
 
-    // 注册表均按元素 id 索引；除 modifierTrace 外未注册都会回落到默认实现
+    // 均按元素 id 索引；未注册都会回落到默认实现。轨迹样式不走这里，由 data 里的 id 决定
     private static final Map<ResourceLocation, Drawer> DRAWERS = new LinkedHashMap<>();
 
     private static final Map<ResourceLocation, Hit> HITS = new LinkedHashMap<>();
 
     private static final Map<ResourceLocation, Highlight> HIGHLIGHTS = new LinkedHashMap<>();
-
-    private static final Map<ResourceLocation, Trace> ELEMENT_TRACES = new LinkedHashMap<>();
-
-    private static final Map<ResourceLocation, Trace> MODIFIER_TRACES = new LinkedHashMap<>();
 
     private WhimRenderer()
     {
@@ -124,16 +97,6 @@ public final class WhimRenderer
         DRAWERS.put(type.id(), spec.draw);
         HITS.put(type.id(), spec.hit);
         HIGHLIGHTS.put(type.id(), spec.highlight);
-
-        if (spec.elementTrace != null)
-        {
-            ELEMENT_TRACES.put(type.id(), spec.elementTrace);
-        }
-
-        if (spec.modifierTrace != null)
-        {
-            MODIFIER_TRACES.put(type.id(), spec.modifierTrace);
-        }
     }
 
     public static Drawer drawer(ResourceLocation id)
@@ -151,14 +114,60 @@ public final class WhimRenderer
         return HIGHLIGHTS.getOrDefault(id, DefaultRender::outline);
     }
 
-    public static Trace elementTrace(ResourceLocation id)
+    // 链的轨迹样式：data 覆盖、类型默认兜底；未登记/拼错的 id 回落到 fallback 并打日志
+    public static Trace elementTrace(WhimParams params, WhimData data)
     {
-        return ELEMENT_TRACES.getOrDefault(id, Traces::line);
+        String raw = params.text(data, Whim.ELEMENT_TRACE);
+
+        // 元素位置声明成合成样式时，仍需一条基础线供它染色
+        return isTint(raw) ? Traces::line : resolve(raw, WhimTraces.LINE);
     }
 
-    public static Trace modifierTrace(ResourceLocation id)
+    public static Trace modifierTrace(WhimParams params, WhimData data)
     {
-        return MODIFIER_TRACES.get(id);
+        String raw = params.text(data, Whim.MODIFIER_TRACE);
+
+        // 合成样式不自己画
+        return isTint(raw) ? Traces.NONE : resolve(raw, WhimTraces.NONE);
+    }
+
+    public static Tint elementTint(WhimParams params, WhimData data)
+    {
+        return tint(params.text(data, Whim.ELEMENT_TRACE));
+    }
+
+    public static Tint modifierTint(WhimParams params, WhimData data)
+    {
+        return tint(params.text(data, Whim.MODIFIER_TRACE));
+    }
+
+    private static Tint tint(String raw)
+    {
+        ResourceLocation id = ResourceLocation.tryParse(raw);
+        return id == null ? null : Traces.tint(id);
+    }
+
+    private static boolean isTint(String raw)
+    {
+        return tint(raw) != null;
+    }
+
+    private static Trace resolve(String raw, ResourceLocation fallback)
+    {
+        ResourceLocation id = ResourceLocation.tryParse(raw);
+        Trace trace = id == null ? null : Traces.get(id);
+
+        if (trace != null)
+        {
+            return trace;
+        }
+
+        if (id != null && !id.equals(fallback) && !Traces.known(id))
+        {
+            GlimmerWhim.log("未知的轨迹样式: " + raw + "，回落到 " + fallback);
+        }
+
+        return Traces.get(fallback);
     }
 
     @SubscribeEvent

@@ -3,6 +3,8 @@ package com.wdlpiaoyi.glimmerwhim.engine;
 import java.util.List;
 import java.util.function.Predicate;
 
+import net.minecraft.resources.ResourceLocation;
+
 public final class WhimParam
 {
     private final String name;
@@ -43,6 +45,19 @@ public final class WhimParam
     public static WhimParam player(String name, String defaultValue)
     {
         return new WhimParam(name, defaultValue, value -> !value.isBlank(), "all、me 或玩家名", List.of("all", "me"));
+    }
+
+    // 轨迹样式 id，须是 WhimTraces 已登记的（含运行期登记）
+    public static WhimParam trace(String name, String defaultValue)
+    {
+        Predicate<String> valid = value ->
+        {
+            ResourceLocation id = ResourceLocation.tryParse(value);
+
+            return id != null && WhimTraces.contains(id);
+        };
+
+        return new WhimParam(name, defaultValue, valid, "已登记的轨迹样式", WhimTraces.names());
     }
 
     private static boolean isPositive(String value)

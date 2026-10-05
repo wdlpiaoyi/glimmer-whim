@@ -10,6 +10,7 @@ import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimSpawn;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimSpawnContext;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimTarget;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimTraces;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -21,10 +22,24 @@ public interface WhimType
 
     WhimParams params();
 
-    // 类型参数 + 内置 lifetime + visibility；后加者覆盖同名
+    // 类型参数 + 内置 lifetime/visibility/trace；后加者覆盖同名
     default WhimParams effectiveParams()
     {
-        return params().plus(WhimParams.lifetime(defaultLifetime())).plus(WhimParams.visibility());
+        return params()
+                .plus(WhimParams.lifetime(defaultLifetime()))
+                .plus(WhimParams.visibility())
+                .plus(WhimParams.traces(elementTrace().toString(), modifierTrace().toString()));
+    }
+
+    // 链的轨迹样式：element 决定整条链，modifier 叠在其上
+    default ResourceLocation elementTrace()
+    {
+        return WhimTraces.LINE;
+    }
+
+    default ResourceLocation modifierTrace()
+    {
+        return WhimTraces.NONE;
     }
 
     // -1 = 永久

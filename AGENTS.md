@@ -22,12 +22,12 @@ Server-authoritative core lives in `engine/`:
 
 Other packages:
 - `anchor/` — placement only; `anchor/WhimAnchors.ANCHORS` is the anchor registry (type + `read`/`parse`/`suggestData` + hint).
-- `whims/` — `WhimType` implementations; `whims/WhimContent.register(...)` registers each type and hooks it onto the Forge bus (instance + static `@SubscribeEvent`); `whims/client/` holds draw code; `whims/dev/` holds dev/test content.
+- `whims/` — `WhimType` implementations; `whims/WhimContent.register(...)` registers each type and hooks it onto the Forge bus (instance + static `@SubscribeEvent`); `whims/client/` holds draw code (`Traces` is the named trace registry: draw styles `line`/`glow`/`none` via `register(id, impl)` and composite styles `hue` via `Traces.tint(id, impl)` — composite styles draw nothing and only dye whatever is drawn after them); trace styles are chosen per chain via `{element_trace:...}` / `{modifier_trace:...}`; `whims/dev/` holds dev/test content.
 - `client/` render/aim/interact/freelook, `net/` packets, `command/` the `/glimmerwhim` tree, `config/` config, `mixin/` client mixins.
 
 ## Registration & test content
 
-- Registration is centralized by design: a new whim = implement `whims/WhimType`, `WhimContent.register(...)` (the engine hooks `@SubscribeEvent` handlers automatically), and register client rendering in a **client-side** class. `bind()` is an escape hatch for third-party buses. A new anchor = one row in `anchor/WhimAnchors.ANCHORS`.
+- Registration is centralized by design: a new whim = implement `whims/WhimType`, `WhimContent.register(...)` (the engine hooks `@SubscribeEvent` handlers automatically), and register client rendering in a **client-side** class. `bind()` is an escape hatch for third-party buses. A new anchor = one row in `anchor/WhimAnchors.ANCHORS`. A new trace style = one id in `engine/WhimTraces` (`register` works at runtime too) plus one client `Traces.register(id, impl)` (draw) or `Traces.tint(id, impl)` (composite, e.g. `hue` — composite styles receive a stack count so each defines its own stacking rule; `hue` shortens its cycle per extra layer); any whim then selects it via `{element_trace:...}` / `{modifier_trace:...}`.
 - Dev content activates by presence: `whims/dev/` self-registers via `@Mod.EventBusSubscriber`; there is no runtime toggle. Moving files out of `whims/dev/` disables them.
 - `parked/` mirrors the source package but is **not compiled**. Restoring a parked file requires moving it back into `whims/dev/` and re-registering it in `DevWhims`/`DevRenders`.
 

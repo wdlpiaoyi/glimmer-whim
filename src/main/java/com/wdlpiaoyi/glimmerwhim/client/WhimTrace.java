@@ -10,6 +10,9 @@ import com.wdlpiaoyi.glimmerwhim.engine.Whim;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimTarget;
+import com.wdlpiaoyi.glimmerwhim.whims.client.Tint;
+import com.wdlpiaoyi.glimmerwhim.whims.client.Trace;
+import com.wdlpiaoyi.glimmerwhim.whims.client.Traces;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.resources.ResourceLocation;
@@ -89,7 +92,7 @@ public final class WhimTrace
         WhimTrace.target = target == null ? null : target.point();
         // PLAYTIME 单位是 tick，×50 换成毫秒（20tps）
         playMillis = (float) Math.max(0.0D, play) * 50.0F;
-        fadeMillis = WhimRenderer.elementTrace(root.type()).fadeMillis();
+        fadeMillis = WhimRenderer.elementTrace(root.params(), root.data()).fadeMillis();
         phase = playMillis > 0.0F && WhimTrace.target != null ? Phase.PLAY : Phase.FADE;
         phaseStart = System.currentTimeMillis();
     }
@@ -106,7 +109,7 @@ public final class WhimTrace
         frozen = live;
         target = null;
         playMillis = 0.0F;
-        fadeMillis = WhimRenderer.elementTrace(frozen.get(0).type()).fadeMillis();
+        fadeMillis = WhimRenderer.elementTrace(frozen.get(0).params(), frozen.get(0).data()).fadeMillis();
         phase = Phase.FADE;
         phaseStart = System.currentTimeMillis();
     }
@@ -187,7 +190,7 @@ public final class WhimTrace
                 continue;
             }
 
-            nodes.add(new Node(at, view.type().id(), view.data(), view.type().params()));
+            nodes.add(new Node(at, view.type().id(), view.data(), view.type().effectiveParams()));
         }
 
         return nodes;
@@ -209,18 +212,95 @@ public final class WhimTrace
 
         Vec3 end = endpoint == null ? null : endpoint.subtract(camera);
         Node root = nodes.get(0);
-        WhimRenderer.elementTrace(root.type()).draw(pose, points, end, fade, root.data(), root.params());
+        List<Stroke> strokes = strokes(nodes);
+        Trace element = WhimRenderer.elementTrace(root.params(), root.data());
+        int count = nodes.size();
 
-        for (int i = 1; i < nodes.size(); i++)
+        // 元素基础线按染色变化切段，每段套用当时的染色
+        int start = 0;
+        boolean merged = false;
+
+        while (start <= count - 2)
+        {
+            Stroke stroke = strokes.get(start);
+            int stop = start;
+
+            while (stop + 1 <= count - 2 && strokes.get(stop + 1).equals(stroke))
+            {
+                stop++;
+            }
+
+            // 末段与末节点染色一致时才把终点并进来，否则终点属于末节点的染色
+            boolean toEnd = stop == count - 2 && strokes.get(count - 1).equals(stroke);
+            merged = toEnd;
+            apply(stroke, root);
+            element.draw(pose, new ArrayList<>(points.subList(start, stop + 2)), toEnd ? end : null, fade,
+                    root.data(), root.params());
+            Traces.clearTint();
+            start = stop + 1;
+        }
+
+        if (!merged)
+        {
+            // 末节点到终点这一段用末节点的染色
+            apply(strokes.get(count - 1), nodes.get(count - 1));
+            element.draw(pose, new ArrayList<>(points.subList(count - 1, count)), end, fade, root.data(),
+                    root.params());
+            Traces.clearTint();
+        }
+
+        // 每个 modifier 从它自己出发画到终点，即只影响它之后的段；后面的 modifier 会叠在同一段上
+        for (int i = 1; i < count; i++)
         {
             Node node = nodes.get(i);
-            WhimRenderer.Trace overlay = WhimRenderer.modifierTrace(node.type());
+            Trace overlay = WhimRenderer.modifierTrace(node.params(), node.data());
 
-            if (overlay != null)
+            if (overlay == null)
             {
-                overlay.draw(pose, points, end, fade, node.data(), node.params());
+                continue;
             }
+
+            apply(strokes.get(i), node);
+            overlay.draw(pose, new ArrayList<>(points.subList(i, count)), end, fade, node.data(), node.params());
+            Traces.clearTint();
         }
+    }
+
+    // 每个节点处的染色：元素样式打底，之后的 modifier 合成样式从它自己往后覆盖
+    // 同一种合成样式连续叠加时累加层数，交给样式自己决定叠加效果
+    private static List<Stroke> strokes(List<Node> nodes)
+    {
+        List<Stroke> strokes = new ArrayList<>(nodes.size());
+        Tint running = WhimRenderer.elementTint(nodes.get(0).params(), nodes.get(0).data());
+        int stack = running == null ? 0 : 1;
+
+        for (int i = 0; i < nodes.size(); i++)
+        {
+            if (i > 0)
+            {
+                Tint own = WhimRenderer.modifierTint(nodes.get(i).params(), nodes.get(i).data());
+
+                if (own != null)
+                {
+                    stack = own == running ? stack + 1 : 1;
+                    running = own;
+                }
+            }
+
+            strokes.add(new Stroke(running, stack));
+        }
+
+        return strokes;
+    }
+
+    private static void apply(Stroke stroke, Node node)
+    {
+        Traces.setTint(stroke.tint() == null ? null : stroke.tint().color(node.data(), node.params(), stroke.stack()));
+    }
+
+    // tint 为 null 表示不染色；stack 是同一种合成样式叠了几层
+    private record Stroke(Tint tint, int stack)
+    {
     }
 
     private static Vec3 crosshair(ClientLevel level, Vec3 eye, Vec3 look)

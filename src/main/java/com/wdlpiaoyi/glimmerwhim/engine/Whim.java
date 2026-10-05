@@ -7,10 +7,12 @@ import java.util.UUID;
 
 public final class Whim
 {
-    // 参数键：lifetime 存续 tick（-1 永久）；visibility 可见性；playtime 客户端播放 tick
+    // 参数键：lifetime 存续 tick（-1 永久）；visibility 可见性；playtime 客户端播放 tick；*_trace 轨迹样式 id
     public static final String LIFETIME = "lifetime";
     public static final String VISIBILITY = "visibility";
     public static final String PLAYTIME = "playtime";
+    public static final String ELEMENT_TRACE = "element_trace";
+    public static final String MODIFIER_TRACE = "modifier_trace";
 
     private final UUID id;
     private final WhimAnchor anchor;

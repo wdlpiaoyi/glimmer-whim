@@ -68,6 +68,13 @@ public final class DevStrikeWhim implements WhimType
     {
     }
 
+    // 电流轨迹
+    @Override
+    public ResourceLocation elementTrace()
+    {
+        return DevTraces.CURRENT;
+    }
+
     @Override
     public ResourceLocation id()
     {

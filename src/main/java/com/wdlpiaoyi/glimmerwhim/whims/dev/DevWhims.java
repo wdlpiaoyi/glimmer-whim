@@ -18,6 +18,7 @@ public final class DevWhims
     public static void onCommonSetup(FMLCommonSetupEvent event)
     {
         // 开发内容：源码存在 whims/dev/ 即注册为可用灵感
+        DevTraces.register();
         WhimContent.register(DevStrikeWhim.INSTANCE, DevStrikeChargeWhim.INSTANCE, DevSightTestWhim.INSTANCE);
     }
 }

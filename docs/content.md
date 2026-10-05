@@ -23,6 +23,7 @@
 - 可接受的目标类型
 - 生命周期
 - 生成规则
+- 轨迹样式（`element_trace` / `modifier_trace` 的 id，见 `engine/WhimTraces` 与 `whims/client/Traces`）
 
 ## 生成
 
