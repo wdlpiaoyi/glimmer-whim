@@ -24,7 +24,7 @@ Server-authoritative core lives in `engine/`:
 
 Other packages:
 - `anchor/` — placement only; `anchor/WhimAnchors.ANCHORS` is the anchor registry (type + `read`/`parse`/`suggestData` + hint).
-- `whims/` — `WhimType` implementations; `whims/WhimContent.register(...)` registers each type and hooks it onto the Forge bus (instance + static `@SubscribeEvent`); `whims/client/` holds draw code and the client-side registration entry `WhimRenders` (`Traces` is the named trace registry: draw styles `line`/`glow`/`curve`/`none` via `register(id, impl)` and composite styles `hue` via `Traces.tint(id, impl)` — composite styles draw nothing and only dye whatever is drawn after them); trace styles are chosen per chain via `{element_trace:...}` / `{modifier_trace:...}`; `whims/dev/` holds dev/test content.
+- `whims/` — `WhimType` implementations; `whims/WhimContent.register(...)` registers each type and hooks it onto the Forge bus (instance + static `@SubscribeEvent`); `whims/client/` holds draw code and the client-side registration entry `WhimRenders` (`Traces` is the named trace registry: draw styles `line`/`glow`/`curve`/`none` via `register(id, impl)` and composite styles `hue` via `Traces.tint(id, impl)` — composite styles draw nothing and only dye whatever is drawn after them); trace styles are chosen per chain via `{element_trace:...}` / `{modifier_trace:...}`; `whims/dev/` holds dev/test content, and `whims/dev/template/` holds skeleton templates for each extension point (reference only; the template whim is itself registered as dev content).
 - `client/` render/aim/interact/freelook, `net/` packets, `command/` the `/glimmerwhim` tree, `config/` config, `mixin/` client mixins.
 
 ## Registration & test content

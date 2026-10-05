@@ -6,6 +6,7 @@ import com.wdlpiaoyi.glimmerwhim.whims.client.WhimRenders;
 import com.wdlpiaoyi.glimmerwhim.whims.dev.DevStrikeChargeWhim;
 import com.wdlpiaoyi.glimmerwhim.whims.dev.DevStrikeWhim;
 import com.wdlpiaoyi.glimmerwhim.whims.dev.DevTraces;
+import com.wdlpiaoyi.glimmerwhim.whims.dev.template.client.WhimTemplateRender;
 
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -28,5 +29,6 @@ public final class DevRenders
         WhimRenders.register(DevStrikeChargeWhim.INSTANCE,
                 new WhimRenderer.RenderSpec().draw(DevStrikeChargeRender::draw));
         WhimRenders.register(DevTraces.CURRENT, DevStrikeTrace::draw);
+        WhimTemplateRender.register();
     }
 }
