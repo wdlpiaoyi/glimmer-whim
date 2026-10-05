@@ -1,8 +1,8 @@
 package com.wdlpiaoyi.glimmerwhim.whims;
 
-import net.minecraft.resources.ResourceLocation;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimDomain;
 
-// 链修饰符输出：dimension 指定数值域（见 WhimDimensions），value 为数值
-public record WhimModifier(ResourceLocation dimension, double value)
+// 链修饰符输出：domain 是该修饰符声明的数值域（含定义），value 为数值
+public record WhimModifier(WhimDomain domain, double value)
 {
 }

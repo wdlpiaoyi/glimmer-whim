@@ -16,7 +16,8 @@
 - modid 用 `GlimmerWhim.MODID`，不要再写 `"glimmerwhim"`。
 - `WhimChain` 已无 `value(...)` / `factor()`（`DevRootWhim` 受影响）。
 - 周期性生成器 `WhimSpawner` / `spawnInterval()` 已删除（`SpawnTestWhim` 受影响）。
+- `WhimDimensions` 已删除；修饰符自己声明并携带 `WhimDomain`（`DevBoostWhim`、`DevExplosionWhim` 受影响）。
 
 ## 移动原因
 
-当前只保留正在开发的 `dev_strike`，其余测试类型（`dev`、`dev_mark`、`spawn_test`、`trace_test` 等）从默认构建里移出，避免它们自动生成或出现在补全列表里。参见 `docs/dev-content.md`。
+当前只保留正在开发的 `dev_strike`、遮挡测试 `dev_sighttest` 与两个修饰符示例 `dev_power`/`dev_range`，其余测试类型（`dev`、`dev_mark`、`spawn_test`、`trace_test`、`dev_explosion` 等）从默认构建里移出，避免它们自动生成、破坏地形或出现在补全列表里。参见 `docs/dev-content.md`。
