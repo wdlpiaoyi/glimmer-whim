@@ -69,7 +69,6 @@ public final class WhimConfig
     private static final ForgeConfigSpec.DoubleValue STRIKE_DAMAGE_RATIO;
     private static final ForgeConfigSpec.DoubleValue STRIKE_SIZE;
     private static final ForgeConfigSpec.DoubleValue STRIKE_RADIUS;
-    private static final ForgeConfigSpec.IntValue STRIKE_BOLTS;
     private static final ForgeConfigSpec.DoubleValue STRIKE_SPREAD;
     private static final ForgeConfigSpec.IntValue STRIKE_CHARGE_TICKS;
     private static final ForgeConfigSpec.IntValue STRIKE_GLOW_TICKS;
@@ -185,8 +184,6 @@ public final class WhimConfig
                 .defineInRange("size", 4.0D, 0.0D, Double.POSITIVE_INFINITY);
         STRIKE_RADIUS = builder.comment("范围伤害半径（方块），作为 {radius} 的默认值。默认 2。")
                 .defineInRange("radius", 2.0D, 0.0D, Double.POSITIVE_INFINITY);
-        STRIKE_BOLTS = builder.comment("视觉闪电道数，作为 {bolts} 的默认值。默认 10。")
-                .defineInRange("bolts", 10, 1, 1000);
         STRIKE_SPREAD = builder.comment("闪电散布半径（方块），作为 {spread} 的默认值。默认 2。")
                 .defineInRange("spread", 2.0D, 0.0D, Double.POSITIVE_INFINITY);
         STRIKE_CHARGE_TICKS = builder.comment("蓄力时长（tick），作为 {charge} 的默认值。默认 35。")
@@ -341,12 +338,7 @@ public final class WhimConfig
         return STRIKE_RADIUS.get();
     }
 
-    // {bolts} 的默认值
-    public static int strikeBolts()
-    {
-        return STRIKE_BOLTS.get();
-    }
-
+    // {bolts} 的默认值由 StrikeWhim.boltCount 按 {damage_ratio} 推算
     // {spread} 的默认值
     public static double strikeSpread()
     {

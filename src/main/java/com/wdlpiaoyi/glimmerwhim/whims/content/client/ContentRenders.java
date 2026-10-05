@@ -2,6 +2,7 @@ package com.wdlpiaoyi.glimmerwhim.whims.content.client;
 
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.client.WhimRenderer;
+import com.wdlpiaoyi.glimmerwhim.whims.client.ScatterVanish;
 import com.wdlpiaoyi.glimmerwhim.whims.client.WhimRenders;
 import com.wdlpiaoyi.glimmerwhim.whims.content.ContentTraces;
 import com.wdlpiaoyi.glimmerwhim.whims.content.StrikeWhim;
@@ -22,10 +23,10 @@ public final class ContentRenders
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event)
     {
-        // 本体同时声明绘制（含蓄力自转）、瞄准高亮与角度命中判定；电流样式注册到具名表
+        // 本体同时声明绘制（含蓄力自转）、瞄准高亮、角度命中判定与消散；电流样式注册到具名表
         WhimRenders.register(StrikeWhim.INSTANCE,
                 new WhimRenderer.RenderSpec().draw(StrikeRender::draw).hit(StrikeRender::hit)
-                        .highlight(StrikeRender::highlight));
+                        .highlight(StrikeRender::highlight).vanish(ScatterVanish::draw));
         WhimRenders.register(ContentTraces.CURRENT, CurrentTrace::draw);
     }
 }

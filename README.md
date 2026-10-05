@@ -107,7 +107,7 @@
 | `freelook` | 自由视角模式（按住/切换）、回正时长、灵敏度、角度限制。 |
 | `render` | 高亮轮廓、面明暗、瞄准颜色、牵引折线；`render.default` 为没有自定义绘制的元素的默认外观。 |
 | `whim` | 串联上限。 |
-| `strike` | 落雷 `strike` 的触发条件与数值默认值（`enabled`/`chance`/`min_health`/`max_damage_ratio`/`combat_window_ticks`/`roll_interval_ticks`/`cooldown_ticks`/`overworld_only`，以及参数默认值 `size`/`damage_ratio`/`radius`/`bolts`/`spread`/`charge_ticks`/`glow_ticks`）。 |
+| `strike` | 落雷 `strike` 的触发条件与数值默认值（`enabled`/`chance`/`min_health`/`max_damage_ratio`/`combat_window_ticks`/`roll_interval_ticks`/`cooldown_ticks`/`overworld_only`，以及参数默认值 `size`/`damage_ratio`/`radius`/`spread`/`charge_ticks`/`glow_ticks`；`{bolts}` 不在配置里，默认由 `{damage_ratio}` 推算）。 |
 | `command` | 命令权限等级、TAB 补全的拾取距离。 |
 | `debug` | 日志详细程度。 |
 
@@ -128,7 +128,7 @@
 
 ## 为开发者
 
-- **新增灵感**：实现 `whims/WhimType`，通过 `whims/WhimContent.register(...)` 注册（引擎会自动把类型上的 `@SubscribeEvent` 挂上 Forge 总线，`bind()` 仅用于第三方总线）。它声明 id、`{参数}`、能否起链（`canRoot()`）、修饰（`modifier()`）、目标限制（`acceptsTarget()`）、用后是否随链消耗（`consumedOnUse()`）、事件处理（`on()`）、生成规则（`spawn()`）、生成表现（`onGenerated()`）、绘制是否开深度测试（`depthOcclusion()`）。正式内容放 `whims/content/`（注册在 `ContentWhims`，客户端在 `ContentRenders`），开发测试内容放 `whims/dev/`（源码里有即注册）。
+- **新增灵感**：实现 `whims/WhimType`，通过 `whims/WhimContent.register(...)` 注册（引擎会自动把类型上的 `@SubscribeEvent` 挂上 Forge 总线，`bind()` 仅用于第三方总线）。它声明 id、`{参数}`、能否起链（`canRoot()`）、修饰（`modifier()`）、目标限制（`acceptsTarget()`）、用后是否随链消耗（`consumedOnUse()`）、事件处理（`on()`）、生成规则（`spawn()`）、生成表现（`onGenerated()`）、绘制是否开深度测试（`depthOcclusion()`）、消失后的消散时长与画法（`vanishMillis()` 配 `RenderSpec.vanish(...)`，画法要具名、可被别的灵感复用）。正式内容放 `whims/content/`（注册在 `ContentWhims`，客户端在 `ContentRenders`），开发测试内容放 `whims/dev/`（源码里有即注册）。
 - **新增锚**：实现 `anchor/WhimAnchor`，在 `anchor/WhimAnchors` 的 `ANCHORS` 列表里加一项（类型、`read`、`parse`、`suggestData`、提示）。
 - **维度**：`engine/WhimDimensions`（`power` / `range`）。
 - **事件**：`engine/WhimEvent`（`SUMMON`、`HIGHLIGHT`、`UNHIGHLIGHT`、`TICK`、`HOLD`、`USE`、`REJECT`、`EXPIRE`、`REMOVE`）；`TICK` 需 `ticks()` 开启；`REJECT` 在整链因目标为空/不合法/不被接受而丢弃前发给链根。

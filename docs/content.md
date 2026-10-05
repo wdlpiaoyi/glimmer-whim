@@ -15,7 +15,7 @@
 
 - id 与命名空间
 - 锚与锚数据
-- `{参数}`
+- `{参数}`（写成 `{名称:最小值..最大值}` 时，灵感成形时在区间内取一个随机值；自然生成与指令召唤都适用）
 - 角色（`ELEMENT` / `MODIFIER`）
 - 修饰维度（`power` / `range`）
 - 可接受的目标类型（`point` 命中点 / `entity` 实体 / `whim` 灵感；新种类在 `engine/WhimTargets` 登记，附带 payload 的位置与描述语义）
@@ -35,10 +35,10 @@
 - 蓄力：松开时若目标是生物，本体标上 `charging` 并公开给所有人（蓄力中不可再交互、不可再入链），目标获得 `{glow}` 刻发光，播放 warden 蓄力音效，`{charge}` 刻后落雷。蓄力地点固定，不跟随玩家。
 - 落雷：本体消失，落点撒 `{bolts}` 道纯视觉闪电（水平散布 `{spread}`），再以**主目标最大生命 × `{damage_ratio}`** 为基准，对半径 `{radius}` 内每个生物按原版爆炸衰减（`g = (1 - d / 2r) × 曝光度`，衰减 `= (g² + g) / 2`）结算伤害与击退；施法者不受影响。伤害是自定义伤害类型 `glimmerwhim:strike`（不带 `BYPASSES_*` 标签，照常受护甲、保护、抗性与无敌帧影响），归属于施法者。
 - 目标：只接受 `entity` 种类；没选目标、或目标不被接受（选中方块、选中的实体不是生物等）时播火把熄灭音并按浪费丢弃；目标在蓄力期间消失则打记录点。
-- 参数：`{shape:quad}` `{size:4}` `{damage_ratio:1}` `{radius:2}` `{bolts:10}` `{spread:2}` `{charge:35}` `{glow:40}`。除 `{shape}` 外，各数值的默认值都来自配置段 `[strike]`（`size`/`damage_ratio`/`radius`/`bolts`/`spread`/`charge_ticks`/`glow_ticks`），单次召唤可用同名参数覆盖。`{shape}` 未来与美术资源绑定，留作参数而不进配置。
+- 参数：`{shape:quad}` `{size:4}` `{damage_ratio:1}` `{radius:2}` `{bolts}` `{spread:2}` `{charge:35}` `{glow:40}`。除 `{shape}` 与 `{bolts}` 外，各数值的默认值都来自配置段 `[strike]`（`size`/`damage_ratio`/`radius`/`spread`/`charge_ticks`/`glow_ticks`），单次召唤可用同名参数覆盖。`{bolts}` 没进配置：默认值由 `{damage_ratio}` 推算（`round(4 + 16 × log(比例 + 1) / log 8)`，比例越大闪电越多），写出来才覆盖。`{shape}` 未来与美术资源绑定，留作参数而不进配置。生成时 `spawn()` 把寿命、尺寸与伤害比例写成区间（分别上下浮动 ±20% / ±15% / ±25%），所以每次自然生成的观感与威力都略有不同。
 - 瞄准：本体停在最远 128 格的空中，按原尺寸瞄太苛刻；命中判定沿用绘制几何体，但以几何中心放大到 2 倍（因此形状怎样、命中体积就怎样，随美术变）。目标拾取用实体命中箱，候选实体的箱子按 `[aim] targetHitboxScale`（默认 1.5 倍）以几何中心放大后取最近的一个；多部件实体的部位（例如末影龙的各段）归到本体。
 - 轨迹：`glimmerwhim:current`（电流）。
-- 美术与音效暂为占位：默认白面片、蓄力自转、被瞄准时放大描边；生成只让本人听见 wither 环境音、蓄力用 warden 蓄力音、落雷用原版雷电音。绘制时开深度测试（`depthOcclusion(data)`），因此会被地形与实体部分遮挡。
+- 表现：不用贴图，画加色混合的光效——光核 + 绕不同轴自转的晶体方框 + 光环（见 `whims/content/client/StrikeRender`）。尺寸照 `{size}` 并做距离补偿（`whims/client/Glow`），因此锚越远几何越大、屏幕上差不多；`{damage_ratio}` 越大光环越多越亮；剩余寿命越少脉动越快（倒计时在客户端本地，只影响外观）；蓄力时自转变快变亮，被瞄准时整体放大加亮。消散用「碎片散开」（`whims/client/ScatterVanish`，时长 `vanishMillis` = 550 ms）：本体先亮一下再炸成十几片光片向外飞散。绘制时开深度测试（`depthOcclusion(data)`），因此会被地形与实体部分遮挡。音效占位：生成只让本人听见 wither 环境音、蓄力用 warden 蓄力音、落雷用原版雷电音。
 
 ## 待补充
 

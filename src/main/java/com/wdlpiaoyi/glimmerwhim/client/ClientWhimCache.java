@@ -2,6 +2,7 @@ package com.wdlpiaoyi.glimmerwhim.client;
 
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -9,6 +10,7 @@ import com.wdlpiaoyi.glimmerwhim.net.WhimRemovePacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimSummonPacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimUpdatePacket;
 import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
+import com.wdlpiaoyi.glimmerwhim.engine.Whim;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 import com.wdlpiaoyi.glimmerwhim.whims.Whims;
@@ -29,6 +31,8 @@ public final class ClientWhimCache
 
     // 客户端镜像，仅用于渲染与瞄准，服务端才是权威
     private static final Map<UUID, WhimView> WHIMES = new LinkedHashMap<>();
+    // 本地倒计时（tick），只用于表现（例如脉动频率）；寿命是否结束仍以服务端为准
+    private static final Map<UUID, Integer> REMAINING = new LinkedHashMap<>();
     // 缓存所属维度；跨维度或重连时整体清空
     private static ResourceKey<Level> dimension;
 
@@ -52,6 +56,16 @@ public final class ClientWhimCache
         }
 
         WHIMES.put(packet.id(), new WhimView(packet.id(), packet.anchor(), type, packet.data()));
+        int lifetime = lifetime(packet.data());
+
+        if (lifetime >= 0)
+        {
+            REMAINING.put(packet.id(), lifetime);
+        }
+        else
+        {
+            REMAINING.remove(packet.id());
+        }
     }
 
     public static void remove(WhimRemovePacket packet)
@@ -61,7 +75,14 @@ public final class ClientWhimCache
             return;
         }
 
-        WHIMES.remove(packet.id());
+        WhimView view = WHIMES.remove(packet.id());
+        REMAINING.remove(packet.id());
+
+        // 本体消失后可以继续演一段消散：时长与画法由类型和渲染登记决定
+        if (view != null)
+        {
+            WhimVanish.begin(view);
+        }
     }
 
     // 只换数据；未持有该灵感时忽略（可见性变更会重新走召唤/移除）
@@ -94,6 +115,8 @@ public final class ClientWhimCache
     public static void clear()
     {
         WHIMES.clear();
+        REMAINING.clear();
+        WhimVanish.clear();
         dimension = null;
     }
 
@@ -112,7 +135,7 @@ public final class ClientWhimCache
             return false;
         }
 
-        WHIMES.clear();
+        clear();
         dimension = incoming;
         return true;
     }
@@ -137,9 +160,54 @@ public final class ClientWhimCache
 
         if (!current.equals(dimension))
         {
-            WHIMES.clear();
+            clear();
             dimension = current;
         }
+
+        countdown();
+    }
+
+    // 可被任何表现读取的剩余寿命比例（0..1）；永久或未知返回 1
+    public static float remainingFraction(UUID id, WhimData data)
+    {
+        Integer left = REMAINING.get(id);
+        int total = lifetime(data);
+
+        if (left == null || total <= 0)
+        {
+            return 1.0F;
+        }
+
+        return Math.max(0.0F, Math.min(1.0F, left / (float) total));
+    }
+
+    // 每 tick 递减；按住期间服务端会冻结寿命，本地倒计时跟着冻结
+    private static void countdown()
+    {
+        List<UUID> held = WhimInteractHandler.chain();
+
+        for (Map.Entry<UUID, Integer> entry : REMAINING.entrySet())
+        {
+            if (entry.getValue() > 0 && (held == null || !held.contains(entry.getKey())))
+            {
+                entry.setValue(entry.getValue() - 1);
+            }
+        }
+    }
+
+    private static int lifetime(WhimData data)
+    {
+        return data.get(Whim.LIFETIME).map(value ->
+        {
+            try
+            {
+                return Integer.parseInt(value);
+            }
+            catch (NumberFormatException exception)
+            {
+                return -1;
+            }
+        }).orElse(-1);
     }
 
     @SubscribeEvent

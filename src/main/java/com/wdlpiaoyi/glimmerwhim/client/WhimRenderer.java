@@ -34,10 +34,11 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 public final class WhimRenderer
 {
+    // id 供需要按单个灵感维护状态的表现使用（例如本地倒计时）
     @FunctionalInterface
     public interface Drawer
     {
-        void draw(PoseStack pose, Vec3 dir, WhimData data, WhimParams params);
+        void draw(PoseStack pose, Vec3 dir, WhimData data, WhimParams params, UUID id);
     }
 
     @FunctionalInterface
@@ -49,7 +50,14 @@ public final class WhimRenderer
     @FunctionalInterface
     public interface Highlight
     {
-        void draw(PoseStack pose, Vec3 dir, WhimData data, WhimParams params);
+        void draw(PoseStack pose, Vec3 dir, WhimData data, WhimParams params, UUID id);
+    }
+
+    // 消散表现：进度 0..1；时长由 WhimType.vanishMillis 声明
+    @FunctionalInterface
+    public interface Vanish
+    {
+        void draw(PoseStack pose, Vec3 dir, float progress, WhimData data, WhimParams params, UUID id);
     }
 
     public static final class RenderSpec
@@ -59,6 +67,8 @@ public final class WhimRenderer
         private Hit hit = DefaultRender::hit;
 
         private Highlight highlight = DefaultRender::outline;
+
+        private Vanish vanish;
 
         public RenderSpec draw(Drawer draw)
         {
@@ -77,6 +87,12 @@ public final class WhimRenderer
             this.highlight = highlight;
             return this;
         }
+
+        public RenderSpec vanish(Vanish vanish)
+        {
+            this.vanish = vanish;
+            return this;
+        }
     }
 
     private record Drawable(ClientWhimCache.WhimView whim, WhimParams params, Vec3 at, boolean depth)
@@ -90,6 +106,8 @@ public final class WhimRenderer
 
     private static final Map<ResourceLocation, Highlight> HIGHLIGHTS = new LinkedHashMap<>();
 
+    private static final Map<ResourceLocation, Vanish> VANISHES = new LinkedHashMap<>();
+
     private WhimRenderer()
     {
     }
@@ -99,6 +117,7 @@ public final class WhimRenderer
         DRAWERS.put(type.id(), spec.draw);
         HITS.put(type.id(), spec.hit);
         HIGHLIGHTS.put(type.id(), spec.highlight);
+        VANISHES.put(type.id(), spec.vanish);
     }
 
     public static Drawer drawer(ResourceLocation id)
@@ -114,6 +133,12 @@ public final class WhimRenderer
     public static Highlight highlight(ResourceLocation id)
     {
         return HIGHLIGHTS.getOrDefault(id, DefaultRender::outline);
+    }
+
+    // 消散样式没有默认实现：没登记就不演消散
+    public static Vanish vanish(ResourceLocation id)
+    {
+        return VANISHES.get(id);
     }
 
     // 是否登记过自己的绘制；未登记的元素用默认外观（见 WhimRenders）
@@ -194,7 +219,7 @@ public final class WhimRenderer
         ClientLevel level = minecraft.level;
 
         if (level == null || minecraft.player == null
-                || ClientWhimCache.all().isEmpty() && !WhimTrace.active())
+                || ClientWhimCache.all().isEmpty() && !WhimTrace.active() && !WhimVanish.active())
         {
             return;
         }
@@ -267,17 +292,18 @@ public final class WhimRenderer
 
             if (whim.id().equals(aimed))
             {
-                highlight(whim.type().id()).draw(pose, dir, whim.data(), entry.params());
+                highlight(whim.type().id()).draw(pose, dir, whim.data(), entry.params(), whim.id());
             }
             else
             {
-                drawer(whim.type().id()).draw(pose, dir, whim.data(), entry.params());
+                drawer(whim.type().id()).draw(pose, dir, whim.data(), entry.params(), whim.id());
             }
 
             pose.popPose();
         }
 
         RenderSystem.disableDepthTest();
+        WhimVanish.render(pose, eye, camera);
         WhimTrace.render(pose, level, eye, look, camera, partialTick);
 
         // 恢复渲染状态，避免影响后续阶段

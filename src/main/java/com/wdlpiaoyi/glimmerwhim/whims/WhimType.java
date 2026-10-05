@@ -174,4 +174,10 @@ public interface WhimType
     default void onGenerated(WhimSpawnContext context, WhimSpawn placement, Whim whim)
     {
     }
+
+    // 消失后在客户端演多久的消散（毫秒）；0 = 直接消失。画法由渲染登记里的消散样式决定
+    default int vanishMillis(WhimData data)
+    {
+        return 0;
+    }
 }

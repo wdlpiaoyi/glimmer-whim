@@ -22,8 +22,9 @@ public final class CurrentTrace
     private static final double JITTER_RATIO = JITTER / STEP;
     // 闪烁周期（毫秒）
     private static final long FLICKER_MILLIS = 45L;
-    private static final float RED = 0.70F;
-    private static final float GREEN = 0.95F;
+    // 与 StrikeRender 的光环同色（紫）
+    private static final float RED = 0.80F;
+    private static final float GREEN = 0.58F;
     private static final float BLUE = 1.0F;
 
     private CurrentTrace()

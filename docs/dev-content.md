@@ -12,7 +12,7 @@
 
 | id | 说明 |
 | --- | --- |
-| `whim_template` | 开发正式内容时的活示例骨架：参数、角色、数值域（`glimmerwhim:template_scale`）、目标接受、遮挡、全部事件分支、生成规则都显式写出，轨迹用 `glimmerwhim:template_trace`；正式灵感从 `whims/dev/template/WhimTemplate.java` 复制。 |
+| `whim_template` | 开发正式内容时的活示例骨架：参数、角色、数值域（`glimmerwhim:template_scale`）、目标接受、遮挡、全部事件分支、生成规则与消散都显式写出，轨迹用 `glimmerwhim:template_trace`；正式灵感从 `whims/dev/template/WhimTemplate.java` 复制。 |
 | `dev_entity` | 用原版望远镜盯住同一实体满 1 秒后，在该实体碰撞箱中心生成跟随该实体移动的棋盘格面片（锚为 `glimmerwhim:entity`），存活 5 秒（数据里记下该实体）；有效目标只能是它自己——先按住（进入），挪开视线，再重新瞄回它，松开时才算命中，成功后在聊天栏输出该实体的 uuid。它的牵引轨迹用曲线样式 `glimmerwhim:curve`（起终点重合时画正对相机的小圆环）。 |
 
 交互目标：目标是「种类 id + payload」；payload 复用 `WhimData`，带命中点。内置种类 `point`（命中点）、`entity`（带实体 uuid）、`whim`（带灵感 uuid）。种类在 `engine/WhimTargets` 登记（id + 提示 + 服务端校验 + payload 的位置/描述语义），客户端产生器在 `client/WhimTargeters` 按优先级登记（内置在 `client/WhimTargeting`：灵感优先于视线命中）。灵感目标在准星于按住之后进入该灵感时产生（链根因为按下时就已进入，必须先离开再回来才会被捕获），服务端再校验该灵感仍在且对玩家可见。

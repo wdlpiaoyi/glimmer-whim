@@ -3,6 +3,7 @@ package com.wdlpiaoyi.glimmerwhim.whims.client;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 
 import org.joml.Matrix4f;
 
@@ -25,6 +26,12 @@ public final class DefaultRender
     {
     }
 
+    // 需要按单个灵感维护状态的表现覆写这个版本；默认外观与 id 无关
+    public static void draw(PoseStack pose, Vec3 dir, WhimData data, WhimParams params, UUID id)
+    {
+        draw(pose, dir, data, params);
+    }
+
     public static void draw(PoseStack pose, Vec3 dir, WhimData data, WhimParams params)
     {
         // shape=cube 画六面体，否则画面向视线的方形面片；half 为边长一半（方块）
@@ -42,6 +49,11 @@ public final class DefaultRender
         {
             quad(pose, dir, half, first, second, cells);
         }
+    }
+
+    public static void outline(PoseStack pose, Vec3 dir, WhimData data, WhimParams params, UUID id)
+    {
+        outline(pose, dir, data, params);
     }
 
     public static void outline(PoseStack pose, Vec3 dir, WhimData data, WhimParams params)

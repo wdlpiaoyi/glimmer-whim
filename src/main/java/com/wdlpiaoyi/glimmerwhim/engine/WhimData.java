@@ -2,12 +2,14 @@ package com.wdlpiaoyi.glimmerwhim.engine;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.util.RandomSource;
 
 public final class WhimData
 {
@@ -57,6 +59,111 @@ public final class WhimData
     public boolean isEmpty()
     {
         return this.values.isEmpty();
+    }
+
+    // 区间写法 {名称:最小值..最大值}：灵感成形时在区间内取一个随机值
+    public static final String RANGE = "..";
+
+    public static String range(int min, int max)
+    {
+        return min + RANGE + max;
+    }
+
+    public static String range(double min, double max)
+    {
+        return format(Math.min(min, max)) + RANGE + format(Math.max(min, max));
+    }
+
+    // 逐项把区间值换成随机值，非区间值原样保留；用于生成时给参数一点浮动
+    public WhimData roll(RandomSource random)
+    {
+        Map<String, String> rolled = new LinkedHashMap<>();
+
+        this.values.forEach((name, value) -> rolled.put(name, randomise(value, random)));
+
+        return new WhimData(rolled);
+    }
+
+    private static String randomise(String text, RandomSource random)
+    {
+        int index = text.indexOf(RANGE);
+
+        // 分隔符必须在两侧都有内容，否则不是区间
+        if (index <= 0 || index + RANGE.length() >= text.length())
+        {
+            return text;
+        }
+
+        String low = text.substring(0, index);
+        String high = text.substring(index + RANGE.length());
+
+        try
+        {
+            // 两端都是整数就取整数，保证 lifetime 这类整数参数仍可解析
+            if (isInteger(low) && isInteger(high))
+            {
+                int min = Integer.parseInt(low);
+                int max = Integer.parseInt(high);
+
+                if (min > max)
+                {
+                    int swap = min;
+                    min = max;
+                    max = swap;
+                }
+
+                return Integer.toString(min + random.nextInt(max - min + 1));
+            }
+
+            double min = Double.parseDouble(low);
+            double max = Double.parseDouble(high);
+
+            if (!Double.isFinite(min) || !Double.isFinite(max))
+            {
+                return text;
+            }
+
+            return format(min + random.nextDouble() * (max - min));
+        }
+        catch (NumberFormatException e)
+        {
+            return text;
+        }
+    }
+
+    private static boolean isInteger(String text)
+    {
+        int start = text.startsWith("-") ? 1 : 0;
+
+        if (text.length() <= start)
+        {
+            return false;
+        }
+
+        for (int i = start; i < text.length(); i++)
+        {
+            if (!Character.isDigit(text.charAt(i)))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // 最多三位小数并去掉尾随零，让写进 data 的数字短一些
+    private static String format(double value)
+    {
+        String text = String.format(Locale.ROOT, "%.3f", value);
+
+        if (text.indexOf('.') < 0)
+        {
+            return text;
+        }
+
+        text = text.replaceAll("0+$", "");
+
+        return text.endsWith(".") ? text.substring(0, text.length() - 1) : text;
     }
 
     // 拆出所有 {名称:值} 组，剩余文本压掉多余空白后作为锚数据

@@ -6,6 +6,7 @@ import java.util.function.Predicate;
 
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.anchor.PosAnchor;
+import com.wdlpiaoyi.glimmerwhim.engine.Whim;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimDomain;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimEvent;
@@ -30,6 +31,7 @@ import net.minecraft.world.phys.Vec3;
 // 每个钩子都显式写出，即使只是默认行为；注释说明它管什么、什么时候需要改。
 // 登记：WhimContent.register(INSTANCE)（本文件作为活示例已在 DevWhims 登记）；
 // 客户端绘制与轨迹在 whims/dev/template/client/WhimTemplateRender 登记。
+// 完整的一手经验（可配置默认值、区间随机、两段式状态机、冷却、延迟效果、定向音效）见 docs/template.md。
 public final class WhimTemplate implements WhimType
 {
     // 灵感 id；/glimmerwhim summon 用它，须全局唯一
@@ -155,6 +157,14 @@ public final class WhimTemplate implements WhimType
         return false;
     }
 
+    // 绘制时是否开深度测试：开启后被方块与实体挡住的部分不画（深度缓冲区分不了两者）；
+    // 默认沿用实体遮挡声明。想「被方块和实体都挡住」又不用实体遮挡判定，就显式返回 true
+    @Override
+    public boolean depthOcclusion(WhimData data)
+    {
+        return WhimType.super.depthOcclusion(data);
+    }
+
     // 能否被准星瞄准/交互；渲染不受影响
     @Override
     public boolean interactable(WhimData data)
@@ -179,6 +189,14 @@ public final class WhimTemplate implements WhimType
     // 进链（被按住或作修饰）时是否暂停寿命倒计时；默认暂停
     @Override
     public boolean pausesInChain()
+    {
+        return true;
+    }
+
+    // 真则用完随链一并消耗；要「使用后转入下一状态」（strike 的蓄力体就是如此）就返回假，
+    // 由 on(USE) 自己 update 数据 / freeze 寿命 / 排定时任务，最后自行移除
+    @Override
+    public boolean consumedOnUse(WhimData data)
     {
         return true;
     }
@@ -218,6 +236,9 @@ public final class WhimTemplate implements WhimType
             }
             case USE ->
             {
+                // 到这里目标已通过引擎校验；沿用 strike 的两段式写法（见 docs/template.md）
+                // 可以先 WhimRegistry.update(...) 改数据与可见性、WhimRegistry.freeze(...) 冻结寿命、
+                // WhimScheduler.schedule(...) 排延迟结算，再由那次结算收尾
                 WhimTarget target = event.target().orElse(null);
                 // 读回被修饰后的数值：链上没有 SCALE 域时取定义的中性值
                 double scale = event.chain().map(chain -> chain.value(SCALE)).orElse(1.0D);
@@ -233,6 +254,11 @@ public final class WhimTemplate implements WhimType
                 // 目标有效则消耗自身，否则丢弃
                 event.remove(target != null && acceptsTarget(target) ? WhimRemoveReason.USED
                         : WhimRemoveReason.DROPPED);
+            }
+            case REJECT ->
+            {
+                // 目标为空/不合法/不被接受，整链即将按浪费丢弃；只发给链根，
+                // 适合在这里给玩家反馈（strike 会播火把熄灭音）
             }
             case EXPIRE ->
             {
@@ -257,8 +283,25 @@ public final class WhimTemplate implements WhimType
     @Override
     public Optional<WhimSpawn> spawn(WhimSpawnContext context)
     {
-        // 随机落在玩家周围，并用 context.lifetime 写初始寿命
+        // 随机落在玩家周围；把数值写成区间（WhimData.range），成形时会各抽一个值，每次生成略有不同
         Vec3 at = context.randomAround(8.0D, 24.0D);
-        return Optional.of(new WhimSpawn(new PosAnchor(at), context.lifetime(DEFAULT_LIFETIME)));
+        WhimData data = WhimData
+                .of(Whim.LIFETIME, WhimData.range((int) (DEFAULT_LIFETIME * 0.8D), (int) (DEFAULT_LIFETIME * 1.2D)))
+                .with(SCALE_KEY, WhimData.range(0.85D, 1.15D));
+        return Optional.of(new WhimSpawn(new PosAnchor(at), data));
+    }
+
+    // 自然生成后的表现：只有生成管线会调用它（指令召唤不走这里）；
+    // 适合只给召唤者的生成音效等，定向发包写法见 strike
+    @Override
+    public void onGenerated(WhimSpawnContext context, WhimSpawn placement, Whim whim)
+    {
+    }
+
+    // 消失后在客户端演多久的消散（毫秒）；画法登记在客户端（见 WhimTemplateRender.vanish）
+    @Override
+    public int vanishMillis(WhimData data)
+    {
+        return 400;
     }
 }

@@ -38,6 +38,9 @@ public final class WhimLifecycle
             values.put(entry.getKey(), entry.getValue());
         }
 
+        // 区间值（名称:最小值..最大值）在灵感成形时取区间内的随机值
+        values = new LinkedHashMap<>(WhimData.of(values).roll(level.getRandom()).values());
+
         // visibility 是元数据，取出后不留在 data
         String raw = values.remove(Whim.VISIBILITY);
         String lifetime = values.get(Whim.LIFETIME);

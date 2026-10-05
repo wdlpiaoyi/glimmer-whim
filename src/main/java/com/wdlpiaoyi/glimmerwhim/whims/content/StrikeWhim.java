@@ -61,8 +61,8 @@ public final class StrikeWhim implements WhimType
     public static final StrikeWhim INSTANCE = new StrikeWhim();
 
     private static final String SHAPE = "shape";
-    private static final String SIZE = "size";
-    private static final String DAMAGE_RATIO = "damage_ratio";
+    public static final String SIZE = "size";
+    public static final String DAMAGE_RATIO = "damage_ratio";
     private static final String RADIUS = "radius";
     private static final String BOLTS = "bolts";
     private static final String SPREAD = "spread";
@@ -86,6 +86,12 @@ public final class StrikeWhim implements WhimType
     private static final double MIN_DISTANCE = 16.0D;
     // 击退强度（按衰减比例缩放）
     private static final double KNOCKBACK = 0.8D;
+    // 消失后碎片散开的时长（毫秒）
+    private static final int VANISH_MILLIS = 550;
+    // 生成数据的浮动幅度：寿命、尺寸与伤害比例在基准值上下浮动，避免每次生成完全相同
+    private static final double LIFETIME_SPREAD = 0.2D;
+    private static final double SIZE_SPREAD = 0.15D;
+    private static final double DAMAGE_SPREAD = 0.25D;
 
     private StrikeWhim()
     {
@@ -106,7 +112,8 @@ public final class StrikeWhim implements WhimType
                 // 默认值来自 [strike] damage_ratio，单次召唤可用 {damage_ratio} 覆盖
                 WhimParam.positiveNumber(DAMAGE_RATIO, Double.toString(WhimConfig.strikeDamageRatio())),
                 WhimParam.positiveNumber(RADIUS, Double.toString(WhimConfig.strikeRadius())),
-                WhimParam.positiveNumber(BOLTS, Integer.toString(WhimConfig.strikeBolts())),
+                // 默认道数随 {damage_ratio} 推算；显式写 {bolts} 才以它为准
+                WhimParam.positiveNumber(BOLTS, Integer.toString(boltCount(WhimConfig.strikeDamageRatio()))),
                 WhimParam.positiveNumber(SPREAD, Double.toString(WhimConfig.strikeSpread())),
                 WhimParam.positiveNumber(CHARGE, Integer.toString(WhimConfig.strikeChargeTicks())),
                 WhimParam.positiveNumber(GLOW, Integer.toString(WhimConfig.strikeGlowTicks())));
@@ -135,6 +142,13 @@ public final class StrikeWhim implements WhimType
     public boolean depthOcclusion(WhimData data)
     {
         return true;
+    }
+
+    // 消失时炸成碎片
+    @Override
+    public int vanishMillis(WhimData data)
+    {
+        return VANISH_MILLIS;
     }
 
     // 蓄力体不再可瞄/可链；消耗则取决于是否真的进了蓄力态
@@ -190,8 +204,15 @@ public final class StrikeWhim implements WhimType
         double distance = Math.max(MIN_DISTANCE, Math.min(DISTANCE, WhimReach.blocks(player) - DISTANCE_MARGIN));
         Vec3 direction = new Vec3(Math.cos(yaw) * Math.cos(elevation), Math.sin(elevation),
                 Math.sin(yaw) * Math.cos(elevation));
-        WhimData data = WhimData.of(Whim.LIFETIME, Integer.toString(WhimConfig.strikeCooldownTicks()))
-                .with(Whim.VISIBILITY, WhimVisibility.ME_MODE);
+        int cooldown = WhimConfig.strikeCooldownTicks();
+        double size = WhimConfig.strikeSize();
+        double damage = WhimConfig.strikeDamageRatio();
+        // 区间值由 WhimLifecycle 在成形时抽定：寿命、尺寸与伤害比例每次生成都略有不同
+        WhimData data = WhimData.of(Whim.VISIBILITY, WhimVisibility.ME_MODE)
+                .with(Whim.LIFETIME, WhimData.range((int) Math.round(cooldown * (1.0D - LIFETIME_SPREAD)),
+                        (int) Math.round(cooldown * (1.0D + LIFETIME_SPREAD))))
+                .with(SIZE, WhimData.range(size * (1.0D - SIZE_SPREAD), size * (1.0D + SIZE_SPREAD)))
+                .with(DAMAGE_RATIO, WhimData.range(damage * (1.0D - DAMAGE_SPREAD), damage * (1.0D + DAMAGE_SPREAD)));
 
         // ray 锚：位置 = 眼睛 + 方向 × 距离，用来表示固定方向上的远处物体；方向生成时固定
         return new WhimSpawn(new RayAnchor(direction, distance), data);
@@ -208,6 +229,18 @@ public final class StrikeWhim implements WhimType
     {
         player.serverLevel().playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.REDSTONE_TORCH_BURNOUT, SoundSource.PLAYERS, 1.0F, 1.0F);
+    }
+
+    // 表现强度：{damage_ratio} 越大，光环越多越亮、闪电越多；对数刻度，比例 1 → 约 1/3，7 以上封顶
+    public static double intensity(double ratio)
+    {
+        return Math.max(0.0D, Math.min(1.0D, Math.log(ratio + 1.0D) / Math.log(8.0D)));
+    }
+
+    // 默认闪电道数
+    public static int boltCount(double ratio)
+    {
+        return (int) Math.round(4.0D + 16.0D * intensity(ratio));
     }
 
     @Override
@@ -255,13 +288,17 @@ public final class StrikeWhim implements WhimType
         target.addEffect(new MobEffectInstance(MobEffects.GLOWING, (int) params().number(charging, GLOW), 0, false,
                 false, false));
 
-        float base = (float) (target.getMaxHealth() * params().number(charging, DAMAGE_RATIO));
-        int charge = Math.max(1, (int) params().number(charging, CHARGE));
+        WhimParams params = params();
+        float base = (float) (target.getMaxHealth() * params.number(charging, DAMAGE_RATIO));
+        int charge = Math.max(1, (int) params.number(charging, CHARGE));
+        // 闪电道数默认随伤害比例推算，{bolts} 显式给出时以它为准
+        int bolts = charging.get(BOLTS).isPresent()
+                ? (int) params.number(charging, BOLTS)
+                : boltCount(params.number(charging, DAMAGE_RATIO));
         // 目标身份与落点在此固定：目标还在就跟着它，消失了就打记录点
         WhimScheduler.schedule(level, body.id(), charge,
                 () -> strike(level, player, body.id(), target.getUUID(), target.position(), base,
-                        params().number(charging, RADIUS), (int) params().number(charging, BOLTS),
-                        params().number(charging, SPREAD)));
+                        params.number(charging, RADIUS), bolts, params.number(charging, SPREAD)));
     }
 
     // 落雷：本体消失，落点附近按原版爆炸衰减统一结算伤害与击退
