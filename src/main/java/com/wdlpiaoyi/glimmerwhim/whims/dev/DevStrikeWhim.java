@@ -182,7 +182,7 @@ public final class DevStrikeWhim implements WhimType
         Vec3 at = spawn.anchor().position(level, eye, 1.0F).orElse(null);
 
         // 生成点被方块遮挡则不触发（忽略实体遮挡）
-        if (at == null || WhimSight.occluded(level, eye, at, player, true, false, false))
+        if (at == null || WhimSight.occluded(level, eye, at, player, true, null, false))
         {
             return;
         }

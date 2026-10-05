@@ -1,6 +1,7 @@
 package com.wdlpiaoyi.glimmerwhim.whims.dev;
 
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.anchor.PosAnchor;
@@ -15,6 +16,8 @@ import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
 public final class DevSightTestWhim implements WhimType
@@ -36,10 +39,10 @@ public final class DevSightTestWhim implements WhimType
     @Override
     public WhimParams params()
     {
-        // blocks/entities 控制对应遮挡是否生效；geometry 选实体遮挡用碰撞箱还是渲染箱
-        return WhimParams.of(WhimParam.choice("blocks", "true", "true", "false"),
-                WhimParam.choice("entities", "false", "true", "false"),
-                WhimParam.choice("geometry", "hitbox", "hitbox", "render"));
+        // 两个 occlusion 开关控制对应遮挡是否生效；entity_geometry 选实体遮挡用碰撞箱还是渲染剔除框
+        return WhimParams.of(WhimParam.choice("block_occlusion", "true", "true", "false"),
+                WhimParam.choice("entity_occlusion", "false", "true", "false"),
+                WhimParam.choice("entity_geometry", "hitbox", "hitbox", "render"));
     }
 
     @Override
@@ -59,19 +62,19 @@ public final class DevSightTestWhim implements WhimType
     @Override
     public boolean occludedByBlocks(WhimData data)
     {
-        return params().text(data, "blocks").equals("true");
+        return params().text(data, "block_occlusion").equals("true");
     }
 
     @Override
-    public boolean occludedByEntities(WhimData data)
+    public Predicate<Entity> entityOccluders(WhimData data)
     {
-        return params().text(data, "entities").equals("true");
+        return params().text(data, "entity_occlusion").equals("true") ? entity -> entity instanceof LivingEntity : null;
     }
 
     @Override
     public boolean entityOcclusionRenderBox(WhimData data)
     {
-        return params().text(data, "geometry").equals("render");
+        return params().text(data, "entity_geometry").equals("render");
     }
 
     @Override
@@ -83,9 +86,9 @@ public final class DevSightTestWhim implements WhimType
         }
 
         // 使用时把当前遮挡开关与瞄准目标打印回玩家，用于实测遮挡几何
-        event.player().sendSystemMessage(Component.literal("dev_sighttest: blocks="
-                + occludedByBlocks(event.whim().data()) + " entities=" + occludedByEntities(event.whim().data())
-                + " geometry=" + (entityOcclusionRenderBox(event.whim().data()) ? "render" : "hitbox")
+        event.player().sendSystemMessage(Component.literal("dev_sighttest: block_occlusion="
+                + occludedByBlocks(event.whim().data()) + " entity_occlusion=" + (entityOccluders(event.whim().data()) != null)
+                + " entity_geometry=" + (entityOcclusionRenderBox(event.whim().data()) ? "render" : "hitbox")
                 + event.target().map(target -> " target=" + target.describe()).orElse("")));
         event.remove(WhimRemoveReason.USED);
     }

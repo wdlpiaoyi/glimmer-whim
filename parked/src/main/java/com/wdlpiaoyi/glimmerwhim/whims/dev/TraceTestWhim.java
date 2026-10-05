@@ -1,15 +1,11 @@
 // parked：已移出构建。恢复到 src 前需按当前引擎 API 校对（如 modid 用 GlimmerWhim.MODID；WhimChain 已无 value()/factor()；周期生成器 spawnInterval 已删除）。
 package com.wdlpiaoyi.glimmerwhim.whims.dev;
 
-import java.util.EnumSet;
-import java.util.Set;
-
 import com.wdlpiaoyi.glimmerwhim.engine.Whim;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimEvent;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParam;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimRemoveReason;
-import com.wdlpiaoyi.glimmerwhim.whims.WhimRole;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 
 import net.minecraft.network.chat.Component;
@@ -37,12 +33,6 @@ public final class TraceTestWhim implements WhimType
         return WhimParams.of(WhimParam.choice("shape", "cube", "cube", "quad"),
                 WhimParam.positiveNumber("size", "1"),
                 WhimParam.positiveNumber(Whim.PLAYTIME, "20"));
-    }
-
-    @Override
-    public Set<WhimRole> roles()
-    {
-        return EnumSet.of(WhimRole.ELEMENT, WhimRole.MODIFIER);
     }
 
     @Override

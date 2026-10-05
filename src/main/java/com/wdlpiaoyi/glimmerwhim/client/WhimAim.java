@@ -90,7 +90,7 @@ public final class WhimAim
 
             if ((!WhimConfig.aimThroughWalls() || whim.type().requiresLineOfSight())
                     && WhimSight.occluded(level, eye, at, Minecraft.getInstance().player,
-                            whim.type().occludedByBlocks(whim.data()), whim.type().occludedByEntities(whim.data()),
+                            whim.type().occludedByBlocks(whim.data()), whim.type().entityOccluders(whim.data()),
                             whim.type().entityOcclusionRenderBox(whim.data())))
             {
                 continue;

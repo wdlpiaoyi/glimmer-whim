@@ -1,6 +1,7 @@
 package com.wdlpiaoyi.glimmerwhim.command;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -361,7 +362,11 @@ public final class WhimCommand
 
             if (index < parts.length && parts[index].startsWith(partial))
             {
-                matched.add(parts[index]);
+                // 逐段加长：第一次 TAB 补出当前段，之后的 TAB 依次续上后面的分量
+                for (int end = index + 1; end <= parts.length; end++)
+                {
+                    matched.add(String.join(" ", Arrays.copyOfRange(parts, index, end)));
+                }
             }
         }
 

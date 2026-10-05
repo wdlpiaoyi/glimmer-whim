@@ -1,9 +1,9 @@
 package com.wdlpiaoyi.glimmerwhim.engine;
 
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
@@ -24,12 +24,13 @@ public final class WhimSight
 
     // 以灵感中心点 at 为终点向 eye 做一条射线判定遮挡。
     // 方块：命中后仅当 canOcclude() 为真才算（玻璃等透明方块不算）。
-    // 实体：命中攻击碰撞箱 getBoundingBox()；renderBox 为真时改用渲染剔除框 getBoundingBoxForCulling()。
+    // 实体：仅 occluders 选中的实体参与，命中攻击碰撞箱 getBoundingBox()；
+    // renderBox 为真时改用渲染剔除框 getBoundingBoxForCulling()。occluders 为 null 表示不判实体。
     public static boolean occluded(Level level, Vec3 eye, Vec3 at, Entity viewer,
-            boolean blocks, boolean entities, boolean renderBox)
+            boolean blocks, Predicate<Entity> occluders, boolean renderBox)
     {
         return blocks && blockedByBlock(level, eye, at, viewer)
-                || entities && blockedByEntity(level, eye, at, viewer, renderBox);
+                || occluders != null && blockedByEntity(level, eye, at, viewer, occluders, renderBox);
     }
 
     private static boolean blockedByBlock(Level level, Vec3 eye, Vec3 at, Entity viewer)
@@ -71,11 +72,12 @@ public final class WhimSight
         return false;
     }
 
-    private static boolean blockedByEntity(Level level, Vec3 eye, Vec3 at, Entity viewer, boolean renderBox)
+    private static boolean blockedByEntity(Level level, Vec3 eye, Vec3 at, Entity viewer,
+            Predicate<Entity> occluders, boolean renderBox)
     {
         AABB bounds = new AABB(eye, at).inflate(1.0D);
 
-        for (Entity candidate : level.getEntities(viewer, bounds, entity -> entity instanceof LivingEntity))
+        for (Entity candidate : level.getEntities(viewer, bounds, occluders))
         {
             AABB box = renderBox ? candidate.getBoundingBoxForCulling() : candidate.getBoundingBox();
             Optional<Vec3> hit = box.clip(eye, at);

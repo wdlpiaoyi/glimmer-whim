@@ -42,7 +42,7 @@ Other packages:
 
 ## Gotchas
 
-- Mixins: after editing `mixin/`, confirm the refmap regenerated and targets mapped (e.g. `CommandSuggestions.formatText` → `m_93892_`, `FormattedCharSequence.forward` → `m_13714_`) in `build/tmp/compileJava/compileJava-refmap.json`.
+- Mixins: after editing `mixin/`, confirm the refmap regenerated and targets mapped (e.g. `CommandSuggestions.formatText` → `m_93892_`, `FormattedCharSequence.forward` → `m_13714_`) in `build/tmp/compileJava/compileJava-refmap.json`. `CommandSuggestionsMixin` only recolors `{…}` for commands starting with the modid.
 - Client render registration must live in a `Dist.CLIENT`-only class; render classes cannot load on the server.
 - A whim without a registered drawer renders with the `[render.default]` look (`WhimRenders` logs such types at load); `render.default` is the fallback for all content, not a dev-only section.
 - `/glimmerwhim summon <type> [anchor] [anchorData] {data}`: the anchor is not implicit — omit it (or write `default`) only when the whim declares its own `spawn()`; otherwise the command errors. Anchor data is positional and outside `{}`; `{...}` holds `name:value` pairs separated by `,` or `;`.

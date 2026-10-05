@@ -20,7 +20,7 @@
 
 数值域：修饰符用 `WhimType.modifier(WhimData)` 只交出 `WhimModifier(id, value)`（域 id + 数字）；`WhimDomain`（id + 中性值 + 折叠规则）由**读它的一方**（元素）持有，元素用 `chain.value(domain)` 按自己的定义折叠该 id 收到的全部数字（链上没有该 id 即取该定义的中性值）。引擎不登记任何具体域，修饰符也不定义规则。示例见 `parked/`：`DevDomains` 声明 `glimmerwhim:power`（中性值 1、相乘）与 `glimmerwhim:range`（中性值 0、相加），`DevPowerWhim`/`DevRangeWhim` 交出数字，`DevExplosionWhim` 消费（半径 = `radius` + range 域，伤害 = `damage` × power 域）。
 
-视线开关：每个灵感类型用 `occludedByBlocks(data)` / `occludedByEntities(data)` 声明「什么能挡住它」，`WhimType` 默认方块挡、生物不挡。实体判定几何用 `entityOcclusionRenderBox(data)` 选择攻击箱/渲染剔除框（默认攻击箱）。`dev_strike` 即用该默认（方块挡、生物不挡）；逐类型开关的测试示例 `dev_sighttest` 在 `parked/`。
+视线开关：每个灵感类型用 `occludedByBlocks(data)` / `entityOccluders(data)` 声明「什么能挡住它」，`WhimType` 默认方块挡、生物不挡（`entityOccluders` 返回实体谓词，null 表示不判实体）。实体判定几何用 `entityOcclusionRenderBox(data)` 选择攻击箱/渲染剔除框（默认攻击箱）。`dev_strike` 即用该默认（方块挡、生物不挡）；逐类型开关的测试示例 `dev_sighttest` 在 `parked/`。
 
 渲染遮挡：声明被实体遮挡的灵感在绘制时开启深度测试，由场景深度真正挡住像素（因此可出现部分遮挡，露出一半）；其余灵感不做深度测试，保持透过。注意深度测试无法区分方块与实体。方块遮挡始终以灵感中心点单射线 + `canOcclude()` 判定。
 

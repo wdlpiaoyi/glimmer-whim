@@ -540,7 +540,7 @@ public final class WhimRegistry
         }
 
         return !whim.type().requiresLineOfSight() || !WhimSight.occluded(player.serverLevel(), eye, at, player,
-                whim.type().occludedByBlocks(whim.data()), whim.type().occludedByEntities(whim.data()),
+                whim.type().occludedByBlocks(whim.data()), whim.type().entityOccluders(whim.data()),
                 whim.type().entityOcclusionRenderBox(whim.data()));
     }
 
@@ -580,7 +580,7 @@ public final class WhimRegistry
             if (resolved.isEmpty() && !tracked.type().canRoot())
             {
                 GlimmerWhim.log("[Whim] chain rejected player={} id={} roles={}", player.getUUID(), id,
-                        tracked.type().roles());
+                        tracked.type().roles(tracked.data()));
                 return false;
             }
 

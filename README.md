@@ -129,7 +129,7 @@
 
 ## 为开发者
 
-- **新增灵感**：实现 `whims/WhimType`，通过 `whims/WhimContent.register(...)` 注册（引擎会自动把类型上的 `@SubscribeEvent` 挂上 Forge 总线，`bind()` 仅用于第三方总线）。它声明 id、`{参数}`、角色（`roles()`）、修饰（`modifier()`）、目标限制（`acceptsTarget()`）、事件处理（`on()`）、生成规则（`spawn()`）。
+- **新增灵感**：实现 `whims/WhimType`，通过 `whims/WhimContent.register(...)` 注册（引擎会自动把类型上的 `@SubscribeEvent` 挂上 Forge 总线，`bind()` 仅用于第三方总线）。它声明 id、`{参数}`、能否起链（`canRoot()`）、修饰（`modifier()`）、目标限制（`acceptsTarget()`）、事件处理（`on()`）、生成规则（`spawn()`）。
 - **新增锚**：实现 `anchor/WhimAnchor`，在 `anchor/WhimAnchors` 的 `ANCHORS` 列表里加一项（类型、`read`、`parse`、`suggestData`、提示）。
 - **维度**：`engine/WhimDimensions`（`power` / `range`）。
 - **事件**：`engine/WhimEvent`（`SUMMON`、`HIGHLIGHT`、`UNHIGHLIGHT`、`TICK`、`HOLD`、`USE`、`EXPIRE`、`REMOVE`）；`TICK` 需 `ticks()` 开启。

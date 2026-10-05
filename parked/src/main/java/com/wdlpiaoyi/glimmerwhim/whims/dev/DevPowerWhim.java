@@ -1,15 +1,12 @@
 package com.wdlpiaoyi.glimmerwhim.whims.dev;
 
-import java.util.EnumSet;
 import java.util.Optional;
-import java.util.Set;
 
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParam;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimModifier;
-import com.wdlpiaoyi.glimmerwhim.whims.WhimRole;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 
 import net.minecraft.resources.ResourceLocation;
@@ -36,10 +33,11 @@ public final class DevPowerWhim implements WhimType
         return WhimParams.of(WhimParam.positiveNumber("amount", "2"));
     }
 
+    // 只能作修饰，不能起链
     @Override
-    public Set<WhimRole> roles()
+    public boolean canRoot()
     {
-        return EnumSet.of(WhimRole.MODIFIER);
+        return false;
     }
 
     @Override

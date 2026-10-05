@@ -3,6 +3,7 @@ package com.wdlpiaoyi.glimmerwhim.whims;
 import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimEvent;
@@ -49,10 +50,22 @@ public interface WhimType
         return -1;
     }
 
-    // 默认仅 ELEMENT 角色
-    default Set<WhimRole> roles()
+    // 角色能力：ELEMENT 由 canRoot 决定，MODIFIER 由 modifier(data) 是否有值决定
+    default Set<WhimRole> roles(WhimData data)
     {
-        return EnumSet.of(WhimRole.ELEMENT);
+        EnumSet<WhimRole> roles = EnumSet.noneOf(WhimRole.class);
+
+        if (canRoot())
+        {
+            roles.add(WhimRole.ELEMENT);
+        }
+
+        if (modifier(data).isPresent())
+        {
+            roles.add(WhimRole.MODIFIER);
+        }
+
+        return roles;
     }
 
     // 作为链修饰符时输出的数值；空 = 无
@@ -87,9 +100,10 @@ public interface WhimType
         return true;
     }
 
-    default boolean occludedByEntities(WhimData data)
+    // 参与实体遮挡判定的实体；null = 实体不遮挡它
+    default Predicate<Entity> entityOccluders(WhimData data)
     {
-        return false;
+        return null;
     }
 
     default boolean entityOcclusionRenderBox(WhimData data)
@@ -102,10 +116,10 @@ public interface WhimType
         return true;
     }
 
-    // 可作链根 = 具 ELEMENT 角色
+    // 可作链根
     default boolean canRoot()
     {
-        return roles().contains(WhimRole.ELEMENT);
+        return true;
     }
 
     // 可入链 = interactable

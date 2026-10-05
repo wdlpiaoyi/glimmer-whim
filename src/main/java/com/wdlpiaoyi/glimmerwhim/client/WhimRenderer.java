@@ -2,9 +2,11 @@ package com.wdlpiaoyi.glimmerwhim.client;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -158,6 +160,9 @@ public final class WhimRenderer
         return tint(raw) != null;
     }
 
+    // 已就未登记样式打过日志的 id，避免每帧重复打
+    private static final Set<ResourceLocation> UNKNOWN_TRACES = new HashSet<>();
+
     private static Trace resolve(String raw, ResourceLocation fallback)
     {
         ResourceLocation id = ResourceLocation.tryParse(raw);
@@ -168,7 +173,7 @@ public final class WhimRenderer
             return trace;
         }
 
-        if (id != null && !id.equals(fallback) && !Traces.known(id))
+        if (id != null && !id.equals(fallback) && !Traces.known(id) && UNKNOWN_TRACES.add(id))
         {
             GlimmerWhim.log("未知的轨迹样式: " + raw + "，回落到 " + fallback);
         }
@@ -227,11 +232,11 @@ public final class WhimRenderer
             }
 
             // 声明被实体遮挡的类型开深度测试，使其能被实体挡住
-            boolean depth = whim.type().occludedByEntities(whim.data());
+            boolean depth = whim.type().entityOccluders(whim.data()) != null;
 
             if (!depth && whim.type().requiresLineOfSight()
                     && WhimSight.occluded(level, eye, at, Minecraft.getInstance().player,
-                            whim.type().occludedByBlocks(whim.data()), false, false))
+                            whim.type().occludedByBlocks(whim.data()), null, false))
             {
                 continue;
             }
