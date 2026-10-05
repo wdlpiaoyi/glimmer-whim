@@ -13,6 +13,7 @@ public final class WhimTraces
 {
     public static final ResourceLocation LINE = ResourceLocation.fromNamespaceAndPath(GlimmerWhim.MODID, "line");
     public static final ResourceLocation GLOW = ResourceLocation.fromNamespaceAndPath(GlimmerWhim.MODID, "glow");
+    public static final ResourceLocation CURVE = ResourceLocation.fromNamespaceAndPath(GlimmerWhim.MODID, "curve");
     public static final ResourceLocation HUE = ResourceLocation.fromNamespaceAndPath(GlimmerWhim.MODID, "hue");
     public static final ResourceLocation NONE = ResourceLocation.fromNamespaceAndPath(GlimmerWhim.MODID, "none");
 
@@ -22,6 +23,7 @@ public final class WhimTraces
     {
         register(LINE);
         register(GLOW);
+        register(CURVE);
         register(HUE);
         register(NONE);
     }

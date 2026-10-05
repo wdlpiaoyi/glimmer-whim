@@ -17,6 +17,7 @@ import com.wdlpiaoyi.glimmerwhim.engine.WhimRemoveReason;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimSpawn;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimTarget;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimTargets;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimTraces;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 
 import net.minecraft.network.chat.Component;
@@ -63,6 +64,13 @@ public final class DevEntityWhim implements WhimType
     {
         // 默认画成面向视线的棋盘格面片
         return WhimParams.of(WhimParam.choice("shape", "quad", "cube", "quad"));
+    }
+
+    @Override
+    public ResourceLocation elementTrace()
+    {
+        // 有效目标常常就是它自己，直线长度为 0，改用曲线才看得见
+        return WhimTraces.CURVE;
     }
 
     @Override

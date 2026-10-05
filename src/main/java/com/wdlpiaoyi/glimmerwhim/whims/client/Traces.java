@@ -32,6 +32,16 @@ public final class Traces
     private static final float[] DEFAULT_COLOR = { 1.0F, 1.0F, 1.0F, 1.0F };
     private static final float[] GLOW_COLOR = { 1.0F, 1.0F, 1.0F, 0.5F };
 
+    // 曲线：每段朝屏幕侧向鼓出，最大的横向偏移是段长的这个比例
+    private static final double CURVE_BULGE = 0.25D;
+    // 细分步长（格）与远处的屏幕步长下限（像素）
+    private static final double CURVE_STEP = 0.5D;
+    private static final double CURVE_MIN_STEP_PIXELS = 24.0D;
+    // 短于它的段视为起终点重合，改画圆环
+    private static final double CURVE_MIN_LENGTH = 0.05D;
+    private static final double CURVE_RING_RADIUS = 0.5D;
+    private static final int CURVE_RING_SEGMENTS = 24;
+
     // 显式声明「不画轨迹」
     public static final Trace NONE = (pose, points, endpoint, fade, data, params) -> { };
 
@@ -45,6 +55,7 @@ public final class Traces
     {
         register(WhimTraces.LINE, Traces::line);
         register(WhimTraces.GLOW, Traces::glow);
+        register(WhimTraces.CURVE, Traces::curve);
         register(WhimTraces.NONE, NONE);
         tint(WhimTraces.HUE, Traces::hueColor);
     }
@@ -118,6 +129,91 @@ public final class Traces
         // 双倍线宽半透明，叠出辉光
         stroke(pose, points, endpoint, GLOW_COLOR[0], GLOW_COLOR[1], GLOW_COLOR[2], (1.0F - fade) * GLOW_COLOR[3],
                 (float) WhimConfig.traceWidth() * 2.0F);
+    }
+
+    public static void curve(PoseStack pose, List<Vec3> points, Vec3 endpoint, float fade, WhimData data,
+            WhimParams params)
+    {
+        List<Vec3> all = new ArrayList<>(points.size() + 1);
+        all.addAll(points);
+
+        if (endpoint != null)
+        {
+            all.add(endpoint);
+        }
+
+        if (all.size() < 2)
+        {
+            return;
+        }
+
+        List<Vec3> path = new ArrayList<>();
+        path.add(all.get(0));
+
+        for (int i = 0; i + 1 < all.size(); i++)
+        {
+            Vec3 from = all.get(i);
+            Vec3 to = all.get(i + 1);
+            Vec3 delta = to.subtract(from);
+            double length = delta.length();
+
+            if (length < CURVE_MIN_LENGTH)
+            {
+                // 起终点重合：折线等于没有，改画一个正对相机的小圆环
+                ring(path, from);
+                path.add(to);
+                continue;
+            }
+
+            Vec3 middle = from.add(delta.scale(0.5D));
+            // 远处按屏幕尺寸放大步长，弯的形状随距离保持一致
+            double step = Math.max(CURVE_STEP, pixelsToWorld(CURVE_MIN_STEP_PIXELS, middle));
+            int steps = Math.max(2, (int) Math.round(length / step));
+            Vec3 lateral = lateral(delta, middle);
+
+            for (int s = 1; s <= steps; s++)
+            {
+                double t = (double) s / steps;
+                // 横向偏移在段中点最大、两端归零
+                path.add(from.add(delta.scale(t))
+                        .add(lateral.scale(length * CURVE_BULGE * 4.0D * t * (1.0D - t))));
+            }
+        }
+
+        polyline(pose, path, DEFAULT_COLOR[0], DEFAULT_COLOR[1], DEFAULT_COLOR[2], (1.0F - fade) * DEFAULT_COLOR[3],
+                (float) WhimConfig.traceWidth());
+    }
+
+    // 屏幕平面内、与线段垂直的方向：从任何视角看都是横向的弯，不会被压平
+    private static Vec3 lateral(Vec3 delta, Vec3 at)
+    {
+        Vec3 axis = at.lengthSqr() < 1.0E-6D ? new Vec3(0.0D, 0.0D, 1.0D) : at.normalize();
+        Vec3 lateral = axis.cross(delta);
+
+        if (lateral.lengthSqr() < 1.0E-6D)
+        {
+            // 视线与线段同向，侧向无从谈起，取任一垂直轴兜底
+            Vec3 reference = Math.abs(axis.y) > 0.9D ? new Vec3(1.0D, 0.0D, 0.0D) : new Vec3(0.0D, 1.0D, 0.0D);
+            lateral = axis.cross(reference);
+        }
+
+        return lateral.lengthSqr() < 1.0E-8D ? Vec3.ZERO : lateral.normalize();
+    }
+
+    // 在点上追加一个正对相机的圆环（相机在 pose 原点）
+    private static void ring(List<Vec3> path, Vec3 center)
+    {
+        Vec3 axis = center.lengthSqr() < 1.0E-6D ? new Vec3(0.0D, 0.0D, 1.0D) : center.normalize();
+        Vec3 reference = Math.abs(axis.y) > 0.9D ? new Vec3(1.0D, 0.0D, 0.0D) : new Vec3(0.0D, 1.0D, 0.0D);
+        Vec3 u = axis.cross(reference).normalize();
+        Vec3 v = axis.cross(u).normalize();
+
+        for (int i = 0; i <= CURVE_RING_SEGMENTS; i++)
+        {
+            double angle = Math.PI * 2.0D * i / CURVE_RING_SEGMENTS;
+            path.add(center.add(u.scale(Math.cos(angle) * CURVE_RING_RADIUS))
+                    .add(v.scale(Math.sin(angle) * CURVE_RING_RADIUS)));
+        }
     }
 
     // 供自定义样式复用：points 须是完整折线（含末点）；width 是屏幕像素宽度
