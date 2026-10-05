@@ -120,8 +120,14 @@ public final class DefaultRender
     // 返回射线命中距离，未命中返回 -1；cube 用 AABB，quad 用面片
     public static double hit(Vec3 eye, Vec3 look, Vec3 at, WhimData data, WhimParams params)
     {
+        return hit(eye, look, at, data, params, 1.0D);
+    }
+
+    // scale 以几何中心为基准放大几何体，用于按需放宽命中判定
+    public static double hit(Vec3 eye, Vec3 look, Vec3 at, WhimData data, WhimParams params, double scale)
+    {
         boolean cube = "cube".equals(params.text(data, "shape", "cube"));
-        double half = params.number(data, "size", 1.0D) / 2.0D;
+        double half = params.number(data, "size", 1.0D) / 2.0D * scale;
 
         return cube ? hitBox(eye, look, at, half) : hitQuad(eye, look, at, half);
     }

@@ -157,7 +157,7 @@ public final class WhimTemplate implements WhimType
 
     // 能否被准星瞄准/交互；渲染不受影响
     @Override
-    public boolean interactable()
+    public boolean interactable(WhimData data)
     {
         return true;
     }
@@ -171,9 +171,9 @@ public final class WhimTemplate implements WhimType
 
     // 能否入链；默认 = interactable
     @Override
-    public boolean canChain()
+    public boolean canChain(WhimData data)
     {
-        return WhimType.super.canChain();
+        return WhimType.super.canChain(data);
     }
 
     // 进链（被按住或作修饰）时是否暂停寿命倒计时；默认暂停

@@ -35,6 +35,7 @@ public final class WhimNetwork
         CHANNEL.registerMessage(id++, WhimUsePacket.class, WhimUsePacket::encode, WhimUsePacket::decode, WhimUsePacket::handle);
         CHANNEL.registerMessage(id++, WhimHoldPacket.class, WhimHoldPacket::encode, WhimHoldPacket::decode, WhimHoldPacket::handle);
         CHANNEL.registerMessage(id++, WhimVoidPacket.class, WhimVoidPacket::encode, WhimVoidPacket::decode, WhimVoidPacket::handle);
+        CHANNEL.registerMessage(id++, WhimUpdatePacket.class, WhimUpdatePacket::encode, WhimUpdatePacket::decode, WhimUpdatePacket::handle);
     }
 
     // 只发给单个玩家，供 S2C 定向同步

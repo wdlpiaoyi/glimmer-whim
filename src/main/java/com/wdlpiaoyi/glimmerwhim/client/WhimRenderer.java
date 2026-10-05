@@ -231,8 +231,8 @@ public final class WhimRenderer
                 continue;
             }
 
-            // 声明被实体遮挡的类型开深度测试，使其能被实体挡住
-            boolean depth = whim.type().entityOccluders(whim.data()) != null;
+            // 声明深度遮挡的类型开深度测试，使方块与实体都能挡住它
+            boolean depth = whim.type().depthOcclusion(whim.data());
 
             if (!depth && whim.type().requiresLineOfSight()
                     && WhimSight.occluded(level, eye, at, Minecraft.getInstance().player,

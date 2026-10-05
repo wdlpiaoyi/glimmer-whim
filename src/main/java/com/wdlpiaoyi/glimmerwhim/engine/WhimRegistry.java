@@ -20,6 +20,7 @@ import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 import com.wdlpiaoyi.glimmerwhim.net.WhimNetwork;
 import com.wdlpiaoyi.glimmerwhim.net.WhimRemovePacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimSummonPacket;
+import com.wdlpiaoyi.glimmerwhim.net.WhimUpdatePacket;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 
 import net.minecraft.resources.ResourceKey;
@@ -109,6 +110,65 @@ public final class WhimRegistry
         for (ServerPlayer player : this.level.players())
         {
             this.sync(player);
+        }
+    }
+
+    // 数据变更后下发给已收到该灵感的玩家
+    public void refresh(Whim whim)
+    {
+        WhimUpdatePacket packet = new WhimUpdatePacket(this.level.dimension(), whim.id(), whim.data());
+
+        for (Map.Entry<UUID, Set<UUID>> entry : this.sent.entrySet())
+        {
+            if (!entry.getValue().contains(whim.id()))
+            {
+                continue;
+            }
+
+            ServerPlayer player = this.level.getServer().getPlayerList().getPlayer(entry.getKey());
+
+            if (player != null)
+            {
+                WhimNetwork.sendTo(player, packet);
+            }
+        }
+    }
+
+    // 改可见性后立即对账：新可见者补发召唤（带当前数据），不再可见者回收
+    public void publish(Whim whim, WhimVisibility visibility)
+    {
+        whim.setVisibility(visibility);
+
+        for (ServerPlayer player : this.level.players())
+        {
+            this.sync(player);
+        }
+    }
+
+    // 内容侧入口：数据与可见性都可为空表示不改；先改数据再公开，两者都随包下发
+    public static void update(UUID id, WhimData data, WhimVisibility visibility)
+    {
+        for (WhimRegistry registry : REGISTRIES.values())
+        {
+            Whim whim = registry.tracked.get(id);
+
+            if (whim == null)
+            {
+                continue;
+            }
+
+            if (data != null)
+            {
+                whim.setData(data);
+                registry.refresh(whim);
+            }
+
+            if (visibility != null)
+            {
+                registry.publish(whim, visibility);
+            }
+
+            return;
         }
     }
 
@@ -226,6 +286,18 @@ public final class WhimRegistry
         whim.type().on(event);
         this.tracked.remove(id);
         this.finishRemoval(whim, event.removal().orElse(WhimRemoveReason.EXPIRED));
+    }
+
+    // 主动暂停某灵感的倒计时（例如本体进入自定义状态）；恢复用 resume(id)
+    public void freeze(UUID id)
+    {
+        Whim whim = this.tracked.get(id);
+
+        if (whim != null && !whim.permanent())
+        {
+            whim.freeze(this.level.getGameTime());
+            this.scheduler.cancelAll(id);
+        }
     }
 
     // 解除暂停并按剩余重新登记到期
@@ -460,7 +532,7 @@ public final class WhimRegistry
         }
     }
 
-    // 链使用事件交给根元素；默认移除原因 USED，整条链一并移除
+    // 链使用事件交给根元素；默认移除原因 USED；声明不消耗的成员留在世界上
     private static void fireChain(WhimRegistry registry, WhimChain chain, ServerPlayer player)
     {
         WhimEvent event = new WhimEvent(WhimEvent.Kind.USE, registry.level, chain.root(), player, chain);
@@ -471,7 +543,10 @@ public final class WhimRegistry
 
         for (Whim whim : chain.order())
         {
-            registry.removeWhim(whim.id(), reason);
+            if (whim.type().consumedOnUse(whim.data()))
+            {
+                registry.removeWhim(whim.id(), reason);
+            }
         }
     }
 
@@ -565,7 +640,7 @@ public final class WhimRegistry
             Whim tracked = registry.tracked.get(id);
 
             if (tracked == null || !tracked.visibility().canUse(player) || !sent.contains(id)
-                    || !tracked.type().canChain())
+                    || !tracked.type().canChain(tracked.data()))
             {
                 // 根节点无效直接拒绝；链中后续无效节点跳过
                 if (resolved.isEmpty())
@@ -603,9 +678,13 @@ public final class WhimRegistry
                 resolved.stream().map(whim -> whim.type().id().toString()).toList(),
                 target == null ? "none" : target.describe());
 
-        // 目标无效则整链按 DROPPED 丢弃（仍算一次使用）
+        // 目标无效则整链按 DROPPED 丢弃（仍算一次使用）；丢弃前先让根元素知道这次使用被拒
         if (target == null || !validTarget(player, target) || !built.root().type().acceptsTarget(target))
         {
+            WhimEvent rejected = new WhimEvent(WhimEvent.Kind.REJECT, registry.level, built.root(), player, built);
+
+            built.root().type().on(rejected);
+
             for (Whim whim : resolved)
             {
                 registry.removeWhim(whim.id(), WhimRemoveReason.DROPPED);
@@ -636,7 +715,7 @@ public final class WhimRegistry
             Whim tracked = registry.tracked.get(id);
 
             if (tracked == null || !tracked.visibility().canUse(player) || !sent.contains(id)
-                    || !tracked.type().canChain())
+                    || !tracked.type().canChain(tracked.data()))
             {
                 continue;
             }
@@ -793,6 +872,7 @@ public final class WhimRegistry
         {
             AIMED.remove(player.getUUID());
             forget(player);
+            WhimPlayerState.forget(player.getUUID());
         }
     }
 

@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import com.wdlpiaoyi.glimmerwhim.net.WhimRemovePacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimSummonPacket;
+import com.wdlpiaoyi.glimmerwhim.net.WhimUpdatePacket;
 import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
@@ -61,6 +62,18 @@ public final class ClientWhimCache
         }
 
         WHIMES.remove(packet.id());
+    }
+
+    // 只换数据；未持有该灵感时忽略（可见性变更会重新走召唤/移除）
+    public static void update(WhimUpdatePacket packet)
+    {
+        if (!sameWorld(packet.dimension()))
+        {
+            return;
+        }
+
+        WHIMES.computeIfPresent(packet.id(),
+                (id, view) -> new WhimView(view.id(), view.anchor(), view.type(), packet.data()));
     }
 
     public static Collection<WhimView> all()

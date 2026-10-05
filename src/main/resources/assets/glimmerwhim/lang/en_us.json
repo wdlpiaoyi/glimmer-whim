@@ -1,5 +1,7 @@
 {
   "key.categories.glimmerwhim": "Glimmer Whim",
   "key.glimmerwhim.freelook": "Free Look",
-  "key.glimmerwhim.interact": "Whim Interact"
+  "key.glimmerwhim.interact": "Whim Interact",
+  "death.attack.glimmerwhim.strike": "%1$s was struck down by lightning",
+  "death.attack.glimmerwhim.strike.player": "%1$s was struck down by lightning whilst fighting %2$s"
 }

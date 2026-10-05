@@ -1,4 +1,4 @@
-package com.wdlpiaoyi.glimmerwhim.whims.dev.client;
+package com.wdlpiaoyi.glimmerwhim.whims.content.client;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +12,7 @@ import com.wdlpiaoyi.glimmerwhim.whims.client.Traces;
 import net.minecraft.world.phys.Vec3;
 
 // 电流：每段细分后沿垂向抖动，抖动符号按帧种子闪烁
-public final class DevStrikeTrace
+public final class CurrentTrace
 {
     // 细分步长与抖幅（格）
     private static final double STEP = 0.5D;
@@ -26,7 +26,7 @@ public final class DevStrikeTrace
     private static final float GREEN = 0.95F;
     private static final float BLUE = 1.0F;
 
-    private DevStrikeTrace()
+    private CurrentTrace()
     {
     }
 

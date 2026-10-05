@@ -7,7 +7,7 @@ import net.minecraft.server.level.ServerPlayer;
 
 public final class WhimEvent
 {
-    // 事件来源：生成/销毁、瞄准边沿高亮/取消、存活 tick、按住、使用链、寿命到点
+    // 事件来源：生成/销毁、瞄准边沿高亮/取消、存活 tick、按住、使用链、使用被拒、寿命到点
     public enum Kind
     {
         SUMMON,
@@ -16,6 +16,7 @@ public final class WhimEvent
         TICK,
         HOLD,
         USE,
+        REJECT,
         EXPIRE,
         REMOVE
     }

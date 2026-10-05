@@ -1,24 +1,24 @@
-package com.wdlpiaoyi.glimmerwhim.whims.dev;
+package com.wdlpiaoyi.glimmerwhim.whims.content;
 
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimContent;
-import com.wdlpiaoyi.glimmerwhim.whims.dev.template.WhimTemplate;
 
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 
+// 正式内容的注册入口（两端都加载）
 @Mod.EventBusSubscriber(modid = GlimmerWhim.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
-public final class DevWhims
+public final class ContentWhims
 {
-    private DevWhims()
+    private ContentWhims()
     {
     }
 
     @SubscribeEvent
     public static void onCommonSetup(FMLCommonSetupEvent event)
     {
-        // 开发内容：源码存在 whims/dev/ 即注册为可用灵感
-        WhimContent.register(DevEntityWhim.INSTANCE, WhimTemplate.INSTANCE);
+        ContentTraces.register();
+        WhimContent.register(StrikeWhim.INSTANCE);
     }
 }

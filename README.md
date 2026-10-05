@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-版本 `0.1.0`，处于早期开发阶段。引擎、交互、串联与渲染框架已经成型，**正式内容尚未加入**：源码树里目前只有一个开发中的 `dev_strike`（及其蓄力视觉体 `dev_strike_charge`），其余测试灵感已移到仓库根的 `parked/`（不在源码树里、不参与构建，需要时移回）。当前更适合作为框架与试验场，而不是可直接游玩的模组。
+版本 `0.1.0`，处于早期开发阶段。引擎、交互、串联与渲染框架已经成型，正式内容刚刚开始：目前只有一个正式灵感——落雷 `strike`（见 [正式内容](docs/content.md)）；开发测试内容只剩 `dev_entity` 与模板 `whim_template`，其余测试灵感已移到仓库根的 `parked/`（不在源码树里、不参与构建，需要时移回）。
 
 ## 环境要求
 
@@ -23,7 +23,7 @@
 
 ## 核心理念
 
-- 我讨厌密密麻麻的快捷键和HUD.
+- 我讨厌密密麻麻的快捷键和密密麻麻的HUD.
 
 ## 操作
 
@@ -56,10 +56,10 @@
 示例：
 
 ```
-/glimmerwhim summon dev_strike
-/glimmerwhim summon dev_strike default {lifetime:600}
-/glimmerwhim summon dev_strike ray ~ ~ ~ 8 {lifetime:600}
-/glimmerwhim summon dev_strike pos ~ ~ ~ {visibility:me}
+/glimmerwhim summon strike
+/glimmerwhim summon strike default {lifetime:600}
+/glimmerwhim summon strike ray ~ ~ ~ 8 {lifetime:600}
+/glimmerwhim summon strike pos ~ ~ ~ {visibility:me}
 ```
 
 ## 锚（anchor）
@@ -95,7 +95,7 @@
 
 ## 生成
 
-每个灵感类型用 `spawn()` 自行声明生成规则（生成位置与初始数据）。生成由触发器调用：命令未指定锚时、以及类型自身的事件处理里会调用它；引擎不再周期性自动生成。灵感超出所有玩家的加载距离时会被移除（原因「超出范围」）。
+每个灵感类型用 `spawn()` 自行声明生成规则（生成位置与初始数据）。生成由触发器调用：命令未指定锚时会调用 `spawn()` 取默认落点，类型自身的事件处理则调用 `WhimLifecycle.generate(...)` —— 抽取 `spawn()` → 被方块挡住就不生成 → 召唤 → 调用类型的 `onGenerated(...)` 做生成表现（指令召唤不走这一步）。引擎不再周期性自动生成。灵感超出所有玩家的加载距离时会被移除（原因「超出范围」）。
 
 ## 配置
 
@@ -103,10 +103,11 @@
 
 | 段 | 作用 |
 | --- | --- |
-| `aim` | 瞄准是否忽略方块遮挡。 |
+| `aim` | 瞄准是否忽略方块遮挡；目标实体拾取的命中箱放大倍率（`targetHitboxScale`）。 |
 | `freelook` | 自由视角模式（按住/切换）、回正时长、灵敏度、角度限制。 |
 | `render` | 高亮轮廓、面明暗、瞄准颜色、牵引折线；`render.default` 为没有自定义绘制的元素的默认外观。 |
 | `whim` | 串联上限。 |
+| `strike` | 落雷 `strike` 的触发条件与数值默认值（`enabled`/`chance`/`min_health`/`max_damage_ratio`/`combat_window_ticks`/`roll_interval_ticks`/`cooldown_ticks`/`overworld_only`，以及参数默认值 `size`/`damage_ratio`/`radius`/`bolts`/`spread`/`charge_ticks`/`glow_ticks`）。 |
 | `command` | 命令权限等级、TAB 补全的拾取距离。 |
 | `debug` | 日志详细程度。 |
 
@@ -127,10 +128,10 @@
 
 ## 为开发者
 
-- **新增灵感**：实现 `whims/WhimType`，通过 `whims/WhimContent.register(...)` 注册（引擎会自动把类型上的 `@SubscribeEvent` 挂上 Forge 总线，`bind()` 仅用于第三方总线）。它声明 id、`{参数}`、能否起链（`canRoot()`）、修饰（`modifier()`）、目标限制（`acceptsTarget()`）、事件处理（`on()`）、生成规则（`spawn()`）。
+- **新增灵感**：实现 `whims/WhimType`，通过 `whims/WhimContent.register(...)` 注册（引擎会自动把类型上的 `@SubscribeEvent` 挂上 Forge 总线，`bind()` 仅用于第三方总线）。它声明 id、`{参数}`、能否起链（`canRoot()`）、修饰（`modifier()`）、目标限制（`acceptsTarget()`）、用后是否随链消耗（`consumedOnUse()`）、事件处理（`on()`）、生成规则（`spawn()`）、生成表现（`onGenerated()`）、绘制是否开深度测试（`depthOcclusion()`）。正式内容放 `whims/content/`（注册在 `ContentWhims`，客户端在 `ContentRenders`），开发测试内容放 `whims/dev/`（源码里有即注册）。
 - **新增锚**：实现 `anchor/WhimAnchor`，在 `anchor/WhimAnchors` 的 `ANCHORS` 列表里加一项（类型、`read`、`parse`、`suggestData`、提示）。
 - **维度**：`engine/WhimDimensions`（`power` / `range`）。
-- **事件**：`engine/WhimEvent`（`SUMMON`、`HIGHLIGHT`、`UNHIGHLIGHT`、`TICK`、`HOLD`、`USE`、`EXPIRE`、`REMOVE`）；`TICK` 需 `ticks()` 开启。
+- **事件**：`engine/WhimEvent`（`SUMMON`、`HIGHLIGHT`、`UNHIGHLIGHT`、`TICK`、`HOLD`、`USE`、`REJECT`、`EXPIRE`、`REMOVE`）；`TICK` 需 `ticks()` 开启；`REJECT` 在整链因目标为空/不合法/不被接受而丢弃前发给链根。
 - **调度**：`engine/WhimScheduler`（`schedule` / `scheduleRepeating`），任务以灵感为 owner，灵感移除即取消；灵感到期同样登记为任务，主循环不再逐 tick 扫描寿命。
 - **渲染**：客户端用 `whims/client/WhimRenders` 登记某个元素的绘制 / 命中 / 高亮 / 牵引与轨迹样式（底层是 `client/WhimRenderer`）；该注册必须在客户端侧声明（渲染类不能在服务端加载），未登记的灵感用 `render.default` 外观。
 

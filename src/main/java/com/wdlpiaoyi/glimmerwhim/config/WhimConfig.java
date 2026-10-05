@@ -18,6 +18,7 @@ public final class WhimConfig
     public static final ForgeConfigSpec COMMON_SPEC;
 
     private static final ForgeConfigSpec.BooleanValue AIM_THROUGH_WALLS;
+    private static final ForgeConfigSpec.DoubleValue TARGET_HITBOX_SCALE;
 
     private static final ForgeConfigSpec.EnumValue<FreeLookMode> FREE_LOOK_MODE;
 
@@ -58,6 +59,29 @@ public final class WhimConfig
 
     private static final ForgeConfigSpec.DoubleValue COMMAND_SUGGEST_REACH;
 
+    private static final ForgeConfigSpec.BooleanValue STRIKE_ENABLED;
+
+    private static final ForgeConfigSpec.DoubleValue STRIKE_CHANCE;
+
+    private static final ForgeConfigSpec.IntValue STRIKE_MIN_HEALTH;
+
+    private static final ForgeConfigSpec.DoubleValue STRIKE_MAX_DAMAGE_RATIO;
+    private static final ForgeConfigSpec.DoubleValue STRIKE_DAMAGE_RATIO;
+    private static final ForgeConfigSpec.DoubleValue STRIKE_SIZE;
+    private static final ForgeConfigSpec.DoubleValue STRIKE_RADIUS;
+    private static final ForgeConfigSpec.IntValue STRIKE_BOLTS;
+    private static final ForgeConfigSpec.DoubleValue STRIKE_SPREAD;
+    private static final ForgeConfigSpec.IntValue STRIKE_CHARGE_TICKS;
+    private static final ForgeConfigSpec.IntValue STRIKE_GLOW_TICKS;
+
+    private static final ForgeConfigSpec.IntValue STRIKE_COMBAT_WINDOW;
+
+    private static final ForgeConfigSpec.IntValue STRIKE_ROLL_INTERVAL;
+
+    private static final ForgeConfigSpec.IntValue STRIKE_COOLDOWN;
+
+    private static final ForgeConfigSpec.BooleanValue STRIKE_OVERWORLD_ONLY;
+
     private static final ForgeConfigSpec.BooleanValue DEBUG_VERBOSE_LOG;
 
     static
@@ -68,6 +92,8 @@ public final class WhimConfig
         builder.push("aim");
         AIM_THROUGH_WALLS = builder.comment("忽略方块遮挡：命中体积即视为瞄准，不检查中间遮挡。默认 true。")
                 .define("throughWalls", true);
+        TARGET_HITBOX_SCALE = builder.comment("目标拾取：实体命中箱的放大倍率，越大越好瞄。默认 1.5。")
+                .defineInRange("targetHitboxScale", 1.5D, 1.0D, 10.0D);
 
         builder.pop();
 
@@ -134,6 +160,41 @@ public final class WhimConfig
                 .defineInRange("suggestReach", 32.0D, 1.0D, 256.0D);
         builder.pop();
 
+        builder.comment("落雷（strike）：触发条件与数值默认值。");
+        builder.push("strike");
+        STRIKE_ENABLED = builder.comment("是否启用触发。默认 true。")
+                .define("enabled", true);
+        STRIKE_CHANCE = builder.comment("满足全部条件后每次抽签的触发概率。默认 0.005。")
+                .defineInRange("chance", 0.005D, 0.0D, 1.0D);
+        STRIKE_MIN_HEALTH = builder.comment("目标最大生命下限；低于此值不触发。默认 500。")
+                .defineInRange("min_health", 500, 1, Integer.MAX_VALUE);
+        // 阈值参数，上界设为无穷：超过 1 只意味着「不因伤害过大而拒绝」，有限上界只是画蛇添足
+        STRIKE_MAX_DAMAGE_RATIO = builder.comment("本次伤害相对目标最大生命的上限（可大于 1，一击可能超过目标最大生命）；高于此值不触发（说明目标还不够强）。默认 0.05。")
+                .defineInRange("max_damage_ratio", 0.05D, 0.0D, Double.POSITIVE_INFINITY);
+        STRIKE_COMBAT_WINDOW = builder.comment("战斗标记时长（tick）：窗口内造成或受到过有源伤害才算在战斗中。默认 240（12 秒）。")
+                .defineInRange("combat_window_ticks", 240, 1, 72000);
+        STRIKE_ROLL_INTERVAL = builder.comment("两次抽签的最小间隔（tick）。默认 20（1 秒）。")
+                .defineInRange("roll_interval_ticks", 20, 0, 72000);
+        STRIKE_COOLDOWN = builder.comment("生成冷却（tick），与灵感自身寿命一致；{lifetime} 可覆盖。默认 100。")
+                .defineInRange("cooldown_ticks", 100, 0, 72000);
+        STRIKE_OVERWORLD_ONLY = builder.comment("是否只在主世界触发。默认 true。")
+                .define("overworld_only", true);
+        STRIKE_DAMAGE_RATIO = builder.comment("落雷中心命中伤害相对目标最大生命的比例，作为 {damage_ratio} 的默认值（单次召唤可覆盖）；可大于 1。默认 1。")
+                .defineInRange("damage_ratio", 1.0D, 0.0D, Double.POSITIVE_INFINITY);
+        STRIKE_SIZE = builder.comment("面片边长（方块），作为 {size} 的默认值；同时决定命中体积。默认 4。")
+                .defineInRange("size", 4.0D, 0.0D, Double.POSITIVE_INFINITY);
+        STRIKE_RADIUS = builder.comment("范围伤害半径（方块），作为 {radius} 的默认值。默认 2。")
+                .defineInRange("radius", 2.0D, 0.0D, Double.POSITIVE_INFINITY);
+        STRIKE_BOLTS = builder.comment("视觉闪电道数，作为 {bolts} 的默认值。默认 10。")
+                .defineInRange("bolts", 10, 1, 1000);
+        STRIKE_SPREAD = builder.comment("闪电散布半径（方块），作为 {spread} 的默认值。默认 2。")
+                .defineInRange("spread", 2.0D, 0.0D, Double.POSITIVE_INFINITY);
+        STRIKE_CHARGE_TICKS = builder.comment("蓄力时长（tick），作为 {charge} 的默认值。默认 35。")
+                .defineInRange("charge_ticks", 35, 0, 72000);
+        STRIKE_GLOW_TICKS = builder.comment("目标发光时长（tick），作为 {glow} 的默认值。默认 40。")
+                .defineInRange("glow_ticks", 40, 0, 72000);
+        builder.pop();
+
         builder.comment("调试：日志输出。");
         builder.push("debug");
         DEBUG_VERBOSE_LOG = builder.comment("是否将调试信息输出为 info 级别；关闭后仅输出 debug 级别。默认 true。")
@@ -150,6 +211,11 @@ public final class WhimConfig
     public static boolean aimThroughWalls()
     {
         return AIM_THROUGH_WALLS.get();
+    }
+
+    public static double targetHitboxScale()
+    {
+        return TARGET_HITBOX_SCALE.get();
     }
 
     public static FreeLookMode freeLookMode()
@@ -235,6 +301,88 @@ public final class WhimConfig
     public static boolean verboseLog()
     {
         return DEBUG_VERBOSE_LOG.get();
+    }
+
+    public static boolean strikeEnabled()
+    {
+        return STRIKE_ENABLED.get();
+    }
+
+    public static double strikeChance()
+    {
+        return STRIKE_CHANCE.get();
+    }
+
+    public static int strikeMinHealth()
+    {
+        return STRIKE_MIN_HEALTH.get();
+    }
+
+    public static double strikeMaxDamageRatio()
+    {
+        return STRIKE_MAX_DAMAGE_RATIO.get();
+    }
+
+    // {damage_ratio} 的默认值
+    public static double strikeDamageRatio()
+    {
+        return STRIKE_DAMAGE_RATIO.get();
+    }
+
+    // {size} 的默认值
+    public static double strikeSize()
+    {
+        return STRIKE_SIZE.get();
+    }
+
+    // {radius} 的默认值
+    public static double strikeRadius()
+    {
+        return STRIKE_RADIUS.get();
+    }
+
+    // {bolts} 的默认值
+    public static int strikeBolts()
+    {
+        return STRIKE_BOLTS.get();
+    }
+
+    // {spread} 的默认值
+    public static double strikeSpread()
+    {
+        return STRIKE_SPREAD.get();
+    }
+
+    // {charge} 的默认值
+    public static int strikeChargeTicks()
+    {
+        return STRIKE_CHARGE_TICKS.get();
+    }
+
+    // {glow} 的默认值
+    public static int strikeGlowTicks()
+    {
+        return STRIKE_GLOW_TICKS.get();
+    }
+
+    public static int strikeCombatWindowTicks()
+    {
+        return STRIKE_COMBAT_WINDOW.get();
+    }
+
+    public static int strikeRollIntervalTicks()
+    {
+        return STRIKE_ROLL_INTERVAL.get();
+    }
+
+    public static int strikeCooldownTicks()
+    {
+        return STRIKE_COOLDOWN.get();
+    }
+
+    public static boolean strikeOverworldOnly()
+    {
+        return STRIKE_OVERWORLD_ONLY.get();
     }
 
     // 解析 #RRGGBB 或 #AARRGGBB；6 位补不透明 alpha；长度/字符非法时回退 fallback

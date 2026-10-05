@@ -1,5 +1,7 @@
 {
   "key.categories.glimmerwhim": "微光奇想",
   "key.glimmerwhim.freelook": "自由视角",
-  "key.glimmerwhim.interact": "灵感交互"
+  "key.glimmerwhim.interact": "灵感交互",
+  "death.attack.glimmerwhim.strike": "%1$s 被落雷劈死了",
+  "death.attack.glimmerwhim.strike.player": "%1$s 在与 %2$s 战斗时被落雷劈死了"
 }

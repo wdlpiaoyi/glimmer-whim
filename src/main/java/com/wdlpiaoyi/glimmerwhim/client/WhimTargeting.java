@@ -3,16 +3,16 @@ package com.wdlpiaoyi.glimmerwhim.client;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimTarget;
 
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.entity.PartEntity;
 
 // 内置目标产生器：灵感优先于视线命中
 public final class WhimTargeting
@@ -58,12 +58,11 @@ public final class WhimTargeting
         Vec3 limit = block.getType() == HitResult.Type.MISS ? end : block.getLocation();
         // 以裁剪终点为界扩展包围盒并膨胀 1 格，沿用原版投射物拾取范围
         AABB bounds = source.getBoundingBox().expandTowards(limit.subtract(context.eye())).inflate(1.0D);
-        EntityHitResult entity = ProjectileUtil.getEntityHitResult(context.level(), source, context.eye(), limit, bounds,
-                candidate -> candidate != source && !candidate.isSpectator() && candidate.isPickable());
+        EntityPick pick = pick(context, source, limit, bounds);
 
-        if (entity != null)
+        if (pick != null)
         {
-            return Optional.of(WhimTarget.ofEntity(entity.getEntity().getUUID(), entity.getLocation()));
+            return Optional.of(WhimTarget.ofEntity(pick.entity().getUUID(), pick.location()));
         }
 
         if (block.getType() != HitResult.Type.MISS)
@@ -72,5 +71,60 @@ public final class WhimTargeting
         }
 
         return Optional.empty();
+    }
+
+    // 沿视线在候选范围内取最近的实体；命中箱按几何中心放大，好瞄
+    private static EntityPick pick(WhimTargeters.Context context, Entity source, Vec3 limit, AABB bounds)
+    {
+        EntityPick best = null;
+        double nearest = Double.MAX_VALUE;
+
+        for (Entity candidate : context.level().getEntities(source, bounds,
+                entity -> entity != source && !entity.isSpectator() && entity.isPickable()))
+        {
+            Vec3 hit = scaled(candidate).clip(context.eye(), limit).orElse(null);
+
+            if (hit == null)
+            {
+                continue;
+            }
+
+            double distance = context.eye().distanceToSqr(hit);
+
+            if (distance < nearest)
+            {
+                nearest = distance;
+                best = new EntityPick(unwrap(candidate), hit);
+            }
+        }
+
+        return best;
+    }
+
+    private static AABB scaled(Entity entity)
+    {
+        AABB box = entity.getBoundingBox();
+        double grow = (WhimConfig.targetHitboxScale() - 1.0D) / 2.0D;
+        return box.inflate(box.getXsize() * grow, box.getYsize() * grow, box.getZsize() * grow);
+    }
+
+    // 多部件实体的部位归到本体（例如末影龙的各段），否则目标会是一个非生物的部件
+    private static Entity unwrap(Entity entity)
+    {
+        if (entity instanceof PartEntity<?> part)
+        {
+            Entity parent = part.getParent();
+
+            if (parent != null)
+            {
+                return parent;
+            }
+        }
+
+        return entity;
+    }
+
+    private record EntityPick(Entity entity, Vec3 location)
+    {
     }
 }

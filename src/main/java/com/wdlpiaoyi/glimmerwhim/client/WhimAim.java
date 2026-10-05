@@ -63,7 +63,7 @@ public final class WhimAim
 
         for (ClientWhimCache.WhimView whim : ClientWhimCache.all())
         {
-            if (!whim.type().interactable())
+            if (!whim.type().interactable(whim.data()))
             {
                 continue;
             }

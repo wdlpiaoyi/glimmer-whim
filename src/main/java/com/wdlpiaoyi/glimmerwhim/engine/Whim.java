@@ -17,8 +17,8 @@ public final class Whim
     private final UUID id;
     private final WhimAnchor anchor;
     private final WhimType type;
-    private final WhimData data;
-    private final WhimVisibility visibility;
+    private WhimData data;
+    private WhimVisibility visibility;
     private long deadline; // 到期游戏刻；负值表示永久
     private long frozenRemaining = -1L; // 非负表示被按住暂停，保存剩余 tick
 
@@ -70,6 +70,18 @@ public final class Whim
     public WhimVisibility visibility()
     {
         return this.visibility;
+    }
+
+    // 运行期改数据；改后由登记表广播给已收到的玩家
+    public void setData(WhimData data)
+    {
+        this.data = data;
+    }
+
+    // 运行期改可见性；改后由登记表重新对账
+    public void setVisibility(WhimVisibility visibility)
+    {
+        this.visibility = visibility;
     }
 
     // 剩余 tick；永久返回 -1，暂停态返回冻结时的剩余

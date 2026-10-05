@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 
+import com.wdlpiaoyi.glimmerwhim.engine.Whim;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimEvent;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
@@ -111,7 +112,14 @@ public interface WhimType
         return false;
     }
 
-    default boolean interactable()
+    // 绘制时是否开深度测试：让方块与实体都能挡住它（深度缓冲区分不了两者）；默认沿用实体遮挡声明
+    default boolean depthOcclusion(WhimData data)
+    {
+        return entityOccluders(data) != null;
+    }
+
+    // 是否可被瞄准/交互；数据可带状态（如进入某状态后不可再交互）
+    default boolean interactable(WhimData data)
     {
         return true;
     }
@@ -123,13 +131,19 @@ public interface WhimType
     }
 
     // 可入链 = interactable
-    default boolean canChain()
+    default boolean canChain(WhimData data)
     {
-        return interactable();
+        return interactable(data);
     }
 
     // 真则进链（被按住或作为修饰）时暂停寿命倒计时；声明假才继续倒计时
     default boolean pausesInChain()
+    {
+        return true;
+    }
+
+    // 真则随链一并消耗；声明假的应用需自行移除（例如转入下一状态的本体）
+    default boolean consumedOnUse(WhimData data)
     {
         return true;
     }
@@ -154,5 +168,10 @@ public interface WhimType
     default Optional<WhimSpawn> spawn(WhimSpawnContext context)
     {
         return Optional.empty();
+    }
+
+    // 自然生成后的表现（音效、粒子等）；只由生成管线调用，指令召唤不走这里
+    default void onGenerated(WhimSpawnContext context, WhimSpawn placement, Whim whim)
+    {
     }
 }
