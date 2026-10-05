@@ -17,7 +17,8 @@
 - `WhimChain` 已无 `value(...)` / `factor()`（`DevRootWhim` 受影响）。
 - 周期性生成器 `WhimSpawner` / `spawnInterval()` 已删除（`SpawnTestWhim` 受影响）。
 - `WhimDimensions` 已删除；修饰符自己声明并携带 `WhimDomain`（`DevBoostWhim`、`DevExplosionWhim` 受影响）。
+- `DevPowerWhim` / `DevRangeWhim` / `DevExplosionWhim` 共用同包的 `DevDomains`，恢复时一起移回。
 
 ## 移动原因
 
-当前只保留正在开发的 `dev_strike`、遮挡测试 `dev_sighttest` 与两个修饰符示例 `dev_power`/`dev_range`，其余测试类型（`dev`、`dev_mark`、`spawn_test`、`trace_test`、`dev_explosion` 等）从默认构建里移出，避免它们自动生成、破坏地形或出现在补全列表里。参见 `docs/dev-content.md`。
+当前只保留开发中的 `dev_strike` 与它的蓄力视觉体 `dev_strike_charge`，其余测试类型（`dev`、`dev_mark`、`dev_sighttest`、`spawn_test`、`trace_test`、`dev_explosion` 与数值域示例 `DevDomains`/`DevPowerWhim`/`DevRangeWhim` 等）从默认构建里移出，避免它们自动生成、破坏地形或出现在补全列表里。参见 `docs/dev-content.md`。

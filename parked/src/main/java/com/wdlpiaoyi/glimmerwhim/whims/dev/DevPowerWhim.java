@@ -14,13 +14,13 @@ import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
 
 import net.minecraft.resources.ResourceLocation;
 
-public final class DevRangeWhim implements WhimType
+public final class DevPowerWhim implements WhimType
 {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(GlimmerWhim.MODID, "dev_range");
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(GlimmerWhim.MODID, "dev_power");
 
-    public static final DevRangeWhim INSTANCE = new DevRangeWhim();
+    public static final DevPowerWhim INSTANCE = new DevPowerWhim();
 
-    private DevRangeWhim()
+    private DevPowerWhim()
     {
     }
 
@@ -33,7 +33,7 @@ public final class DevRangeWhim implements WhimType
     @Override
     public WhimParams params()
     {
-        return WhimParams.of(WhimParam.positiveNumber("amount", "4"));
+        return WhimParams.of(WhimParam.positiveNumber("amount", "2"));
     }
 
     @Override
@@ -45,6 +45,6 @@ public final class DevRangeWhim implements WhimType
     @Override
     public Optional<WhimModifier> modifier(WhimData data)
     {
-        return Optional.of(new WhimModifier(DevDomains.RANGE, params().number(data, "amount")));
+        return Optional.of(new WhimModifier(DevDomains.POWER.id(), params().number(data, "amount")));
     }
 }

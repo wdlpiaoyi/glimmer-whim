@@ -11,19 +11,18 @@ public final class WhimChain
 {
     private final List<Whim> order; // order[0] 为根元素，其余为按点击顺序叠加的修饰符
     private final WhimTarget target;
-    private final Map<ResourceLocation, Double> values; // 各数值域的聚合结果
+    private final Map<ResourceLocation, List<Double>> values; // 各数值域收到的数字，折叠规则由读它的元素定义
 
     public WhimChain(List<Whim> order, WhimTarget target)
     {
         this.order = List.copyOf(order);
         this.target = target;
-        this.values = fold(this.order);
+        this.values = collect(this.order);
     }
 
-    // 按域 id 归并修饰符数值；同名域以链上第一个声明它的修饰符的定义为准
-    private static Map<ResourceLocation, Double> fold(List<Whim> order)
+    // 按域 id 收集修饰符交出的数字；修饰符不定义折叠规则
+    private static Map<ResourceLocation, List<Double>> collect(List<Whim> order)
     {
-        Map<ResourceLocation, WhimDomain> definitions = new LinkedHashMap<>();
         Map<ResourceLocation, List<Double>> collected = new LinkedHashMap<>();
 
         for (int i = 1; i < order.size(); i++)
@@ -31,19 +30,10 @@ public final class WhimChain
             Whim modifier = order.get(i);
 
             modifier.type().modifier(modifier.data()).ifPresent(output ->
-            {
-                ResourceLocation id = output.domain().id();
-
-                definitions.putIfAbsent(id, output.domain());
-                collected.computeIfAbsent(id, key -> new ArrayList<>()).add(output.value());
-            });
+                    collected.computeIfAbsent(output.domain(), key -> new ArrayList<>()).add(output.value()));
         }
 
-        Map<ResourceLocation, Double> folded = new LinkedHashMap<>();
-
-        collected.forEach((id, values) -> folded.put(id, definitions.get(id).fold(values)));
-
-        return folded;
+        return collected;
     }
 
     public List<Whim> order()
@@ -66,9 +56,11 @@ public final class WhimChain
         return this.target;
     }
 
-    // 读取某数值域的聚合值；链上没有该域时取它自己的中性值
+    // 用调用者给的定义折叠该域的数值；链上没有该域时取定义的中性值
     public double value(WhimDomain domain)
     {
-        return this.values.getOrDefault(domain.id(), domain.identity());
+        List<Double> numbers = this.values.get(domain.id());
+
+        return numbers == null ? domain.identity() : domain.fold(numbers);
     }
 }
