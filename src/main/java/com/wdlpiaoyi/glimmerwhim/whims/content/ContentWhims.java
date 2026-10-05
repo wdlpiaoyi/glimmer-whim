@@ -19,6 +19,8 @@ public final class ContentWhims
     public static void onCommonSetup(FMLCommonSetupEvent event)
     {
         ContentTraces.register();
+        ContentShapes.register();
+        ContentHits.register();
         WhimContent.register(StrikeWhim.INSTANCE);
     }
 }

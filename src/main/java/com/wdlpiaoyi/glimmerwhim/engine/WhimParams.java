@@ -48,6 +48,15 @@ public final class WhimParams
                 WhimParam.trace(Whim.MODIFIER_TRACE, modifierDefault)));
     }
 
+    // 本体的外观与命中体积：怎么画、怎么判中、命中多大
+    public static WhimParams appearance(String shapeDefault, String hitDefault)
+    {
+        return new WhimParams(List.of(
+                WhimParam.shape(Whim.SHAPE, shapeDefault),
+                WhimParam.hitVolume(Whim.HIT, hitDefault),
+                WhimParam.positiveNumber(Whim.HIT_SCALE, "1")));
+    }
+
     public Collection<WhimParam> all()
     {
         return this.params.values();

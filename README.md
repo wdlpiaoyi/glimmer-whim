@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-版本 `0.1.0`，处于早期开发阶段。引擎、交互、串联与渲染框架已经成型，正式内容刚刚开始：目前只有一个正式灵感——落雷 `strike`（见 [正式内容](docs/content.md)）；开发测试内容只剩 `dev_entity` 与模板 `whim_template`，其余测试灵感已移到仓库根的 `parked/`（不在源码树里、不参与构建，需要时移回）。
+版本 `0.1.0`，处于早期开发阶段。引擎、交互、串联与渲染框架已经成型，正式内容刚刚开始：目前只有一个正式灵感——落雷 `strike`（见 [正式内容](docs/content.md)）。开发测试内容与各扩展点模板都已移到仓库根的 `parked/`（不在源码树里、不参与构建，需要时移回）。
 
 ## 环境要求
 
@@ -105,7 +105,7 @@
 | --- | --- |
 | `aim` | 瞄准是否忽略方块遮挡；目标实体拾取的命中箱放大倍率（`targetHitboxScale`）。 |
 | `freelook` | 自由视角模式（按住/切换）、回正时长、灵敏度、角度限制。 |
-| `render` | 高亮轮廓、面明暗、瞄准颜色、牵引折线；`render.default` 为没有自定义绘制的元素的默认外观。 |
+| `render` | 高亮轮廓、面明暗、瞄准颜色、牵引折线；`render.default` 是默认外观（`glimmerwhim:quad`）的颜色与棋盘格设置。 |
 | `whim` | 串联上限。 |
 | `strike` | 落雷 `strike` 的触发条件与数值默认值（`enabled`/`chance`/`min_health`/`max_damage_ratio`/`combat_window_ticks`/`roll_interval_ticks`/`cooldown_ticks`/`overworld_only`，以及参数默认值 `size`/`damage_ratio`/`radius`/`spread`/`charge_ticks`/`glow_ticks`；`{bolts}` 不在配置里，默认由 `{damage_ratio}` 推算）。 |
 | `command` | 命令权限等级、TAB 补全的拾取距离。 |
@@ -128,12 +128,12 @@
 
 ## 为开发者
 
-- **新增灵感**：实现 `whims/WhimType`，通过 `whims/WhimContent.register(...)` 注册（引擎会自动把类型上的 `@SubscribeEvent` 挂上 Forge 总线，`bind()` 仅用于第三方总线）。它声明 id、`{参数}`、能否起链（`canRoot()`）、修饰（`modifier()`）、目标限制（`acceptsTarget()`）、用后是否随链消耗（`consumedOnUse()`）、事件处理（`on()`）、生成规则（`spawn()`）、生成表现（`onGenerated()`）、绘制是否开深度测试（`depthOcclusion()`）、消失后的消散时长与画法（`vanishMillis()` 配 `RenderSpec.vanish(...)`，画法要具名、可被别的灵感复用）。正式内容放 `whims/content/`（注册在 `ContentWhims`，客户端在 `ContentRenders`），开发测试内容放 `whims/dev/`（源码里有即注册）。
+- **新增灵感**：实现 `whims/WhimType`，通过 `whims/WhimContent.register(...)` 注册（引擎会自动把类型上的 `@SubscribeEvent` 挂上 Forge 总线，`bind()` 仅用于第三方总线）。它声明 id、`{参数}`、能否起链（`canRoot()`）、修饰（`modifier()`）、目标限制（`acceptsTarget()`）、用后是否随链消耗（`consumedOnUse()`）、事件处理（`on()`）、生成规则（`spawn()`）、生成表现（`onGenerated()`）、绘制是否开深度测试（`depthOcclusion()`）、消失后的消散时长与画法（`vanishMillis()` 配 `RenderSpec.vanish(...)`，画法要具名、可被别的灵感复用）。正式内容放 `whims/content/`（注册在 `ContentWhims`，客户端在 `ContentRenders`）。开发测试内容放 `whims/dev/`（源码里有即注册）；当前整棵 `whims/dev/` 都在 `parked/` 里，连注册入口 `DevWhims`/`DevRenders` 也是，扩展点骨架从 `parked/.../whims/dev/template/` 复制（见 [开发测试内容](docs/dev-content.md)）。
 - **新增锚**：实现 `anchor/WhimAnchor`，在 `anchor/WhimAnchors` 的 `ANCHORS` 列表里加一项（类型、`read`、`parse`、`suggestData`、提示）。
 - **维度**：`engine/WhimDimensions`（`power` / `range`）。
 - **事件**：`engine/WhimEvent`（`SUMMON`、`HIGHLIGHT`、`UNHIGHLIGHT`、`TICK`、`HOLD`、`USE`、`REJECT`、`EXPIRE`、`REMOVE`）；`TICK` 需 `ticks()` 开启；`REJECT` 在整链因目标为空/不合法/不被接受而丢弃前发给链根。
 - **调度**：`engine/WhimScheduler`（`schedule` / `scheduleRepeating`），任务以灵感为 owner，灵感移除即取消；灵感到期同样登记为任务，主循环不再逐 tick 扫描寿命。
-- **渲染**：客户端用 `whims/client/WhimRenders` 登记某个元素的绘制 / 命中 / 高亮 / 牵引与轨迹样式（底层是 `client/WhimRenderer`）；该注册必须在客户端侧声明（渲染类不能在服务端加载），未登记的灵感用 `render.default` 外观。
+- **渲染**：本体的画法与命中体积是具名资产——`{shape:…}` 选外观（id 登记在 `engine/WhimShapes`，画法在客户端 `whims/client/Appearances`）、`{hit:…}` 选命中体积（`engine/WhimHits` + `whims/client/HitVolumes`），类型用 `defaultShape()` / `defaultHit()` 给默认值，判定大小再用通用参数 `{hit_scale:…}`（默认 1，只影响判定）微调；瞄准高亮与消散按类型登记在 `whims/client/WhimRenders`（底层 `client/WhimRenderer`，`RenderSpec` 只有 `highlight` / `vanish`）。轨迹样式同理（`engine/WhimTraces` + `whims/client/Traces`）。登记必须在客户端侧声明（渲染类不能在服务端加载）。
 
 ## 许可
 

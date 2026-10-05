@@ -13,6 +13,11 @@ public final class Whim
     public static final String PLAYTIME = "playtime";
     public static final String ELEMENT_TRACE = "element_trace";
     public static final String MODIFIER_TRACE = "modifier_trace";
+    // 本体的外观与命中体积，取值来自 WhimShapes / WhimHits
+    public static final String SHAPE = "shape";
+    public static final String HIT = "hit";
+    // 命中体积相对本体大小的倍率；只影响判定，不影响外观
+    public static final String HIT_SCALE = "hit_scale";
 
     private final UUID id;
     private final WhimAnchor anchor;

@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimSight;
 import com.wdlpiaoyi.glimmerwhim.net.WhimAimPacket;
 import com.wdlpiaoyi.glimmerwhim.net.WhimNetwork;
@@ -96,7 +97,8 @@ public final class WhimAim
                 continue;
             }
 
-            double hit = WhimRenderer.hit(whim.type().id()).test(eye, direction, at, whim.data(), whim.type().params());
+            WhimParams params = whim.type().effectiveParams();
+            double hit = WhimRenderer.hitVolume(params, whim.data()).test(eye, direction, at, whim.data(), params);
 
             if (hit < 0.0D || hit >= bestHit)
             {

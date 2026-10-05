@@ -1,8 +1,7 @@
 package com.wdlpiaoyi.glimmerwhim.engine;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 
@@ -17,7 +16,7 @@ public final class WhimTraces
     public static final ResourceLocation HUE = ResourceLocation.fromNamespaceAndPath(GlimmerWhim.MODID, "hue");
     public static final ResourceLocation NONE = ResourceLocation.fromNamespaceAndPath(GlimmerWhim.MODID, "none");
 
-    private static final List<ResourceLocation> IDS = new ArrayList<>();
+    private static final WhimIds IDS = new WhimIds();
 
     static
     {
@@ -35,15 +34,12 @@ public final class WhimTraces
     // 新样式先在这里登记 id，再由客户端注册同名绘制实现
     public static void register(ResourceLocation id)
     {
-        if (!IDS.contains(id))
-        {
-            IDS.add(id);
-        }
+        IDS.register(id);
     }
 
     public static List<ResourceLocation> ids()
     {
-        return Collections.unmodifiableList(IDS);
+        return IDS.ids();
     }
 
     public static boolean contains(ResourceLocation id)
@@ -51,8 +47,13 @@ public final class WhimTraces
         return IDS.contains(id);
     }
 
+    public static Optional<ResourceLocation> resolve(String raw)
+    {
+        return IDS.resolve(raw);
+    }
+
     public static List<String> names()
     {
-        return IDS.stream().map(ResourceLocation::toString).toList();
+        return IDS.names();
     }
 }

@@ -14,90 +14,100 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
+import com.wdlpiaoyi.glimmerwhim.engine.Whim;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimShapes;
 
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.Vec3;
 
+// 默认外观与默认命中体积；{size} 是这里与 Glow 共用的尺寸约定
 public final class DefaultRender
 {
     private DefaultRender()
     {
     }
 
-    // 需要按单个灵感维护状态的表现覆写这个版本；默认外观与 id 无关
-    public static void draw(PoseStack pose, Vec3 dir, WhimData data, WhimParams params, UUID id)
+    // ---- 具名外观（WhimRenderer.Drawer）----
+
+    public static void quad(PoseStack pose, Vec3 dir, WhimData data, WhimParams params, UUID id)
     {
-        draw(pose, dir, data, params);
+        quadGeometry(pose, dir, half(data, params), WhimConfig.renderDefaultColorElement(),
+                WhimConfig.renderDefaultColorElementAlt(), WhimConfig.renderDefaultCheckerCells());
     }
 
-    public static void draw(PoseStack pose, Vec3 dir, WhimData data, WhimParams params)
+    public static void cube(PoseStack pose, Vec3 dir, WhimData data, WhimParams params, UUID id)
     {
-        // shape=cube 画六面体，否则画面向视线的方形面片；half 为边长一半（方块）
-        boolean cube = "cube".equals(params.text(data, "shape", "cube"));
-        double half = params.number(data, "size", 1.0D) / 2.0D;
-        int cells = WhimConfig.renderDefaultCheckerCells();
-        float[] first = WhimConfig.renderDefaultColorElement();
-        float[] second = WhimConfig.renderDefaultColorElementAlt();
-
-        if (cube)
-        {
-            cube(pose, half, first, second, cells);
-        }
-        else
-        {
-            quad(pose, dir, half, first, second, cells);
-        }
+        cubeGeometry(pose, half(data, params), WhimConfig.renderDefaultColorElement(),
+                WhimConfig.renderDefaultColorElementAlt(), WhimConfig.renderDefaultCheckerCells());
     }
+
+    // ---- 具名命中体积（WhimRenderer.Hit）；返回射线命中距离，未命中为 -1 ----
+
+    public static double hitQuad(Vec3 eye, Vec3 look, Vec3 at, WhimData data, WhimParams params)
+    {
+        return quadTest(eye, look, at, hitHalf(data, params));
+    }
+
+    public static double hitBox(Vec3 eye, Vec3 look, Vec3 at, WhimData data, WhimParams params)
+    {
+        return boxTest(eye, look, at, hitHalf(data, params));
+    }
+
+    public static double hitSphere(Vec3 eye, Vec3 look, Vec3 at, WhimData data, WhimParams params)
+    {
+        return sphere(eye, look, at, hitHalf(data, params));
+    }
+
+    // 球形命中，按给定半径；从球内起算时返回 0
+    public static double sphere(Vec3 eye, Vec3 look, Vec3 at, double radius)
+    {
+        Vec3 offset = eye.subtract(at);
+        double b = 2.0D * offset.dot(look);
+        double discriminant = b * b - 4.0D * (offset.lengthSqr() - radius * radius);
+
+        if (discriminant < 0.0D)
+        {
+            return -1.0D;
+        }
+
+        double root = Math.sqrt(discriminant);
+        double near = (-b - root) / 2.0D;
+
+        return (-b + root) / 2.0D < 0.0D ? -1.0D : Math.max(near, 0.0D);
+    }
+
+    // ---- 默认瞄准高亮：先用瞄准色画外扩 outline 宽的壳，再画本体；自定义外观请自备 highlight ----
 
     public static void outline(PoseStack pose, Vec3 dir, WhimData data, WhimParams params, UUID id)
     {
-        outline(pose, dir, data, params);
-    }
-
-    public static void outline(PoseStack pose, Vec3 dir, WhimData data, WhimParams params)
-    {
-        // 先用瞄准色画外扩 outline 宽的壳，再叠正常本体
+        boolean cube = WhimShapes.CUBE.toString().equals(params.text(data, Whim.SHAPE));
         double outline = WhimConfig.renderOutlineWidth();
+        double half = half(data, params);
 
         if (outline > 0.0D)
         {
-            boolean cube = "cube".equals(params.text(data, "shape", "cube"));
-            double half = params.number(data, "size", 1.0D) / 2.0D;
             int cells = WhimConfig.renderDefaultCheckerCells();
             float[] aimedColor = WhimConfig.renderColorAimed();
 
             if (cube)
             {
-                cube(pose, half + outline, aimedColor, aimedColor, cells);
+                cubeGeometry(pose, half + outline, aimedColor, aimedColor, cells);
             }
             else
             {
-                quad(pose, dir, half + outline, aimedColor, aimedColor, cells);
+                quadGeometry(pose, dir, half + outline, aimedColor, aimedColor, cells);
             }
         }
 
-        draw(pose, dir, data, params);
-    }
-
-    public static void hue(PoseStack pose, Vec3 dir, WhimData data, WhimParams params)
-    {
-        boolean cube = "cube".equals(params.text(data, "shape", "cube"));
-        double half = params.number(data, "size", 1.0D) / 2.0D;
-        int cells = WhimConfig.renderDefaultCheckerCells();
-        // 颜色按 5 秒周期循环色相
-        float shift = (float) ((System.currentTimeMillis() % 5000L) / 5000.0D);
-        float[] first = rotateHue(WhimConfig.renderDefaultColorElement(), shift);
-        float[] second = rotateHue(WhimConfig.renderDefaultColorElementAlt(), shift);
-
         if (cube)
         {
-            cube(pose, half, first, second, cells);
+            cube(pose, dir, data, params, id);
         }
         else
         {
-            quad(pose, dir, half, first, second, cells);
+            quad(pose, dir, data, params, id);
         }
     }
 
@@ -129,23 +139,19 @@ public final class DefaultRender
         return (float) Math.max(0.0D, Math.min(1.0D, value));
     }
 
-    // 返回射线命中距离，未命中返回 -1；cube 用 AABB，quad 用面片
-    public static double hit(Vec3 eye, Vec3 look, Vec3 at, WhimData data, WhimParams params)
+    private static double half(WhimData data, WhimParams params)
     {
-        return hit(eye, look, at, data, params, 1.0D);
+        return params.number(data, "size", 1.0D) / 2.0D;
     }
 
-    // scale 以几何中心为基准放大几何体，用于按需放宽命中判定
-    public static double hit(Vec3 eye, Vec3 look, Vec3 at, WhimData data, WhimParams params, double scale)
+    // 判定用的半边长：本体大小按 {hit_scale} 缩放，画法不受它影响
+    private static double hitHalf(WhimData data, WhimParams params)
     {
-        boolean cube = "cube".equals(params.text(data, "shape", "cube"));
-        double half = params.number(data, "size", 1.0D) / 2.0D * scale;
-
-        return cube ? hitBox(eye, look, at, half) : hitQuad(eye, look, at, half);
+        return half(data, params) * params.number(data, Whim.HIT_SCALE, 1.0D);
     }
 
     // slab 法求射线与 AABB 的最近交点
-    private static double hitBox(Vec3 eye, Vec3 look, Vec3 at, double half)
+    private static double boxTest(Vec3 eye, Vec3 look, Vec3 at, double half)
     {
         double[] origin = { eye.x, eye.y, eye.z };
         double[] direction = { look.x, look.y, look.z };
@@ -188,7 +194,7 @@ public final class DefaultRender
     }
 
     // 面片正对视线；背向、距离非正或偏离面心超半宽即未命中
-    private static double hitQuad(Vec3 eye, Vec3 look, Vec3 at, double half)
+    private static double quadTest(Vec3 eye, Vec3 look, Vec3 at, double half)
     {
         Vec3 normal = at.subtract(eye).normalize();
         double facing = look.dot(normal);
@@ -213,7 +219,7 @@ public final class DefaultRender
     }
 
     // 以视线为法线构建面向玩家的四边形面片
-    private static void quad(PoseStack pose, Vec3 dir, double half, float[] first, float[] second, int cells)
+    private static void quadGeometry(PoseStack pose, Vec3 dir, double half, float[] first, float[] second, int cells)
     {
         Matrix4f matrix = pose.last().pose();
         BufferBuilder builder = Tesselator.getInstance().getBuilder();
@@ -226,7 +232,7 @@ public final class DefaultRender
         BufferUploader.drawWithShader(builder.end());
     }
 
-    private static void cube(PoseStack pose, double half, float[] first, float[] second, int cells)
+    private static void cubeGeometry(PoseStack pose, double half, float[] first, float[] second, int cells)
     {
         Matrix4f matrix = pose.last().pose();
         BufferBuilder builder = Tesselator.getInstance().getBuilder();

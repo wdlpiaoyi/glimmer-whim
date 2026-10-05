@@ -60,14 +60,13 @@ public final class StrikeWhim implements WhimType
     public static final ResourceLocation DAMAGE_TYPE = ResourceLocation.fromNamespaceAndPath(GlimmerWhim.MODID, "strike");
     public static final StrikeWhim INSTANCE = new StrikeWhim();
 
-    private static final String SHAPE = "shape";
     public static final String SIZE = "size";
     public static final String DAMAGE_RATIO = "damage_ratio";
     private static final String RADIUS = "radius";
     private static final String BOLTS = "bolts";
     private static final String SPREAD = "spread";
-    private static final String CHARGE = "charge";
-    private static final String GLOW = "glow";
+    private static final String CHARGE_TICKS = "charge_ticks";
+    private static final String GLOW_TICKS = "glow_ticks";
 
     // 本体状态：蓄力中不可再交互，落雷时由落雷流程移除
     public static final String CHARGING = "charging";
@@ -107,7 +106,6 @@ public final class StrikeWhim implements WhimType
     public WhimParams params()
     {
         return WhimParams.of(
-                WhimParam.choice(SHAPE, "quad", "quad", "cube"),
                 WhimParam.positiveNumber(SIZE, Double.toString(WhimConfig.strikeSize())),
                 // 默认值来自 [strike] damage_ratio，单次召唤可用 {damage_ratio} 覆盖
                 WhimParam.positiveNumber(DAMAGE_RATIO, Double.toString(WhimConfig.strikeDamageRatio())),
@@ -115,14 +113,27 @@ public final class StrikeWhim implements WhimType
                 // 默认道数随 {damage_ratio} 推算；显式写 {bolts} 才以它为准
                 WhimParam.positiveNumber(BOLTS, Integer.toString(boltCount(WhimConfig.strikeDamageRatio()))),
                 WhimParam.positiveNumber(SPREAD, Double.toString(WhimConfig.strikeSpread())),
-                WhimParam.positiveNumber(CHARGE, Integer.toString(WhimConfig.strikeChargeTicks())),
-                WhimParam.positiveNumber(GLOW, Integer.toString(WhimConfig.strikeGlowTicks())));
+                WhimParam.positiveNumber(CHARGE_TICKS, Integer.toString(WhimConfig.strikeChargeTicks())),
+                WhimParam.positiveNumber(GLOW_TICKS, Integer.toString(WhimConfig.strikeGlowTicks())));
     }
 
     @Override
     public ResourceLocation elementTrace()
     {
         return ContentTraces.CURRENT;
+    }
+
+    // 本体画成光效、命中体积取球
+    @Override
+    public ResourceLocation defaultShape()
+    {
+        return ContentShapes.GLOW;
+    }
+
+    @Override
+    public ResourceLocation defaultHit()
+    {
+        return ContentHits.GLOW;
     }
 
     @Override
@@ -285,12 +296,12 @@ public final class StrikeWhim implements WhimType
         // 蓄力音在目标处，视距内所有人可闻；音量只放大传播半径，否则远处目标听不见
         level.playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.WARDEN_SONIC_CHARGE,
                 SoundSource.HOSTILE, soundRange(level), 1.0F);
-        target.addEffect(new MobEffectInstance(MobEffects.GLOWING, (int) params().number(charging, GLOW), 0, false,
+        target.addEffect(new MobEffectInstance(MobEffects.GLOWING, (int) params().number(charging, GLOW_TICKS), 0, false,
                 false, false));
 
         WhimParams params = params();
         float base = (float) (target.getMaxHealth() * params.number(charging, DAMAGE_RATIO));
-        int charge = Math.max(1, (int) params.number(charging, CHARGE));
+        int charge = Math.max(1, (int) params.number(charging, CHARGE_TICKS));
         // 闪电道数默认随伤害比例推算，{bolts} 显式给出时以它为准
         int bolts = charging.get(BOLTS).isPresent()
                 ? (int) params.number(charging, BOLTS)

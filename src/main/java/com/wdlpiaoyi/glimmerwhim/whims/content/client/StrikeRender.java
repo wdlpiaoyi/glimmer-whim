@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.wdlpiaoyi.glimmerwhim.client.ClientWhimCache;
+import com.wdlpiaoyi.glimmerwhim.engine.Whim;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.whims.client.DefaultRender;
@@ -16,8 +17,7 @@ import net.minecraft.world.phys.Vec3;
 // 落雷本体：不用贴图，画加色混合的光核与光环。{damage_ratio} 越大越多越亮，剩余寿命越少脉动越快，蓄力时自转加速变亮，被瞄准时整体放大
 public final class StrikeRender
 {
-    // 本体停在最远 128 格的空中，按原尺寸瞄太苛刻：按几何中心把命中体积放大到 2 倍
-    private static final double HIT_SCALE = 2.0D;
+    // 本体停在最远 128 格的空中，按原尺寸瞄太苛刻：命中体积用球，半径对齐可见光核
     private static final float HIGHLIGHT_SCALE = 1.25F;
     private static final double HIGHLIGHT_BRIGHTNESS = 1.2D;
 
@@ -28,6 +28,8 @@ public final class StrikeRender
 
     // 核心半径取 Glow 的通用约定：{size} 的一半再乘距离补偿，锚越远几何越大，屏幕上看起来差不多
     private static final double GLOW_RATIO = 2.6D;
+    // 命中球半径 = {size} 的一半 × 该比例，与可见光核同一约定
+    private static final double HIT_RADIUS_RATIO = GLOW_RATIO;
     private static final double RING_BASE_RATIO = 1.55D;
     private static final double RING_STEP_RATIO = 0.42D;
     private static final double RING_WIDTH_RATIO = 0.08D;
@@ -55,7 +57,8 @@ public final class StrikeRender
     private static final float[] CORE_COLOR = { 0.95F, 0.86F, 1.0F, 1.0F };
     private static final float[] GLOW_COLOR = { 0.62F, 0.26F, 0.98F, 1.0F };
     private static final float[] RING_COLOR = { 0.78F, 0.55F, 1.0F, 1.0F };
-    private static final float[] AIM_COLOR = { 1.0F, 0.85F, 1.0F, 1.0F };
+    // 瞄准指示环：比光环亮、带紫调，别用近白色，免得看着像一条默认描边
+    private static final float[] AIM_COLOR = { 0.93F, 0.74F, 1.0F, 1.0F };
 
     private StrikeRender()
     {
@@ -72,10 +75,11 @@ public final class StrikeRender
         render(pose, dir, data, params, id, HIGHLIGHT_SCALE, HIGHLIGHT_BRIGHTNESS, true);
     }
 
-    // 沿用本体几何，只是放大命中体积（远处也能选中）
+    // 命中体积是球，半径对齐可见光核（见 HIT_RADIUS_RATIO），再按 {hit_scale} 缩放
     public static double hit(Vec3 eye, Vec3 look, Vec3 at, WhimData data, WhimParams params)
     {
-        return DefaultRender.hit(eye, look, at, data, params, HIT_SCALE);
+        return DefaultRender.sphere(eye, look, at, params.number(data, StrikeWhim.SIZE, 1.0D) * 0.5D * HIT_RADIUS_RATIO
+                * params.number(data, Whim.HIT_SCALE, 1.0D));
     }
 
     private static void render(PoseStack pose, Vec3 dir, WhimData data, WhimParams params, UUID id, double scale,

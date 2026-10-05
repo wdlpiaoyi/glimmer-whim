@@ -4,6 +4,8 @@ import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.client.WhimRenderer;
 import com.wdlpiaoyi.glimmerwhim.whims.client.ScatterVanish;
 import com.wdlpiaoyi.glimmerwhim.whims.client.WhimRenders;
+import com.wdlpiaoyi.glimmerwhim.whims.content.ContentHits;
+import com.wdlpiaoyi.glimmerwhim.whims.content.ContentShapes;
 import com.wdlpiaoyi.glimmerwhim.whims.content.ContentTraces;
 import com.wdlpiaoyi.glimmerwhim.whims.content.StrikeWhim;
 
@@ -23,10 +25,11 @@ public final class ContentRenders
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event)
     {
-        // 本体同时声明绘制（含蓄力自转）、瞄准高亮、角度命中判定与消散；电流样式注册到具名表
+        // 本体只声明瞄准高亮与消散；画法与命中体积是具名资产，分别登记
         WhimRenders.register(StrikeWhim.INSTANCE,
-                new WhimRenderer.RenderSpec().draw(StrikeRender::draw).hit(StrikeRender::hit)
-                        .highlight(StrikeRender::highlight).vanish(ScatterVanish::draw));
+                new WhimRenderer.RenderSpec().highlight(StrikeRender::highlight).vanish(ScatterVanish::draw));
+        WhimRenders.shape(ContentShapes.GLOW, StrikeRender::draw);
+        WhimRenders.hitVolume(ContentHits.GLOW, StrikeRender::hit);
         WhimRenders.register(ContentTraces.CURRENT, CurrentTrace::draw);
     }
 }

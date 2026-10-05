@@ -186,9 +186,9 @@ public final class WhimConfig
                 .defineInRange("radius", 2.0D, 0.0D, Double.POSITIVE_INFINITY);
         STRIKE_SPREAD = builder.comment("闪电散布半径（方块），作为 {spread} 的默认值。默认 2。")
                 .defineInRange("spread", 2.0D, 0.0D, Double.POSITIVE_INFINITY);
-        STRIKE_CHARGE_TICKS = builder.comment("蓄力时长（tick），作为 {charge} 的默认值。默认 35。")
+        STRIKE_CHARGE_TICKS = builder.comment("蓄力时长（tick），作为 {charge_ticks} 的默认值。默认 35。")
                 .defineInRange("charge_ticks", 35, 0, 72000);
-        STRIKE_GLOW_TICKS = builder.comment("目标发光时长（tick），作为 {glow} 的默认值。默认 40。")
+        STRIKE_GLOW_TICKS = builder.comment("目标发光时长（tick），作为 {glow_ticks} 的默认值。默认 40。")
                 .defineInRange("glow_ticks", 40, 0, 72000);
         builder.pop();
 
@@ -345,13 +345,13 @@ public final class WhimConfig
         return STRIKE_SPREAD.get();
     }
 
-    // {charge} 的默认值
+    // {charge_ticks} 的默认值
     public static int strikeChargeTicks()
     {
         return STRIKE_CHARGE_TICKS.get();
     }
 
-    // {glow} 的默认值
+    // {glow_ticks} 的默认值
     public static int strikeGlowTicks()
     {
         return STRIKE_GLOW_TICKS.get();

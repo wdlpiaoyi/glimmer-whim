@@ -1,6 +1,8 @@
 package com.wdlpiaoyi.glimmerwhim.engine;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import net.minecraft.resources.ResourceLocation;
@@ -50,14 +52,26 @@ public final class WhimParam
     // 轨迹样式 id，须是 WhimTraces 已登记的（含运行期登记）
     public static WhimParam trace(String name, String defaultValue)
     {
-        Predicate<String> valid = value ->
-        {
-            ResourceLocation id = ResourceLocation.tryParse(value);
+        return named(name, defaultValue, WhimTraces::resolve, "已登记的轨迹样式", WhimTraces.names());
+    }
 
-            return id != null && WhimTraces.contains(id);
-        };
+    // 外观 id，须是 WhimShapes 已登记的（含运行期登记）
+    public static WhimParam shape(String name, String defaultValue)
+    {
+        return named(name, defaultValue, WhimShapes::resolve, "已登记的外观", WhimShapes.names());
+    }
 
-        return new WhimParam(name, defaultValue, valid, "已登记的轨迹样式", WhimTraces.names());
+    // 命中体积 id，须是 WhimHits 已登记的（含运行期登记）
+    public static WhimParam hitVolume(String name, String defaultValue)
+    {
+        return named(name, defaultValue, WhimHits::resolve, "已登记的命中体积", WhimHits.names());
+    }
+
+    // 取值是某个具名清单里的 id；允许省略命名空间
+    private static WhimParam named(String name, String defaultValue, Function<String, Optional<ResourceLocation>> resolve,
+            String hint, List<String> choices)
+    {
+        return new WhimParam(name, defaultValue, value -> resolve.apply(value).isPresent(), hint, choices);
     }
 
     private static boolean isPositive(String value)

@@ -15,11 +15,15 @@ import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.anchor.WhimAnchor;
 import com.wdlpiaoyi.glimmerwhim.engine.Whim;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimHits;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimShapes;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimSight;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimTraces;
 import com.wdlpiaoyi.glimmerwhim.whims.WhimType;
+import com.wdlpiaoyi.glimmerwhim.whims.client.Appearances;
 import com.wdlpiaoyi.glimmerwhim.whims.client.DefaultRender;
+import com.wdlpiaoyi.glimmerwhim.whims.client.HitVolumes;
 import com.wdlpiaoyi.glimmerwhim.whims.client.Tint;
 import com.wdlpiaoyi.glimmerwhim.whims.client.Trace;
 import com.wdlpiaoyi.glimmerwhim.whims.client.Traces;
@@ -60,27 +64,12 @@ public final class WhimRenderer
         void draw(PoseStack pose, Vec3 dir, float progress, WhimData data, WhimParams params, UUID id);
     }
 
+    // 本体画法与命中体积不走这里：它们由 data 里的 {shape}/{hit} 决定，见 Appearances/HitVolumes
     public static final class RenderSpec
     {
-        private Drawer draw = DefaultRender::draw;
-
-        private Hit hit = DefaultRender::hit;
-
         private Highlight highlight = DefaultRender::outline;
 
         private Vanish vanish;
-
-        public RenderSpec draw(Drawer draw)
-        {
-            this.draw = draw;
-            return this;
-        }
-
-        public RenderSpec hit(Hit hit)
-        {
-            this.hit = hit;
-            return this;
-        }
 
         public RenderSpec highlight(Highlight highlight)
         {
@@ -99,11 +88,7 @@ public final class WhimRenderer
     {
     }
 
-    // 均按元素 id 索引；未注册都会回落到默认实现。轨迹样式不走这里，由 data 里的 id 决定
-    private static final Map<ResourceLocation, Drawer> DRAWERS = new LinkedHashMap<>();
-
-    private static final Map<ResourceLocation, Hit> HITS = new LinkedHashMap<>();
-
+    // 按元素 id 索引；未注册都会回落到默认实现。外观、命中体积与轨迹样式不走这里，由 data 里的 id 决定
     private static final Map<ResourceLocation, Highlight> HIGHLIGHTS = new LinkedHashMap<>();
 
     private static final Map<ResourceLocation, Vanish> VANISHES = new LinkedHashMap<>();
@@ -114,20 +99,48 @@ public final class WhimRenderer
 
     public static void register(WhimType type, RenderSpec spec)
     {
-        DRAWERS.put(type.id(), spec.draw);
-        HITS.put(type.id(), spec.hit);
         HIGHLIGHTS.put(type.id(), spec.highlight);
         VANISHES.put(type.id(), spec.vanish);
     }
 
-    public static Drawer drawer(ResourceLocation id)
+    // 本体的画法：由 {shape} 决定；未登记/拼错的 id 回落到默认外观并打日志
+    public static Drawer appearance(WhimParams params, WhimData data)
     {
-        return DRAWERS.getOrDefault(id, DefaultRender::draw);
+        String raw = params.text(data, Whim.SHAPE);
+        ResourceLocation id = WhimShapes.resolve(raw).orElse(null);
+        Drawer drawer = id == null ? null : Appearances.get(id);
+
+        if (drawer != null)
+        {
+            return drawer;
+        }
+
+        if (raw != null && !raw.isBlank() && UNKNOWN_SHAPES.add(raw))
+        {
+            GlimmerWhim.log("未知的外观: " + raw + "，回落到 " + WhimShapes.QUAD);
+        }
+
+        return Appearances.get(WhimShapes.QUAD);
     }
 
-    public static Hit hit(ResourceLocation id)
+    // 本体的命中体积：由 {hit} 决定；未登记/拼错的 id 回落到默认命中体积并打日志
+    public static Hit hitVolume(WhimParams params, WhimData data)
     {
-        return HITS.getOrDefault(id, DefaultRender::hit);
+        String raw = params.text(data, Whim.HIT);
+        ResourceLocation id = WhimHits.resolve(raw).orElse(null);
+        Hit hit = id == null ? null : HitVolumes.get(id);
+
+        if (hit != null)
+        {
+            return hit;
+        }
+
+        if (raw != null && !raw.isBlank() && UNKNOWN_HITS.add(raw))
+        {
+            GlimmerWhim.log("未知的命中体积: " + raw + "，回落到 " + WhimHits.QUAD);
+        }
+
+        return HitVolumes.get(WhimHits.QUAD);
     }
 
     public static Highlight highlight(ResourceLocation id)
@@ -139,12 +152,6 @@ public final class WhimRenderer
     public static Vanish vanish(ResourceLocation id)
     {
         return VANISHES.get(id);
-    }
-
-    // 是否登记过自己的绘制；未登记的元素用默认外观（见 WhimRenders）
-    public static boolean custom(ResourceLocation id)
-    {
-        return DRAWERS.containsKey(id);
     }
 
     // 链的轨迹样式：data 覆盖、类型默认兜底；未登记/拼错的 id 回落到 fallback 并打日志
@@ -185,12 +192,16 @@ public final class WhimRenderer
         return tint(raw) != null;
     }
 
-    // 已就未登记样式打过日志的 id，避免每帧重复打
-    private static final Set<ResourceLocation> UNKNOWN_TRACES = new HashSet<>();
+    // 已就未登记样式打过日志的原文，避免每帧重复打
+    private static final Set<String> UNKNOWN_TRACES = new HashSet<>();
+
+    private static final Set<String> UNKNOWN_SHAPES = new HashSet<>();
+
+    private static final Set<String> UNKNOWN_HITS = new HashSet<>();
 
     private static Trace resolve(String raw, ResourceLocation fallback)
     {
-        ResourceLocation id = ResourceLocation.tryParse(raw);
+        ResourceLocation id = WhimTraces.resolve(raw).orElse(null);
         Trace trace = id == null ? null : Traces.get(id);
 
         if (trace != null)
@@ -198,7 +209,10 @@ public final class WhimRenderer
             return trace;
         }
 
-        if (id != null && !id.equals(fallback) && !Traces.known(id) && UNKNOWN_TRACES.add(id))
+        // 写的本来就是 fallback（含省略命名空间的写法）时不刷日志
+        boolean fallbackText = raw != null && (raw.equals(fallback.toString()) || raw.equals(fallback.getPath()));
+
+        if (id == null && !fallbackText && raw != null && !raw.isBlank() && UNKNOWN_TRACES.add(raw))
         {
             GlimmerWhim.log("未知的轨迹样式: " + raw + "，回落到 " + fallback);
         }
@@ -266,7 +280,7 @@ public final class WhimRenderer
                 continue;
             }
 
-            drawable.add(new Drawable(whim, whim.type().params(), at, depth));
+            drawable.add(new Drawable(whim, whim.type().effectiveParams(), at, depth));
         }
 
         // 远到近排序，保证半透明叠加顺序
@@ -296,7 +310,7 @@ public final class WhimRenderer
             }
             else
             {
-                drawer(whim.type().id()).draw(pose, dir, whim.data(), entry.params(), whim.id());
+                appearance(entry.params(), whim.data()).draw(pose, dir, whim.data(), entry.params(), whim.id());
             }
 
             pose.popPose();

@@ -103,7 +103,7 @@ public final class WhimVanish
 
             pose.pushPose();
             pose.translate(position.x, position.y, position.z);
-            vanish.draw(pose, dir, progress, fading.whim().data(), type.params(), fading.whim().id());
+            vanish.draw(pose, dir, progress, fading.whim().data(), type.effectiveParams(), fading.whim().id());
             pose.popPose();
         }
 

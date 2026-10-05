@@ -8,7 +8,9 @@ import java.util.function.Predicate;
 import com.wdlpiaoyi.glimmerwhim.engine.Whim;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimData;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimEvent;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimHits;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
+import com.wdlpiaoyi.glimmerwhim.engine.WhimShapes;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimSpawn;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimSpawnContext;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimTarget;
@@ -25,13 +27,14 @@ public interface WhimType
 
     WhimParams params();
 
-    // 类型参数 + 内置 lifetime/visibility/trace；后加者覆盖同名
+    // 类型参数 + 内置 lifetime/visibility/trace/shape/hit；后加者覆盖同名
     default WhimParams effectiveParams()
     {
         return params()
                 .plus(WhimParams.lifetime(defaultLifetime()))
                 .plus(WhimParams.visibility())
-                .plus(WhimParams.traces(elementTrace().toString(), modifierTrace().toString()));
+                .plus(WhimParams.traces(elementTrace().toString(), modifierTrace().toString()))
+                .plus(WhimParams.appearance(defaultShape().toString(), defaultHit().toString()));
     }
 
     // 链的轨迹样式：element 决定整条链，modifier 叠在其上
@@ -43,6 +46,18 @@ public interface WhimType
     default ResourceLocation modifierTrace()
     {
         return WhimTraces.NONE;
+    }
+
+    // 本体的具名外观；{shape} 覆盖它
+    default ResourceLocation defaultShape()
+    {
+        return WhimShapes.QUAD;
+    }
+
+    // 本体的具名命中体积；{hit} 覆盖它
+    default ResourceLocation defaultHit()
+    {
+        return WhimHits.QUAD;
     }
 
     // -1 = 永久
