@@ -138,4 +138,4 @@
 
 ## 许可
 
-All Rights Reserved。
+MIT，见 [LICENSE](LICENSE)。
