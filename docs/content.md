@@ -11,6 +11,8 @@
 | 位置 | `whims/content/` | `whims/dev/` |
 | 注册 | `ContentWhims`（服务端）/ `ContentRenders`（客户端），始终注册 | 源码中有 `whims/dev/` 即注册 |
 
+内容可由配置关闭：`[whim] enabled`（本模组内容总开关）、`[whim] enabledExternal`（第三方内容总开关）、`[whim] disabled`（点名禁用的 id 名单，任意命名空间，可写短名）。被禁用的内容在启动时就不注册，改动后需重启；名单里写了未知内容或拼错的 id，启动日志会给出对应警告（本模组 id 写错 / 命名空间已加载但没有这个内容 / 对应模组未安装 / id 无法解析）。
+
 ## 每个正式灵感应记录
 
 - id 与命名空间

@@ -1,5 +1,13 @@
 package com.wdlpiaoyi.glimmerwhim.config;
 
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
+
+import net.minecraft.resources.ResourceLocation;
+
 import net.minecraftforge.common.ForgeConfigSpec;
 
 public final class WhimConfig
@@ -54,6 +62,12 @@ public final class WhimConfig
     private static final float[] FALLBACK_AIMED = { 1.0F, 1.0F, 1.0F, 1.0F };
 
     private static final ForgeConfigSpec.IntValue MAX_CHAIN_LENGTH;
+
+    private static final ForgeConfigSpec.BooleanValue WHIM_ENABLED;
+
+    private static final ForgeConfigSpec.BooleanValue WHIM_EXTERNAL_ENABLED;
+
+    private static final ForgeConfigSpec.ConfigValue<List<? extends String>> WHIM_DISABLED;
 
     private static final ForgeConfigSpec.IntValue COMMAND_PERMISSION_LEVEL;
 
@@ -149,6 +163,17 @@ public final class WhimConfig
         MAX_CHAIN_LENGTH = builder
                 .comment("一次施法最多串联的灵感条数（含根）；0 = 禁止串联（只能用根）。默认 8。")
                 .defineInRange("maxChainLength", 8, 0, 64);
+        WHIM_ENABLED = builder
+                .comment("本模组内容的总开关：关闭后 glimmerwhim: 命名空间下的灵感全部不注册。",
+                        "内容在启动时注册，改动后须重启才生效。默认 true。")
+                .define("enabled", true);
+        WHIM_EXTERNAL_ENABLED = builder
+                .comment("第三方内容的总开关：关闭后其他命名空间注册的灵感全部不注册。默认 true。")
+                .define("enabledExternal", true);
+        WHIM_DISABLED = builder
+                .comment("点名禁用的灵感 id，可写短名（strike 等价 glimmerwhim:strike）。",
+                        "任意命名空间均可；名单里的内容无论上面两个开关如何都不注册。默认空。")
+                .defineList("disabled", List.of(), element -> element instanceof String);
         builder.pop();
 
         builder.comment("命令：/glimmerwhim 的权限与补全。");
@@ -283,6 +308,56 @@ public final class WhimConfig
     public static int maxChainLength()
     {
         return MAX_CHAIN_LENGTH.get();
+    }
+
+    // 内容是否注册：所属命名空间的总开关与点名名单，任一为禁用即禁用
+    public static boolean whimEnabled(ResourceLocation id)
+    {
+        if (disabledWhims().contains(id))
+        {
+            return false;
+        }
+
+        return GlimmerWhim.MODID.equals(id.getNamespace()) ? WHIM_ENABLED.get() : WHIM_EXTERNAL_ENABLED.get();
+    }
+
+    // 配置里点名的禁用名单，已解析成 id（短名按本模组命名空间补全）
+    public static Set<ResourceLocation> disabledWhims()
+    {
+        Set<ResourceLocation> ids = new LinkedHashSet<>();
+
+        for (String raw : disabledWhimNames())
+        {
+            ResourceLocation id = resolveWhimId(raw);
+
+            if (id != null)
+            {
+                ids.add(id);
+            }
+        }
+
+        return ids;
+    }
+
+    // 配置里点名的禁用名单，原文
+    public static List<? extends String> disabledWhimNames()
+    {
+        return WHIM_DISABLED.get();
+    }
+
+    // 含冒号的按全名解析，否则补本模组命名空间；无法解析返回 null
+    public static ResourceLocation resolveWhimId(String raw)
+    {
+        String text = raw == null ? "" : raw.trim();
+
+        if (text.isEmpty())
+        {
+            return null;
+        }
+
+        return text.indexOf(':') >= 0
+                ? ResourceLocation.tryParse(text)
+                : ResourceLocation.tryParse(GlimmerWhim.MODID + ":" + text);
     }
 
     public static int commandPermissionLevel()

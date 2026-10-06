@@ -6,6 +6,8 @@
 
 没有运行时开关，是否构建进模组取决于文件是否在 `src/main/java/com/wdlpiaoyi/glimmerwhim/whims/dev/` 里。现在连两个注册入口 `whims/dev/DevWhims`（服务端）与 `whims/dev/client/DevRenders`（客户端）也停在 `parked/` 里，所以要先移回它们，再把要用的类型文件移回并登记进去。恢复清单与注意事项见 `parked/README.md`。
 
+移回来的内容同样受配置开关约束（`[whim] enabled` / `[whim] enabledExternal` / `[whim] disabled`，见 [`docs/content.md`](content.md)）。被禁用的内容在启动时就不注册，改动后需重启；名单里写了未知内容或拼错的 id，启动日志会给出对应警告。
+
 ## 类型（下列类型的文件都在 `parked/` 里）
 
 | id | 说明 |

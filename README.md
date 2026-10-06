@@ -106,10 +106,12 @@
 | `aim` | 瞄准是否忽略方块遮挡；目标实体拾取的命中箱放大倍率（`targetHitboxScale`）。 |
 | `freelook` | 自由视角模式（按住/切换）、回正时长、灵敏度、角度限制。 |
 | `render` | 高亮轮廓、面明暗、瞄准颜色、牵引折线；`render.default` 是默认外观（`glimmerwhim:quad`）的颜色与棋盘格设置。 |
-| `whim` | 串联上限。 |
+| `whim` | 串联上限；内容开关：`enabled`（本模组内容总开关）、`enabledExternal`（第三方内容总开关）、`disabled`（点名禁用的 id 名单，任意命名空间，可写短名）。 |
 | `strike` | 落雷 `strike` 的触发条件与数值默认值（`enabled`/`chance`/`min_health`/`max_damage_ratio`/`combat_window_ticks`/`roll_interval_ticks`/`cooldown_ticks`/`overworld_only`，以及参数默认值 `size`/`damage_ratio`/`radius`/`spread`/`charge_ticks`/`glow_ticks`；`{bolts}` 不在配置里，默认由 `{damage_ratio}` 推算）。 |
 | `command` | 命令权限等级、TAB 补全的拾取距离。 |
 | `debug` | 日志详细程度。 |
+
+被禁用的灵感在启动时不注册（命令召唤不到、补全不列出、链里也进不去），因此改动后需重启才生效。
 
 ## 文档
 
