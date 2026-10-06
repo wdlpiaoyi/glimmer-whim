@@ -87,6 +87,8 @@ public final class WhimConfig
     private static final ForgeConfigSpec.IntValue STRIKE_CHARGE_TICKS;
     private static final ForgeConfigSpec.IntValue STRIKE_GLOW_TICKS;
 
+    private static final ForgeConfigSpec.IntValue STRIKE_DAMAGE_WINDOW;
+
     private static final ForgeConfigSpec.IntValue STRIKE_COMBAT_WINDOW;
 
     private static final ForgeConfigSpec.IntValue STRIKE_ROLL_INTERVAL;
@@ -195,7 +197,9 @@ public final class WhimConfig
         // 阈值参数，上界设为无穷：超过 1 只意味着「不因伤害过大而拒绝」，有限上界只是画蛇添足
         STRIKE_MAX_DAMAGE_RATIO = builder.comment("本次伤害相对目标最大生命的上限（可大于 1，一击可能超过目标最大生命）；高于此值不触发（说明目标还不够强）。默认 0.05。")
                 .defineInRange("max_damage_ratio", 0.05D, 0.0D, Double.POSITIVE_INFINITY);
-        STRIKE_COMBAT_WINDOW = builder.comment("战斗标记时长（tick）：窗口内造成或受到过有源伤害才算在战斗中。默认 240（12 秒）。")
+        STRIKE_DAMAGE_WINDOW = builder.comment("「造成过伤害」标记的存活时长（tick）：每次造成或受到有源伤害都续期。默认 240（12 秒）。")
+                .defineInRange("damage_window_ticks", 240, 1, 72000);
+        STRIKE_COMBAT_WINDOW = builder.comment("进入战斗状态前，该标记需要连续保持的时长（tick）：达到后才算战斗状态，标记一断战斗状态随之结束。默认 240（12 秒）。")
                 .defineInRange("combat_window_ticks", 240, 1, 72000);
         STRIKE_ROLL_INTERVAL = builder.comment("两次抽签的最小间隔（tick）。默认 20（1 秒）。")
                 .defineInRange("roll_interval_ticks", 20, 0, 72000);
@@ -432,6 +436,13 @@ public final class WhimConfig
         return STRIKE_GLOW_TICKS.get();
     }
 
+    // 「造成过伤害」标记的存活时长
+    public static int strikeDamageWindowTicks()
+    {
+        return STRIKE_DAMAGE_WINDOW.get();
+    }
+
+    // 进入战斗状态前该标记需要连续保持的时长
     public static int strikeCombatWindowTicks()
     {
         return STRIKE_COMBAT_WINDOW.get();

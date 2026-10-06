@@ -71,8 +71,8 @@ public final class StrikeWhim implements WhimType
     // 本体状态：蓄力中不可再交互，落雷时由落雷流程移除
     public static final String CHARGING = "charging";
 
-    // 玩家侧临时状态（engine/WhimPlayerState），单位 tick
-    private static final String COMBAT = "strike_combat";
+    // 玩家侧临时状态（engine/WhimPlayerState），单位 tick；战斗状态由 DAMAGE 的起点推出来，不单独存
+    private static final String DAMAGE = "strike_damage";
     private static final String COOLDOWN = "strike_cooldown";
     private static final String ROLL = "strike_roll";
 
@@ -383,11 +383,11 @@ public final class StrikeWhim implements WhimType
             return;
         }
 
-        // 有源伤害（来源带实体）给双方刷战斗标记；造成与受到都算
+        // 有源伤害（来源带实体）给双方刷「造成过伤害」标记；造成与受到都算
         if (event.getSource().getEntity() != null)
         {
-            markCombat(event.getEntity());
-            markCombat(event.getSource().getEntity());
+            markDamage(event.getEntity());
+            markDamage(event.getSource().getEntity());
         }
 
         if (!(event.getSource().getDirectEntity() instanceof ServerPlayer player))
@@ -397,8 +397,8 @@ public final class StrikeWhim implements WhimType
 
         LivingEntity target = event.getEntity();
 
-        // 必须先处于战斗状态：12 秒内造成或受到过有源伤害（本次命中只刷新标记，不自己当门槛）
-        if (!WhimPlayerState.active(player, COMBAT))
+        // 必须先处于战斗状态：从本场第一击起连续刷新该标记满 combat_window_ticks（本次命中只续标记，自己不开门）
+        if (!inCombat(player))
         {
             return;
         }
@@ -443,11 +443,19 @@ public final class StrikeWhim implements WhimType
         }
     }
 
-    private static void markCombat(Entity entity)
+    private static void markDamage(Entity entity)
     {
         if (entity instanceof ServerPlayer player)
         {
-            WhimPlayerState.mark(player, COMBAT, WhimConfig.strikeCombatWindowTicks());
+            WhimPlayerState.mark(player, DAMAGE, WhimConfig.strikeDamageWindowTicks());
         }
+    }
+
+    // 战斗状态：从本场第一击起，该标记连续保持满 combat_window_ticks；标记一断（停手超过 damage_window_ticks）即结束
+    private static boolean inCombat(ServerPlayer player)
+    {
+        long since = WhimPlayerState.since(player, DAMAGE);
+
+        return since > 0L && player.getServer().getTickCount() - since >= WhimConfig.strikeCombatWindowTicks();
     }
 }

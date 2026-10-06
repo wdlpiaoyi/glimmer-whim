@@ -92,10 +92,6 @@ public final class WhimRegistry
             this.ticking.add(whim.id());
         }
 
-        GlimmerWhim.log("[Whim] summon id={} dim={} anchor={} element={} lifetime={} visibility={}",
-                whim.id(), this.level.dimension().location(), whim.anchor().type(), whim.type().id(),
-                whim.lifetime(this.level.getGameTime()), whim.visibility().describe());
-
         WhimEvent summoned = new WhimEvent(WhimEvent.Kind.SUMMON, this.level, whim, null, null);
         whim.type().on(summoned);
 
@@ -198,8 +194,6 @@ public final class WhimRegistry
     // 清理瞄准/按住记录，只给曾收到过该灵感的玩家发移除包
     private void announceRemoval(UUID id, WhimRemoveReason reason)
     {
-        GlimmerWhim.log("[Whim] remove id={} dim={} reason={}", id, this.level.dimension().location(), reason);
-
         AIMED.values().removeIf(id::equals);
         HELD.replaceAll((owner, chain) -> chain.contains(id)
                 ? chain.stream().filter(other -> !other.equals(id)).toList()
@@ -645,7 +639,6 @@ public final class WhimRegistry
                 // 根节点无效直接拒绝；链中后续无效节点跳过
                 if (resolved.isEmpty())
                 {
-                    GlimmerWhim.log("[Whim] chain rejected player={} id={}", player.getUUID(), id);
                     return false;
                 }
 
@@ -654,8 +647,6 @@ public final class WhimRegistry
 
             if (resolved.isEmpty() && !tracked.type().canRoot())
             {
-                GlimmerWhim.log("[Whim] chain rejected player={} id={} roles={}", player.getUUID(), id,
-                        tracked.type().roles(tracked.data()));
                 return false;
             }
 
@@ -673,10 +664,6 @@ public final class WhimRegistry
         }
 
         WhimChain built = new WhimChain(resolved, target);
-
-        GlimmerWhim.log("[Whim] use player={} chain={} target={}", player.getUUID(),
-                resolved.stream().map(whim -> whim.type().id().toString()).toList(),
-                target == null ? "none" : target.describe());
 
         // 目标无效则整链按 DROPPED 丢弃（仍算一次使用）；丢弃前先让根元素知道这次使用被拒
         if (target == null || !validTarget(player, target) || !built.root().type().acceptsTarget(target))
@@ -720,7 +707,6 @@ public final class WhimRegistry
                 continue;
             }
 
-            GlimmerWhim.log("[Whim] void player={} id={}", player.getUUID(), id);
             registry.removeWhim(id, WhimRemoveReason.DROPPED);
         }
 
@@ -766,7 +752,6 @@ public final class WhimRegistry
                 || !registry.sent.getOrDefault(player.getUUID(), Set.of()).contains(root)
                 || !withinSight(player, tracked))
         {
-            GlimmerWhim.log("[Whim] hold rejected player={} id={}", player.getUUID(), root);
             return false;
         }
 
@@ -774,7 +759,6 @@ public final class WhimRegistry
 
         if (previous == null || !previous.get(0).equals(root))
         {
-            GlimmerWhim.log("[Whim] hold player={} id={}", player.getUUID(), root);
             fire(WhimEvent.Kind.HOLD, root, player);
         }
 

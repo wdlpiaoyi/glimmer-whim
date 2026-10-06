@@ -1,10 +1,8 @@
 package com.wdlpiaoyi.glimmerwhim.client;
 
-import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 
-import com.wdlpiaoyi.glimmerwhim.GlimmerWhim;
 import com.wdlpiaoyi.glimmerwhim.config.WhimConfig;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimParams;
 import com.wdlpiaoyi.glimmerwhim.engine.WhimSight;
@@ -57,7 +55,6 @@ public final class WhimAim
     public static UUID update(ClientLevel level, Vec3 eye, Vec3 look, float partialTick)
     {
         ClientWhimCache.WhimView best = null;
-        double bestDot = 0.0D;
         double bestHit = Double.POSITIVE_INFINITY;
         double reach = WhimReach.blocks();
         Vec3 direction = look.normalize();
@@ -107,7 +104,6 @@ public final class WhimAim
 
             best = whim;
             bestHit = hit;
-            bestDot = toIt.normalize().dot(direction);
         }
 
         UUID id = best == null ? null : best.id();
@@ -115,17 +111,6 @@ public final class WhimAim
         if (!Objects.equals(id, aimed))
         {
             aimed = id;
-
-            if (best == null)
-            {
-                GlimmerWhim.log("[Whim] aim id=-");
-            }
-            else
-            {
-                double angle = Math.toDegrees(Math.acos(Math.min(1.0D, bestDot)));
-                GlimmerWhim.log("[Whim] aim id={} element={} angle={}",
-                        best.id(), best.type().id(), String.format(Locale.ROOT, "%.1f", angle));
-            }
         }
 
         return aimed;
